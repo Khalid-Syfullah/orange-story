@@ -54,6 +54,12 @@ Body text needs 4.5:1, large text (24px and up) 3:1. Measured:
 
 The painted sky is part of this: behind text it must never get lighter than `#416EB4` (a 42% mix of sky toward sky-soft). The first placeholder faded to sky-soft at the bottom, where milk text fell to 2.58:1; `design.test.ts` now reads the sky plate's lightest row and checks it, so final art is held to the same line.
 
+## How figures are rendered
+
+The people are paintings, not drawings: an academic neoclassical oil-painting look in one shared light (warm sun from the upper left, cool sky fill, a thin warm rim on the right), described with the cast in `docs/ART-DIRECTION.md`. Each figure is a plate in the manifest (`docs/ART-PLATES.md`), and the final paintings come from an artist or an image model, briefed by `docs/ART-BRIEFS.md` and brought in by `npm run art:import`.
+
+Until then a procedural painter (`scripts/art/`) stands in: each character is built from rounded forms (turned heads, tapered limbs, grouped fingers, drapery hanging from points of tension), lit with five values and cast shadows, and painted with seeded brush strokes over a canvas weave and a faint craquelure. The props share the same light. A texture guard fails any character plate that turns out flat. Nothing in the interface changes for this: the plates are images, and where code ties something to a figure (a fruit in a hand, a fingertip, a blade) it reads a named point on the plate, never a constant.
+
 ## Text over the painting
 
 Text sits on painted plates, not on flat color, so where the painting runs behind words it gives way while the words are up (`useTextHaze`, see `SCROLL.md`):

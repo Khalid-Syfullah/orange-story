@@ -1,3 +1,4 @@
+import { plateEntry, platePoint } from "@/art/manifest";
 import { clamp01, ease, remap } from "@/lib/progress";
 import { BLUEPRINT } from "@/scroll/script";
 
@@ -16,12 +17,27 @@ export const PANELS = 4;
 export const PANEL_WIDTH = 0.5;
 /** Width of a folded panel, as a share of the open width. */
 export const FOLDED = 0.1;
+const PANEL_IDS = ["blueprint/plan-1", "blueprint/plan-2", "blueprint/plan-3", "blueprint/plan-4"] as const;
+
+/** The open plan's place: the middle of its four panels. */
+function openCentre(): [number, number] {
+  let x = 0;
+  let y = 0;
+  for (const id of PANEL_IDS) {
+    const [px, py] = plateEntry(id).position;
+    x += px / PANEL_IDS.length;
+    y += py / PANEL_IDS.length;
+  }
+  return [x, y];
+}
+
 /**
- * Where the packet is held, relative to the open plan's place: in the architect's hands (the
- * `blueprint/architect` placeholder holds them in front of his chest; the packet's lower half sits in
- * them). Measured on the scaffold shot (the blueprint's first camera key).
+ * Where the packet is held, relative to the open plan's place: between the architect's hands, the
+ * `plan` point of her plate (read from the art, so a painting with her hands elsewhere moves it).
  */
-export const HELD: readonly [number, number] = [1.25, -0.28];
+const planPoint = platePoint("blueprint/architect", "plan");
+const centre = openCentre();
+export const HELD: readonly [number, number] = [planPoint[0] - centre[0], planPoint[1] - centre[1]];
 
 /** How open panel i (0 to 3) is at progress p: FOLDED when shut, 1 when flat. */
 export function panelOpen(i: number, p: number): number {

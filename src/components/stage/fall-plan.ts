@@ -1,4 +1,4 @@
-import { plateEntry } from "@/art/manifest";
+import { plateEntry, platePoint } from "@/art/manifest";
 import { clamp01, ease, lerp, remap } from "@/lib/progress";
 import { transitionOf } from "@/scroll/helpers";
 import { CAMERA, FALL } from "@/scroll/script";
@@ -18,8 +18,9 @@ import { createCameraPath, getStageAspect, type CameraPath } from "./camera-path
  *   of focus, while the camera pushes into it and then dollies up between the rows.
  */
 
-/** The fruit on the placeholder branch (`prune/branch-right`): world centre and diameter. */
-export const BRANCH_FRUIT = { x: 0.74, y: 1.993, diameter: 0.121 } as const;
+/** The fruit on the branch that is cut (`prune/branch-right`): world centre (its `fruit` point) and diameter. */
+const fruitPoint = platePoint("prune/branch-right", "fruit");
+export const BRANCH_FRUIT = { x: fruitPoint[0], y: fruitPoint[1], diameter: 0.121 } as const;
 
 /** Where the ball sits in the falling-orange sprite: its diameter and the drop of its centre below the sprite's, as fractions of the sprite. */
 export const SPRITE_BALL = { diameter: 0.76, drop: 0.07 } as const;

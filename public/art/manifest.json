@@ -1,5 +1,5 @@
 {
-  "about": "Every painted plate of the story (docs/ART-PLATES.md). src is under public/; size is the image in pixels; depth is the distance behind the picture plane in world units (z = -depth); anchor is the point of the image (fractions from the left and from the top) placed at position (world x, y); height is the plate's height in world units (width follows the image aspect and repeat). The first scene in scenes owns the file's folder; the others reuse it. role: plate (placed in depth), backdrop (fills the view behind the scene), texture (read by a material), sprite (repeated by an effect). Entries with a placeholder spec are drawn by `npm run art:placeholders`; delete the spec when final art replaces the file.",
+  "about": "Every painted plate of the story (docs/ART-PLATES.md). src is under public/; size is the image in pixels; depth is the distance behind the picture plane in world units (z = -depth); anchor is the point of the image (fractions from the left and from the top) placed at position (world x, y); height is the plate's height in world units (width follows the image aspect and repeat). The first scene in scenes owns the file's folder; the others reuse it. role: plate (placed in depth), backdrop (fills the view behind the scene), texture (read by a material), sprite (repeated by an effect). Entries with a placeholder spec are drawn by `npm run art:placeholders` (kind `study`: a painted stand-in of a character from scripts/art/cast.mjs); `npm run art:import` replaces the file with a finished painting, deletes the spec and sets `painted: true`. points are named image points (fractions from the left and top) that code ties things to, read through platePoint().",
   "version": 1,
   "maxSize": 2048,
   "plates": [
@@ -54,8 +54,9 @@
       "anchor": [0.5, 1],
       "position": [3.45, 1.5],
       "height": 2.45,
-      "note": "Marble statue of a woman on top of the minaret, right arm raised high (the orange is its own layer).",
-      "placeholder": { "kind": "statue" }
+      "points": { "orange": [0.7, 0.065306] },
+      "note": "Marble statue of a woman on top of the minaret, one arm raised high (the orange is its own layer, over her hand at the `orange` point).",
+      "placeholder": { "kind": "study" }
     },
     {
       "id": "hero/statue-orange",
@@ -68,8 +69,8 @@
       "position": [3.695, 3.79],
       "height": 0.3,
       "layer": 1,
-      "note": "The orange held up to the sky like a torch; its own layer so it can glow.",
-      "placeholder": { "kind": "orange" }
+      "note": "The orange held up to the sky like a torch, a gilded leaf at its stem; its own layer so it can glow.",
+      "placeholder": { "kind": "study" }
     },
     {
       "id": "hero/crowd-far",
@@ -81,8 +82,9 @@
       "anchor": [0.5, 1],
       "position": [4.8, -3.35],
       "height": 1,
-      "note": "Robed onlookers, far row, faces turned up to the statue.",
-      "placeholder": { "kind": "crowd", "count": 7, "seed": "far", "haze": 0.3, "lookAt": 0.05 }
+      "points": { "look-at": [0.05, 0] },
+      "note": "Onlookers in ochre, terracotta, indigo and olive, far row, faces turned up to the statue (toward the `look-at` point).",
+      "placeholder": { "kind": "study" }
     },
     {
       "id": "hero/crowd-mid",
@@ -94,8 +96,9 @@
       "anchor": [0.5, 1],
       "position": [3.9, -3.85],
       "height": 1.2,
-      "note": "Robed onlookers, middle row, faces turned up to the statue.",
-      "placeholder": { "kind": "crowd", "count": 6, "seed": "mid", "haze": 0.12, "lookAt": 0.375 }
+      "points": { "look-at": [0.375, 0] },
+      "note": "Onlookers, middle row, faces turned up to the statue (toward the `look-at` point).",
+      "placeholder": { "kind": "study" }
     },
     {
       "id": "hero/crowd-near",
@@ -107,8 +110,9 @@
       "anchor": [0.5, 1],
       "position": [4.4, -4.45],
       "height": 1.45,
-      "note": "Robed onlookers, near row, faces turned up to the statue.",
-      "placeholder": { "kind": "crowd", "count": 5, "seed": "near", "lookAt": 0.28 }
+      "points": { "look-at": [0.28, 0] },
+      "note": "Onlookers, near row, faces turned up to the statue (toward the `look-at` point).",
+      "placeholder": { "kind": "study" }
     },
     {
       "id": "ascent/stone",
@@ -232,8 +236,9 @@
       "anchor": [0.72, 0.3],
       "position": [1.55, 8.2],
       "height": 1.9,
+      "points": { "grip": [0.72, 0.3] },
       "note": "Left hand in a robe sleeve, entering from the lower left.",
-      "placeholder": { "kind": "hand", "from": "bottom-left" }
+      "placeholder": { "kind": "study" }
     },
     {
       "id": "graft/hand-right",
@@ -245,8 +250,9 @@
       "anchor": [0.28, 0.3],
       "position": [2.55, 8.2],
       "height": 1.9,
+      "points": { "grip": [0.28, 0.3] },
       "note": "Right hand in a robe sleeve, entering from the lower right.",
-      "placeholder": { "kind": "hand", "from": "bottom-right" }
+      "placeholder": { "kind": "study" }
     },
     {
       "id": "graft/cutting",
@@ -382,8 +388,9 @@
       "anchor": [0.5, 0.04],
       "position": [1.6, 10.35],
       "height": 4.2,
+      "points": { "fingertips": [0.5, 0.04] },
       "note": "A hand rising from the bottom center, robe sleeve below.",
-      "placeholder": { "kind": "hand", "from": "bottom" }
+      "placeholder": { "kind": "study" }
     },
     {
       "id": "pluck/harvester-body",
@@ -395,8 +402,8 @@
       "anchor": [0.5, 1],
       "position": [3.05, 0.2],
       "height": 6.4,
-      "note": "The harvester, a man in a white classical robe: body (right of center, clear of the text on the left).",
-      "placeholder": { "kind": "figure", "robe": "white", "pose": "stand", "head": false, "arms": false }
+      "note": "The harvester, a young man in an ivory tunic and a saffron mantle: body (right of center, clear of the text on the left).",
+      "placeholder": { "kind": "study" }
     },
     {
       "id": "pluck/harvester-arm",
@@ -408,8 +415,9 @@
       "anchor": [0.88, 0.12],
       "position": [2.43, 5.25],
       "height": 1.3,
-      "note": "His right arm from the shoulder (the anchor), holding the orange out in front of him.",
-      "placeholder": { "kind": "arm", "hold": "orange", "from": "right", "sleeve": "white", "shoulder": [0.88, 0.12], "hand": [0.25, 0.76] }
+      "points": { "orange": [0.172308, 0.696923] },
+      "note": "His right arm from the shoulder (the anchor), holding the orange out in front of him (its centre is the `orange` point).",
+      "placeholder": { "kind": "study" }
     },
     {
       "id": "pluck/harvester-head",
@@ -421,8 +429,8 @@
       "anchor": [0.5, 0.95],
       "position": [3.05, 5.45],
       "height": 0.85,
-      "note": "His head, looking at the orange in his hand.",
-      "placeholder": { "kind": "head", "facing": "left" }
+      "note": "His head (linen headband, chestnut hair), looking at the orange in his hand.",
+      "placeholder": { "kind": "study" }
     },
     {
       "id": "share/arm-open",
@@ -434,8 +442,9 @@
       "anchor": [0.88, 0.12],
       "position": [2.43, 5.25],
       "height": 1.3,
+      "points": { "orange": [0.172308, 0.696923] },
       "note": "His right arm exactly as `pluck/harvester-arm` but holding nothing: the scene draws the whole orange, and then its halves, in his hand.",
-      "placeholder": { "kind": "arm", "hold": "none", "from": "right", "sleeve": "white", "shoulder": [0.88, 0.12], "hand": [0.25, 0.76] }
+      "placeholder": { "kind": "study" }
     },
     {
       "id": "share/knife-hand",
@@ -447,8 +456,9 @@
       "anchor": [0.26, 0.5],
       "position": [1.5, 4.62],
       "height": 0.7,
+      "points": { "knife-tip": [0.26, 0.5] },
       "note": "His left hand with a knife (the blade tip is the anchor; the blade points left), cutting through the orange in his right. In front of the orange. The scene turns it so the blade points down and plunges.",
-      "placeholder": { "kind": "hand", "from": "right", "hold": "knife" }
+      "placeholder": { "kind": "study" }
     },
     {
       "id": "share/peel-left",
@@ -460,6 +470,7 @@
       "anchor": [0.5, 0.5],
       "position": [1.38, 4.5],
       "height": 0.42,
+      "points": { "cut-edge": [0.62, 0.5] },
       "note": "The left half: outer peel.",
       "placeholder": { "kind": "half", "side": "left", "part": "peel" }
     },
@@ -473,6 +484,7 @@
       "anchor": [0.5, 0.5],
       "position": [1.38, 4.5],
       "height": 0.42,
+      "points": { "cut-edge": [0.62, 0.5] },
       "note": "The left half: cut face with its segments.",
       "placeholder": { "kind": "half", "side": "left", "part": "face" }
     },
@@ -486,6 +498,7 @@
       "anchor": [0.5, 0.5],
       "position": [1.62, 4.5],
       "height": 0.42,
+      "points": { "cut-edge": [0.38, 0.5] },
       "note": "The right half: outer peel.",
       "placeholder": { "kind": "half", "side": "right", "part": "peel" }
     },
@@ -499,6 +512,7 @@
       "anchor": [0.5, 0.5],
       "position": [1.62, 4.5],
       "height": 0.42,
+      "points": { "cut-edge": [0.38, 0.5] },
       "note": "The right half: cut face with its segments.",
       "placeholder": { "kind": "half", "side": "right", "part": "face" }
     },
@@ -512,8 +526,9 @@
       "anchor": [0.88, 0.5],
       "position": [1.3, 4.38],
       "height": 0.6,
+      "points": { "fingertips": [0.88, 0.5] },
       "note": "A second person's hand reaching in from center left to take one half.",
-      "placeholder": { "kind": "hand", "from": "left", "sleeve": "skySoft" }
+      "placeholder": { "kind": "study" }
     },
     {
       "id": "work/cloud-1",
@@ -616,8 +631,8 @@
       "anchor": [0.5, 1],
       "position": [-1.7, 8],
       "height": 1.9,
-      "note": "Builder in classical dress, working on the giant orange.",
-      "placeholder": { "kind": "figure", "robe": "marble", "pose": "work", "facing": "left" }
+      "note": "The builder (rust tunic, leather apron, short black beard) at work with mallet and chisel, on the giant orange.",
+      "placeholder": { "kind": "study" }
     },
     {
       "id": "blueprint/scaffold",
@@ -643,7 +658,7 @@
       "position": [-1.9, 10.6],
       "height": 1.7,
       "note": "The builder at work on a scaffold platform.",
-      "placeholder": { "kind": "figure", "robe": "marble", "pose": "work", "facing": "right" }
+      "placeholder": { "kind": "study" }
     },
     {
       "id": "blueprint/architect",
@@ -655,8 +670,9 @@
       "anchor": [0.5, 1],
       "position": [1.5, 7.9],
       "height": 2,
-      "note": "Architect in a white robe and head covering, holding the folded drawing.",
-      "placeholder": { "kind": "figure", "robe": "white", "pose": "hold", "headCover": true, "facing": "left" }
+      "points": { "plan": [0.25, 0.29] },
+      "note": "Architect in an ivory linen veil and open robe over an indigo underdress, her hands held as if holding the folded drawing (the drawing is its own plates, at the `plan` point).",
+      "placeholder": { "kind": "study" }
     },
     {
       "id": "blueprint/plan-1",
@@ -773,7 +789,7 @@
       "position": [-1.9, 0.9],
       "height": 1.7,
       "note": "Builder on the stage to the left of the orange.",
-      "placeholder": { "kind": "figure", "robe": "marble", "pose": "work", "facing": "right" }
+      "placeholder": { "kind": "study" }
     },
     {
       "id": "site/builder-right",
@@ -786,7 +802,7 @@
       "position": [1.9, 0.9],
       "height": 1.7,
       "note": "Builder on the stage to the right of the orange.",
-      "placeholder": { "kind": "figure", "robe": "milk", "pose": "work", "facing": "left" }
+      "placeholder": { "kind": "study" }
     },
     {
       "id": "site/builder-seated",
@@ -799,7 +815,7 @@
       "position": [1.1, 0.9],
       "height": 1.15,
       "note": "Builder seated on a stool on the stage, holding the plan.",
-      "placeholder": { "kind": "figure", "robe": "white", "pose": "seated", "facing": "left" }
+      "placeholder": { "kind": "study" }
     },
     {
       "id": "site/top-down",
@@ -923,6 +939,7 @@
       "position": [0.05, 1.9],
       "height": 0.6,
       "sway": 0.8,
+      "points": { "fruit": [0.8625, 0.565] },
       "note": "The branch that is cut and falls, with an orange on it.",
       "placeholder": { "kind": "branch", "direction": "right", "leaves": 6, "oranges": 1, "seed": "pr" }
     },
@@ -936,8 +953,8 @@
       "anchor": [0.5, 1],
       "position": [0.75, -0.7],
       "height": 2.9,
-      "note": "Gardener in classical dress: body (his arms with the shears are separate layers).",
-      "placeholder": { "kind": "figure", "robe": "marble", "pose": "stand", "facing": "left", "arms": false }
+      "note": "The gardener (straw hat, silver-streaked beard, olive apron over a sand tunic): body (his arms with the shears are separate layers).",
+      "placeholder": { "kind": "study" }
     },
     {
       "id": "prune/gardener-arms-1",
@@ -950,8 +967,9 @@
       "position": [0.584, 1.58],
       "height": 0.911,
       "frame": 0,
+      "points": { "shears-tip": [0.1, 0.42] },
       "note": "His arms with the shears, frame 1 of 2 (open).",
-      "placeholder": { "kind": "arm", "hold": "shears", "from": "right", "frame": 0 }
+      "placeholder": { "kind": "study" }
     },
     {
       "id": "prune/gardener-arms-2",
@@ -964,8 +982,9 @@
       "position": [0.584, 1.58],
       "height": 0.911,
       "frame": 1,
+      "points": { "shears-tip": [0.1, 0.42] },
       "note": "His arms with the shears, frame 2 of 2 (closed).",
-      "placeholder": { "kind": "arm", "hold": "shears", "from": "right", "frame": 1 }
+      "placeholder": { "kind": "study" }
     },
     {
       "id": "fall/falling-orange",
@@ -1123,8 +1142,9 @@
       "anchor": [0.5, 1],
       "position": [-2.6, 6.05],
       "height": 2.5,
-      "note": "Astronomer in classical dress pointing at the sky with his right hand, finger clear.",
-      "placeholder": { "kind": "figure", "robe": "white", "pose": "point", "facing": "right" }
+      "points": { "fingertip": [0.84, 0.07] },
+      "note": "Astronomer in a deep indigo cloak pointing at the sky with his right hand, fingertip clear (the `fingertip` point).",
+      "placeholder": { "kind": "study" }
     },
     {
       "id": "stars/star",
@@ -1163,8 +1183,8 @@
       "anchor": [0.5, 1],
       "position": [-2.5, 3.85],
       "height": 3.5,
-      "note": "Woman in a classical robe: body.",
-      "placeholder": { "kind": "figure", "robe": "milk", "pose": "stand", "facing": "right", "arms": false }
+      "note": "Woman in an ivory peplos with a saffron-orange sash: body (the arm with the jug is its own plate).",
+      "placeholder": { "kind": "study" }
     },
     {
       "id": "finale/woman-arm",
@@ -1176,8 +1196,9 @@
       "anchor": [0.12, 0.45],
       "position": [-2.35, 6.5],
       "height": 1.1,
-      "note": "Her arm with the watering can.",
-      "placeholder": { "kind": "arm", "hold": "can", "from": "left", "sleeve": "milk" }
+      "points": { "spout": [0.938182, 0.586364] },
+      "note": "Her arm with a terracotta jug, pouring (the water leaves the spout at the `spout` point).",
+      "placeholder": { "kind": "study" }
     },
     {
       "id": "finale/water-1",
@@ -1231,8 +1252,8 @@
       "anchor": [0.5, 1],
       "position": [2.5, 3.85],
       "height": 3.5,
-      "note": "Man in a classical robe: body.",
-      "placeholder": { "kind": "figure", "robe": "marble", "pose": "stand", "facing": "left", "arms": false }
+      "note": "Man in a slate-blue mantle over an ivory tunic: body (his arms with the shears are separate plates).",
+      "placeholder": { "kind": "study" }
     },
     {
       "id": "finale/man-arms-1",
@@ -1245,8 +1266,9 @@
       "position": [2.3, 6.6],
       "height": 1.1,
       "frame": 0,
+      "points": { "shears-tip": [0.08, 0.543636] },
       "note": "His arms with the shears, frame 1 of 2 (open).",
-      "placeholder": { "kind": "arm", "hold": "shears", "from": "right", "frame": 0 }
+      "placeholder": { "kind": "study" }
     },
     {
       "id": "finale/man-arms-2",
@@ -1259,8 +1281,9 @@
       "position": [2.3, 6.6],
       "height": 1.1,
       "frame": 1,
+      "points": { "shears-tip": [0.08, 0.543636] },
       "note": "His arms with the shears, frame 2 of 2 (closed).",
-      "placeholder": { "kind": "arm", "hold": "shears", "from": "right", "frame": 1 }
+      "placeholder": { "kind": "study" }
     },
     {
       "id": "finale/falling-orange",

@@ -1,5 +1,6 @@
+import { platePoint } from "@/art/manifest";
 import { clamp01, ease, remap, seeded } from "@/lib/progress";
-import { STARS } from "@/scroll/script";
+import { CAMERA, STARS } from "@/scroll/script";
 
 import { hazeAmount } from "./text-haze";
 
@@ -13,11 +14,20 @@ import type { TwinklePoint } from "./twinkle";
  * (only clouds there). Everything is a function of progress, so it plays backwards exactly.
  */
 
-/** World position of the astronomer's fingertip (the graph grows from here). */
-export const FINGERTIP = [-1.55, 8.15] as const;
-
 /** World z of the stars (behind the platform, in front of the sky). */
 export const STAR_Z = -2;
+
+/**
+ * Where the graph grows from: the astronomer's fingertip (the `fingertip` point of his plate), seen
+ * from the stargazer camera and carried back onto the stars' plane, so on screen the first stars sit
+ * at his finger.
+ */
+export const FINGERTIP: readonly [number, number] = (() => {
+  const [x, y, z] = platePoint("stars/astronomer", "fingertip");
+  const camera = CAMERA.find((k) => k.scene === "stars")?.position ?? [0, 6, 7];
+  const t = (camera[2] - STAR_Z) / (camera[2] - z);
+  return [camera[0] + (x - camera[0]) * t, camera[1] + (y - camera[1]) * t];
+})();
 
 /** The part of the sky that stays empty: the bottom right, where only clouds drift. */
 export function inClearCorner(x: number, y: number): boolean {

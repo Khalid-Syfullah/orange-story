@@ -2,7 +2,7 @@
 
 The orange.io website: one continuous scroll story about a growth partner paid from the harvest, not the hours.
 
-The whole site is a single pinned stage, about 53 screens of ordinary scrolling. As the visitor scrolls, painted scenes of an orange tree, its keepers and its harvest pass by in 2.5D (flat painted plates at different depths, filmed by a moving camera), and the text arrives and leaves in set places: four chapters, The Model, The Work, The Terms and Questions, and a finale. Everything is driven by one scroll position, so scrolling back up plays the story backwards exactly. The artwork is placeholder for now: tidy silhouettes standing in for the paintings, at the paths the final plates will use.
+The whole site is a single pinned stage, about 53 screens of ordinary scrolling. As the visitor scrolls, painted scenes of an orange tree, its keepers and its harvest pass by in 2.5D (flat painted plates at different depths, filmed by a moving camera), and the text arrives and leaves in set places: four chapters, The Model, The Work, The Terms and Questions, and a finale. Everything is driven by one scroll position, so scrolling back up plays the story backwards exactly. The artwork is a stand-in for now: procedurally painted oil studies of the cast (`docs/ART-DIRECTION.md`) at the paths the final paintings will use, with a brief for every painting and an importer that turns finished paintings into plates.
 
 ![The opening: a statue on a minaret raises a glowing orange; "Grown to be found."](docs/screenshots/hero.webp)
 
@@ -28,7 +28,7 @@ Versions from `package.json`:
 - **Motion 14.1** (`motion/react`) for the text and DOM animation
 - **Tailwind CSS 4**, **shadcn/ui** on **Radix UI 1.7**, **lucide-react 1.54** icons
 - **react-hook-form 7.89** and **zod 3.25** for the application form
-- **Vitest 4.1** (unit tests), **Playwright 1.64** (the scroll test), **ESLint 9**, **sharp 0.35** (placeholder art)
+- **Vitest 4.1** (unit tests), **Playwright 1.64** (the scroll test), **ESLint 9**, **sharp 0.35** and **@napi-rs/canvas 1.0** (the art tools in `scripts/`; dev only, the app never imports them)
 - Fonts: Newsreader, Geist and Geist Mono, through `next/font`
 
 ## Getting started
@@ -51,7 +51,7 @@ npx playwright install chromium   # once
 npm run test:story                # builds, serves on port 3100, runs e2e/story.spec.ts
 ```
 
-`npm run art:placeholders` redraws every placeholder plate (`-- --check` only verifies that every plate's file exists at its listed size).
+`npm run art:placeholders` repaints every stand-in plate on worker threads (`-- --check` verifies every file against the manifest and fails a flat character plate). `npm run art:briefs` writes the painting briefs, `npm run art:import` brings finished paintings in (see "Replacing the art").
 
 ## Project structure
 
@@ -69,18 +69,27 @@ npm run test:story                # builds, serves on port 3100, runs e2e/story.
 | `src/components/ui/` | shadcn/ui components (button, tag, form fields, sheet, tooltip) |
 | `src/styles/` | The fonts, and the tokens for code (`tokens.ts`) |
 | `src/art/manifest.ts`, `public/art/` | The art manifest and the plates |
-| `scripts/art-placeholders.mjs` | Draws the placeholder plates |
+| `scripts/art-placeholders.mjs`, `scripts/art/` | The stand-in painter: the cast (`cast.mjs`), poses, figures, painting, props, the texture guard |
+| `scripts/art-briefs.mjs`, `scripts/art-import.mjs`, `art/rig/` | Painting briefs (`docs/ART-BRIEFS.md`), the importer, and its committed sidecars (points, key colour, rig); paintings go in `art/source/` (not committed) |
 | `e2e/story.spec.ts`, `playwright.config.ts` | The scroll test |
 | `DESIGN.md` | The design system: palette, contrast, type, shapes, grid, motion |
 | `SCROLL.md` | The script in prose, with the tuned numbers, the storyboard check and performance |
-| `docs/` | Storyboard, art plates, technique reference, how the build ran, screenshots |
+| `docs/` | Storyboard, art direction, art plates, art briefs, technique reference, how the build ran, screenshots |
 | `deploy/`, `.github/workflows/` | CI and the deployment |
 
 ## Editing
 
 **Copy.** Every string is in `src/content/copy.ts`; components never hold text. The script refers to copy by key (`model.found`, `work.cards.0`), and `npm test` fails if a key is missing.
 
-**Art.** Every plate is listed in `public/art/manifest.json`: its file, pixel size, depth, anchor and world height. To add a painting, save it as WebP with alpha at the entry's path and size (or change `size`), then delete the entry's `placeholder` spec so the generator never overwrites it; no code changes. `npm test` checks every file against the manifest. `docs/ART-PLATES.md` lists the plates per scene and what final art must keep (a sky that stays dark enough behind text, nothing cut by its image edge, orchard rows that fade out at their foot).
+**Art.** Every plate is listed in `public/art/manifest.json`: its file, pixel size, depth, anchor, world height and named points (where code ties things to the art). `npm test` checks every file against the manifest. `docs/ART-PLATES.md` lists the plates per scene and what final art must keep (a sky that stays dark enough behind text, nothing cut by its image edge, orchard rows that fade out at their foot, one light).
+
+### Replacing the art
+
+1. `npm run art:briefs` writes `docs/ART-BRIEFS.md`: the generation order (a reference sheet per recurring character first) and, per plate, the size, key colour, prompt, negative prompt and checks.
+2. Generate or paint each one on its flat key colour and save it as `art/source/<scene>/<name>.png` (not committed).
+3. Write its sidecar `art/rig/<scene>/<name>.json` (committed): the key colour, an `anchor` point for plates not standing on their foot, and the named points (the orange in the hand, the fingertip, ...), in the painting's own fractions.
+4. `npm run art:import` cuts each painting out, fits it to its plate, writes the WebP and the points, and marks the entry `painted` so the stand-in generator leaves it alone; `npm run art:import -- --check` checks the result.
+5. If a point is off, place it by hand in the plate lab on `/design` (Points), copy the sidecar JSON, and import again. No code changes.
 
 **Pacing.** Everything that moves is placed in `src/scroll/script.ts`: `STAGE_VH` (the stage length), the scene shares, the beats, the transitions, the camera keys and each scene's own timing object. Positions inside a scene move with it when its share changes; text lengths are in screens. `validateScript()` stops the page in development on an impossible script (and fails `npm test`), the dev timeline (the backtick key) shows the live values, and `SCROLL.md` explains every number. Run `npm test` and `npm run test:story` after a change.
 
@@ -101,4 +110,4 @@ npm run test:story                # builds, serves on port 3100, runs e2e/story.
 
 ## Credits
 
-The artwork is placeholder, drawn by `scripts/art-placeholders.mjs`, until the original paintings are added. Copy and code are original to Orange. Newsreader, Geist and Geist Mono are served from Google Fonts through `next/font`. The site was built phase by phase with Claude Code (`docs/BUILD.md`).
+The artwork is a procedural stand-in, painted by `scripts/art/` from an original cast, until the original paintings are added. Copy and code are original to Orange. Newsreader, Geist and Geist Mono are served from Google Fonts through `next/font`. The site was built phase by phase with Claude Code (`docs/BUILD.md`).

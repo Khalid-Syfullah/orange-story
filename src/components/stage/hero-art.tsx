@@ -3,7 +3,7 @@
 import * as React from "react";
 import { animate, useMotionValue, useTransform, type MotionValue } from "motion/react";
 
-import { plateEntry } from "@/art/manifest";
+import { platePoint } from "@/art/manifest";
 import { ease } from "@/lib/progress";
 import { sceneProgress } from "@/scroll/helpers";
 
@@ -30,8 +30,12 @@ import type { SceneArtProps } from "./scene-layers";
  *   scrolling up.
  */
 
-/** The orange's place in the world: where the glow comes from. */
-export const ORANGE = plateEntry("hero/statue-orange").position;
+/**
+ * The orange's place in the world, in the statue's raised hand (the `orange` point of her plate):
+ * the orange plate stands there and the glow comes from there.
+ */
+const orangePoint = platePoint("hero/statue", "orange");
+export const ORANGE: readonly [number, number] = [orangePoint[0], orangePoint[1]];
 
 /** World units the statue group and the crowd rise from as they appear. */
 const STATUE_RISE = 0.35;
@@ -111,7 +115,7 @@ export function HeroArt({ scene }: SceneArtProps) {
       <Plate id="hero/minaret" opacity={minaret} y={minaretY} blur={minaretBlur} />
       <Plate id="hero/crowd-near" opacity={crowdNear} y={nearY} />
       <Plate id="hero/statue" opacity={statue} y={statueY} blur={statueBlur} />
-      <Plate id="hero/statue-orange" opacity={orange} y={orangeY} blur={orangeBlur} tint={colors.white} tintAmount={whitening} />
+      <Plate id="hero/statue-orange" position={ORANGE} opacity={orange} y={orangeY} blur={orangeBlur} tint={colors.white} tintAmount={whitening} />
       <IntroDriver clock={clock} />
     </>
   );

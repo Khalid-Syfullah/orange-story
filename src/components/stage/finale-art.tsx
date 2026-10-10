@@ -14,6 +14,7 @@ import {
   astronomerOffset,
   CAN_TIP,
   cutFruitAt,
+  SPOUT,
   DROP_COUNT,
   dropAt,
   finaleCloudShift,
@@ -162,9 +163,9 @@ function Keepers({ clearing, fruitClearing }: { clearing: PlateClearing; fruitCl
     <>
       <Plate id="finale/woman-body" x={womanX} y={womanY} layer={LAYER.body} clearing={clearing} />
       <Plate id="finale/woman-arm" x={womanX} y={womanY} rotate={tip} layer={LAYER.arm} clearing={clearing} />
-      <Plate id="finale/water-1" x={womanX} y={womanY} opacity={streams[0]} layer={LAYER.stream} clearing={clearing} />
-      <Plate id="finale/water-2" x={womanX} y={womanY} opacity={streams[1]} layer={LAYER.stream} clearing={clearing} />
-      <Plate id="finale/water-3" x={womanX} y={womanY} opacity={streams[2]} layer={LAYER.stream} clearing={clearing} />
+      <Plate id="finale/water-1" position={SPOUT} x={womanX} y={womanY} opacity={streams[0]} layer={LAYER.stream} clearing={clearing} />
+      <Plate id="finale/water-2" position={SPOUT} x={womanX} y={womanY} opacity={streams[1]} layer={LAYER.stream} clearing={clearing} />
+      <Plate id="finale/water-3" position={SPOUT} x={womanX} y={womanY} opacity={streams[2]} layer={LAYER.stream} clearing={clearing} />
 
       <Plate id="finale/man-body" x={manX} y={manY} layer={LAYER.body} clearing={clearing} />
       <Plate id="finale/man-arms-1" x={manX} y={armY} layer={LAYER.arm} clearing={clearing} />

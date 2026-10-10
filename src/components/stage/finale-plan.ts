@@ -1,3 +1,4 @@
+import { platePoint } from "@/art/manifest";
 import { clamp01, ease, remap } from "@/lib/progress";
 import { beatOf } from "@/scroll/helpers";
 import { FINALE } from "@/scroll/script";
@@ -213,8 +214,13 @@ function fruit(out: FruitFrame | undefined, x: number, y: number, rotate: number
 /** A fruit that is not there. */
 const hidden = (out?: FruitFrame): FruitFrame => fruit(out, 0, 0, 0, 0, 1);
 
-/** Where he cuts: the tips of the open shears. */
-export const CUT_POINT = [1.42, 6.42] as const;
+/** Where he cuts: the tips of the open shears (the `shears-tip` point of his arms plate). */
+const shearsTip = platePoint("finale/man-arms-1", "shears-tip");
+export const CUT_POINT: readonly [number, number] = [shearsTip[0], shearsTip[1]];
+
+/** Where the water leaves her jug (the `spout` point of her arm plate): the stream frames hang from here. */
+const spoutPoint = platePoint("finale/woman-arm", "spout");
+export const SPOUT: readonly [number, number] = [spoutPoint[0], spoutPoint[1]];
 
 /** The orange he cuts free: it hangs from its stem while he snips, then drops when the last snip shuts. Writes into `out` when given. */
 export function cutFruitAt(t: number, out?: FruitFrame): FruitFrame {

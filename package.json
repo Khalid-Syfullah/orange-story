@@ -9,7 +9,9 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:story": "playwright test",
-    "art:placeholders": "node scripts/art-placeholders.mjs"
+    "art:placeholders": "node scripts/art-placeholders.mjs",
+    "art:briefs": "node scripts/art-briefs.mjs",
+    "art:import": "node scripts/art-import.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
@@ -32,6 +34,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@napi-rs/canvas": "^1.0.11",
     "@playwright/test": "^1.64.0",
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^20",

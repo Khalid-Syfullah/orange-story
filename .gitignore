@@ -13,6 +13,9 @@ node_modules/
 /out/
 /build
 
+# finished paintings before import (large; `npm run art:import` turns them into plates)
+/art/source/
+
 # build tooling (never committed)
 logs/
 _to_delete/

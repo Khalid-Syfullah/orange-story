@@ -1,4 +1,4 @@
-import { plateEntry } from "@/art/manifest";
+import { plateEntry, platePoint } from "@/art/manifest";
 import { clamp01, ease, lerp, remap } from "@/lib/progress";
 import { CAMERA, PLUCK } from "@/scroll/script";
 
@@ -26,8 +26,12 @@ const eased = (p: number, [a, b]: readonly [number, number]) => ease(remap(p, a,
 /** A single bump that rises and falls over a range (0 outside it). */
 const bump = (p: number, [a, b]: readonly [number, number]) => Math.sin(Math.PI * remap(p, a, b));
 
-/** Where the orange rests in the harvester's hand (centre of the ball, world units). */
-export const HELD: Readonly<[number, number]> = [1.51, 4.5];
+/**
+ * Where the orange rests in the harvester's hand (centre of the ball, world units): the `orange`
+ * point of his arm plate, so a painting that holds the fruit elsewhere moves it with its sidecar.
+ */
+const heldPoint = platePoint("pluck/harvester-arm", "orange");
+export const HELD: Readonly<[number, number]> = [heldPoint[0], heldPoint[1]];
 
 /** World size of the held orange relative to the hero orange (the arm plate's own is a little smaller). */
 export const HELD_SCALE = 0.87;

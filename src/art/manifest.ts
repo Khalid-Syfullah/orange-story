@@ -24,7 +24,7 @@ export type PlateId = `${SceneId}/${string}`;
 
 export type Pair = readonly [number, number];
 
-/** How `npm run art:placeholders` draws the placeholder. Removed when final art lands. */
+/** How `npm run art:placeholders` draws the placeholder (`kind: "study"`: a character's painted stand-in). Removed when final art lands. */
 export interface PlaceholderSpec {
   kind: string;
   [param: string]: unknown;
@@ -64,13 +64,30 @@ export interface PlateEntry {
   frame?: number;
   /**
    * Named points on the image, as fractions from the left and from the top, that code ties things
-   * to (the oranges the question cards' connector lines are fixed on). Final art keeps a painted
-   * feature at each point, or moves the point to where the painting has it.
+   * to through `platePoint()`: the orange in a hand, a fingertip, a blade tip, the oranges the
+   * question cards' connector lines are fixed on. A painting brings its own (its sidecar's points,
+   * written here by `npm run art:import`), so positions come from the art, not from constants.
    */
   points?: Readonly<Record<string, Pair>>;
+  /**
+   * How a painted figure can be moved (used by the living stage): hem, chest and head rectangles
+   * ([left, top, right, bottom] fractions) and a pivot point, from the painting's sidecar.
+   */
+  rig?: PlateRig;
   /** What the plate shows. */
   note: string;
+  /** How `npm run art:placeholders` draws the stand-in. Removed when a painting replaces the file. */
   placeholder?: PlaceholderSpec;
+  /** The file is a finished painting brought in by `npm run art:import` (the generator never overwrites it). */
+  painted?: boolean;
+}
+
+/** Regions of a painted figure, as fractions of its image, for the stage to move it by. */
+export interface PlateRig {
+  hem?: readonly [number, number, number, number];
+  chest?: readonly [number, number, number, number];
+  head?: readonly [number, number, number, number];
+  pivot?: Pair;
 }
 
 export interface ArtManifest {

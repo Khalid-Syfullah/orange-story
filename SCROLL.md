@@ -433,10 +433,10 @@ Scene by scene against `docs/STORYBOARD.md`. Everything the storyboard asks for 
 
 TODO, outside the code:
 
-- **Art.** Every plate is a placeholder; the painted plates go in at the paths in `public/art/manifest.json` (see `docs/ART-PLATES.md`).
+- **Art.** Every plate is a stand-in (the characters as procedurally painted oil studies); the paintings are briefed in `docs/ART-BRIEFS.md` and go in with `npm run art:import` at the paths in `public/art/manifest.json` (see `docs/ART-PLATES.md`). The places the scenes tie to the figures (the orange in a hand, the fingertip the stars grow from, the blade tip, the spout, the shears) are named points on the plates, so a painting moves them with its sidecar.
 - **The contact email** "hello@orange.io" is marked "TODO: confirm the real address" in the storyboard; it lives in `src/content/copy.ts`.
 - **The application endpoint.** The form posts to `NEXT_PUBLIC_APPLY_ENDPOINT`; without it the form shows its success message but sends nothing (see the README).
-- **The architect's arms** (scene 7): with final art, arm frames for him unfolding the drawing.
+- **The architect's arms** (scene 7): with final art, arm frames for her unfolding the drawing.
 
 ## Reduced motion
 

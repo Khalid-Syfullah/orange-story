@@ -99,7 +99,7 @@ export function AscentArt({ scene }: SceneArtProps) {
         <Leaf key={leaf.id} leaf={leaf} progress={progress} />
       ))}
       <Plate id="hero/statue" y={rise} opacity={statue} />
-      <Plate id="hero/statue-orange" y={rise} opacity={statue} tint={colors.white} tintAmount={ORANGE_WHITENING} />
+      <Plate id="hero/statue-orange" position={ORANGE} y={rise} opacity={statue} tint={colors.white} tintAmount={ORANGE_WHITENING} />
     </>
   );
 }

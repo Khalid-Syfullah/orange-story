@@ -1,4 +1,4 @@
-import { plateEntry, plateWorldSize } from "@/art/manifest";
+import { plateEntry, platePoint, plateWorldSize } from "@/art/manifest";
 import { clamp01, ease, lerp, remap } from "@/lib/progress";
 import { SHARE } from "@/scroll/script";
 
@@ -14,9 +14,10 @@ import { HELD, HELD_SCALE, heldOffset } from "./pluck-harvest";
  * cut faces revealed as they part. A second hand reaches in from center left, takes the left half and
  * draws it a little away, then both hands bring the halves together and hold them.
  *
- * The halves are placed by their cut edges. The placeholder halves have the cut edge 0.12 of the plate
- * width from the plate center (left half: to the right of it; right half: to the left); final art
- * keeps that or changes `HALF_EDGE`.
+ * Places come from the art: the halves are placed by their cut edges (the `cut-edge` point of each
+ * half's plate), the knife by its blade tip (the `knife-tip` point of the knife-hand plate), and the
+ * whole orange by the harvester's `HELD` (the `orange` point of his arm). A new painting only needs
+ * its sidecar's points.
  */
 
 export interface Offset {
@@ -26,8 +27,16 @@ export interface Offset {
 
 const eased = (p: number, [a, b]: readonly [number, number]) => ease(remap(p, a, b));
 
-/** Distance of a half's cut edge from its plate center, as a fraction of the plate width. */
-export const HALF_EDGE = 0.12;
+/** Distance of a half's cut edge from its anchor (the plate centre), as a fraction of the plate width: from its `cut-edge` point. */
+function cutEdge(id: string, side: 1 | -1): number {
+  const e = plateEntry(id);
+  const p = e.points?.["cut-edge"];
+  if (!p) throw new Error(`Plate "${id}" has no point "cut-edge"`);
+  return side * (p[0] - e.anchor[0]);
+}
+
+/** The halves' cut edges from their plate centres (left half: right of it; right half: left of it). */
+export const HALF_EDGE = { left: cutEdge("share/peel-left", 1), right: cutEdge("share/peel-right", -1) } as const;
 
 /** The halves are drawn this much smaller while together in the harvester's hand (the whole orange's size). */
 export const CLOSED_SCALE = 0.9;
@@ -35,26 +44,21 @@ export const CLOSED_SCALE = 0.9;
 /** World x of the cut where the two halves meet (the middle of the held orange). */
 export const CUT_X = HELD[0];
 
-/** World x of the cut edges while the halves are opened, drawn away and held together. */
+/** World x of the cut edges while the halves are opened and drawn away (relative to the cut, so they follow the held orange). */
 export const EDGE = {
-  openLeft: 1.4,
-  openRight: 1.59,
+  openLeft: CUT_X - 0.11,
+  openRight: CUT_X + 0.08,
   /** The second hand draws the left half this far out. */
-  takenLeft: 1.22,
+  takenLeft: CUT_X - 0.29,
 } as const;
 
 const left = () => plateEntry("share/peel-left");
 const right = () => plateEntry("share/peel-right");
 const knife = () => plateEntry("share/knife-hand");
 
-/** Cut edge of a half at scale 1 when it stands at its manifest place (the held pose). */
+/** Cut edge of a half at scale 1 when it stands at its manifest place (the held pose): its `cut-edge` point. */
 export function heldEdges(): { left: number; right: number } {
-  const l = left();
-  const r = right();
-  return {
-    left: l.position[0] + HALF_EDGE * plateWorldSize(l)[0],
-    right: r.position[0] - HALF_EDGE * plateWorldSize(r)[0],
-  };
+  return { left: platePoint("share/peel-left", "cut-edge")[0], right: platePoint("share/peel-right", "cut-edge")[0] };
 }
 
 /** The whole orange in his right hand, before the cut: the hero orange at the place the pluck ended. */
@@ -106,12 +110,26 @@ export function halvesAt(p: number): HalvesPose {
     peel: eased(p, SHARE.split),
     face: clamp01(remap(openAt(p), 0.25, 1)),
     scale,
-    left: { x: leftEdgeAt(p) - HALF_EDGE * lw - l.position[0], y },
-    right: { x: rightEdgeAt(p) + HALF_EDGE * rw - r.position[0], y },
+    left: { x: leftEdgeAt(p) - HALF_EDGE.left * lw - l.position[0], y },
+    right: { x: rightEdgeAt(p) + HALF_EDGE.right * rw - r.position[0], y },
   };
 }
 
-/* The knife hand: the plate is turned so the blade points down, and plunges through the orange. */
+/* The knife hand: the plate is turned so the blade points down, and plunges through the orange.
+   The path below is the blade tip's; the plate turns about its anchor, so the plate's own offsets
+   take away where the turned tip sits from the anchor (nothing, while the tip is the anchor). */
+
+/** The blade tip from the knife plate's anchor, in world units at scale 1 (from its `knife-tip` point). */
+function tipFromAnchor(): [number, number] {
+  const k = knife();
+  const p = k.points?.["knife-tip"];
+  if (!p) throw new Error(`Plate "share/knife-hand" has no point "knife-tip"`);
+  const [w, h] = plateWorldSize(k);
+  return [(p[0] - k.anchor[0]) * w, (k.anchor[1] - p[1]) * h];
+}
+
+/** `v` turned by `a` radians (counterclockwise, as the plate turns). */
+const turn = ([x, y]: [number, number], a: number): [number, number] => [x * Math.cos(a) - y * Math.sin(a), x * Math.sin(a) + y * Math.cos(a)];
 
 /** The blade points down (the plate's blade points left; this turns it a little short of a quarter). */
 export const KNIFE_TILT = 1.25;
@@ -132,11 +150,13 @@ export function knifeAt(p: number): Offset & { rotate: number; opacity: number }
   y = lerp(y, KNIFE_THROUGH.y, plunge);
   x = lerp(x, KNIFE_AWAY.x, leave);
   y = lerp(y, KNIFE_AWAY.y, leave);
+  // It swings round as it arrives and tips back a little as it withdraws.
+  const rotate = KNIFE_TILT + 0.5 * (1 - arrive) + 0.25 * leave;
+  const [tx, ty] = turn(tipFromAnchor(), rotate);
   return {
-    x,
-    y,
-    // It swings round as it arrives and tips back a little as it withdraws.
-    rotate: KNIFE_TILT + 0.5 * (1 - arrive) + 0.25 * leave,
+    x: x - tx,
+    y: y - ty,
+    rotate,
     opacity: clamp01(remap(arrive, 0, 0.4)) * (1 - clamp01(remap(leave, 0.6, 1))),
   };
 }
@@ -145,7 +165,8 @@ export function knifeAt(p: number): Offset & { rotate: number; opacity: number }
 export function knifeTip(p: number): Offset {
   const k = knife();
   const o = knifeAt(p);
-  return { x: k.position[0] + o.x, y: k.position[1] + o.y };
+  const [tx, ty] = turn(tipFromAnchor(), o.rotate);
+  return { x: k.position[0] + o.x + tx, y: k.position[1] + o.y + ty };
 }
 
 /* The second hand: from center left to the left half, takes it, and holds it with the other. */
