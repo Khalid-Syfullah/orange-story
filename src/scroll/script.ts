@@ -593,6 +593,36 @@ export const BLUEPRINT = {
   work: [at("blueprint", 0), at("blueprint", 0.5)] as ProgressRange,
 } as const;
 
+/**
+ * The site's own timings (progress). The art in `src/components/stage/site-plan.ts` choreographs on
+ * these: the builders work at ground level, the camera rises to a straight top-down view (`rise`,
+ * the first two site camera keys), the side-view plates give way to the matching top-down set
+ * (`sideOut`, `topDownIn`), the top-down view zooms out and shrinks into the left half (`shrink`,
+ * the pull camera move) while the tiled ground grows into a large field around it (`tiles`), and
+ * the right half becomes the milk-white panel with its leaf shadows (`panel`) until the dust covers
+ * it (`end`).
+ */
+export const SITE = {
+  /** The builders' to-and-fro while the camera is still near the ground. */
+  work: [at("site", 0.12), at("site", 0.36)] as ProgressRange,
+  /** The camera rises from ground level to straight above. */
+  rise: [at("site", 0.2), at("site", 0.42)] as ProgressRange,
+  /** The seaside figures and the platform fade out as the view tilts down. */
+  sideOut: [at("site", 0.32), at("site", 0.4)] as ProgressRange,
+  /** The sea and its sky leave last (no sky in the top-down view). */
+  seaOut: [at("site", 0.38), at("site", 0.42)] as ProgressRange,
+  /** The matching top-down set and the first tiles fade in. */
+  topDownIn: [at("site", 0.28), at("site", 0.38)] as ProgressRange,
+  /** The top-down view zooms out and shrinks into the left half of the screen. */
+  shrink: [at("site", 0.42), at("site", 0.7)] as ProgressRange,
+  /** The tiled ground grows into a large field around the scaffold. */
+  tiles: [at("site", 0.38), at("site", 0.72)] as ProgressRange,
+  /** The right half becomes the milk-white panel. */
+  panel: [at("site", 0.4), at("site", 0.5)] as ProgressRange,
+  /** The dust has covered the screen: the panel and the site are gone. */
+  end: DUST_COVERED,
+} as const;
+
 export const CAMERA: readonly CameraKey[] = [
   // Hero: wide and still.
   key("hero", at("hero", 0), "hold", HERO_WIDE, [0, 0, 0], 35),
@@ -622,9 +652,10 @@ export const CAMERA: readonly CameraKey[] = [
   key("blueprint", at("blueprint", 0.35), "push", [0, 9, 13], [0, 9.5, 0], 38),
   key("blueprint", UNFOLD_COVERED, "reframe", [0, 9.6, 2.6], [0, 9.6, 0], 34),
   // Site: rise from ground level to top-down, then pull out as the view shrinks into the left half.
-  key("site", UNFOLD_CLEARING, "dolly-up", [0, 1.2, 12], [0, 1, 0], 38),
-  key("site", at("site", 0.42), "pull", TOP_DOWN, [0, 0, 0], 38),
-  key("site", at("site", 0.7), "hold", TOP_DOWN_FAR, [0, 0, 0], 38),
+  key("site", UNFOLD_CLEARING, "hold", [0, 1.2, 12], [0, 1, 0], 38),
+  key("site", SITE.rise[0], "dolly-up", [0, 1.2, 12], [0, 1, 0], 38),
+  key("site", SITE.rise[1], "pull", TOP_DOWN, [0, 0, 0], 38),
+  key("site", SITE.shrink[1], "hold", TOP_DOWN_FAR, [0, 0, 0], 38),
   key("site", DUST_COVERED, "reframe", TOP_DOWN_FAR, [0, 0, 0], 38),
   // Prune: the gardener at work.
   key("prune", DUST_CLEARING, "hold", GARDENER, [0, 0.5, 0], 35),
@@ -701,7 +732,7 @@ const UNFOLD = transitionOf("unfold");
 /** Milk-white moments: the paper unfold, and the top-down site with its milk panel. Sky elsewhere. */
 export const TONES: readonly ToneCue[] = [
   { tone: "milk", start: round6(UNFOLD_COVERED - 0.25 * SCREEN), end: UNFOLD.end },
-  { tone: "milk", start: at("site", 0.4), end: DUST_COVERED },
+  { tone: "milk", start: SITE.topDownIn[1], end: SITE.end }, // once the sand and tiles have replaced the sea
 ];
 
 /* ------------------------------------------------------------------ */

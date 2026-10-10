@@ -21,6 +21,7 @@ import type { BeatId } from "@/scroll/types";
 import { validateScript } from "@/scroll/validate";
 
 import { Beat } from "./beat";
+import { SitePanel } from "./site-panel";
 import { TransitionLayer } from "./transition-layer";
 
 /**
@@ -96,6 +97,8 @@ export function StoryStage({ year }: { year: number }) {
           <div aria-hidden data-layer="scene" className="pointer-events-none absolute inset-0">
             {live ? <StageCanvas progress={progress} /> : null}
           </div>
+
+          {live ? <SitePanel progress={progress} /> : null}
 
           <TransitionLayer progress={progress} live={live} />
 

@@ -1,0 +1,85 @@
+import { ease, remap } from "@/lib/progress";
+import { SITE } from "@/scroll/script";
+
+/**
+ * Scene 8, the building site by the sea, as pure functions (no React, no three). Timings live in
+ * `SITE` (`src/scroll/script.ts`); places come from the art manifest. Every value is a function of
+ * progress alone, so it plays backwards exactly.
+ *
+ * - The builders work (a small to-and-fro) while the camera is still near the ground.
+ * - As the camera rises, the side-view plates cross-fade into the matching top-down set; the sea and
+ *   its sky leave last, so the top-down view has no sky.
+ * - The top-down view zooms out (camera pull) and shrinks into the left half of the screen
+ *   (`shrinkAt`, a shift of the whole site), while the tiled ground grows into a large field around it
+ *   (`tileField`).
+ */
+
+/** Where the shrunken site is centered, as a fraction of the half view width left of center: the middle of the left half. */
+export const LEFT_HALF_CENTER = 0.5;
+
+/** Side length of the tiled field when it is first uncovered, in world units: just the top-down plate's own size. */
+export const FIELD_FROM = 9;
+/** Side length of the full field, in world units: far larger than the view at the farthest camera. */
+export const FIELD_TO = 64;
+/** World size of one tile (the field grows by adding tiles, not by stretching them). */
+export const TILE_SIZE = 2;
+
+const fade = (p: number, [a, b]: readonly [number, number]) => ease(remap(p, a, b));
+
+/** Opacity of the side-view figures, stage, platform and orange: 1 at ground level, 0 once looking down. */
+export function sideOpacity(p: number): number {
+  return 1 - fade(p, SITE.sideOut);
+}
+
+/** Opacity of the seaside backdrop: it outlasts the figures and is gone before the camera is straight above. */
+export function seaOpacity(p: number): number {
+  return 1 - fade(p, SITE.seaOut);
+}
+
+/** Opacity of the matching top-down set. */
+export function topDownOpacity(p: number): number {
+  return fade(p, SITE.topDownIn);
+}
+
+/** How far the top-down view has shrunk into the left half, 0 to 1. */
+export function shrinkAt(p: number): number {
+  return fade(p, SITE.shrink);
+}
+
+/** Horizontal shift of the site, in world units, for the half-width of the view at the ground. */
+export function siteShift(p: number, halfWidth: number): number {
+  return -LEFT_HALF_CENTER * halfWidth * shrinkAt(p);
+}
+
+/** The tiled ground: its side length (world units) and how many tiles it repeats across and down. */
+export function tileField(p: number): { size: number; tiles: number } {
+  const size = FIELD_FROM + (FIELD_TO - FIELD_FROM) * fade(p, SITE.tiles);
+  return { size, tiles: size / TILE_SIZE };
+}
+
+/** Opacity of the tiled ground: it appears with the top-down set. */
+export function tilesOpacity(p: number): number {
+  return topDownOpacity(p);
+}
+
+/** Opacity of the milk-white panel in the right half: it fades in with the shrink and is gone once the dust has covered it. */
+export function panelOpacity(p: number): number {
+  return p >= SITE.end ? 0 : fade(p, SITE.panel);
+}
+
+/** The panel's leaf shadows arrive a little after the milk, so the panel is calm first. */
+export function leavesOpacity(p: number): number {
+  return p >= SITE.end ? 0 : ease(remap(p, SITE.panel[0] + (SITE.panel[1] - SITE.panel[0]) * 0.5, SITE.panel[1] + (SITE.shrink[1] - SITE.panel[1]) * 0.4));
+}
+
+/** True while the panel (and its time-based leaf drift) should be mounted: a little before and after its life. */
+export function panelMounted(p: number, margin = 0.004): boolean {
+  return p >= SITE.panel[0] - margin && p < SITE.end + margin;
+}
+
+/** A builder's small to-and-fro while he works, in radians. `index` offsets each builder's rhythm. */
+export function builderSwing(index: number, p: number): number {
+  const t = remap(p, SITE.work[0], SITE.work[1]);
+  const settle = 1 - ease(remap(p, SITE.work[1], SITE.sideOut[1]));
+  return Math.sin(t * Math.PI * (9 + index * 2) + index * 1.7) * 0.035 * settle;
+}

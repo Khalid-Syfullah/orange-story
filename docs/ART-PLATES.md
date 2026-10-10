@@ -13,7 +13,7 @@ All plates live in `public/art/<scene>/<plate>.webp` (with alpha), listed in `pu
 | share | knife hand; orange halves (outer peel and cut face separate); second person's hand |
 | work | cloud sprites (4 to 6, halftone treatment); giant orange on minaret; builder |
 | blueprint | scaffold and minaret; builder; architect; plan in 4 fold panels |
-| site | seaside ground and sea; marble platform; timber stage and steps; orange under construction; three builders; matching top-down plate of the same set; tiled ground pattern; blurred leaf-shadow texture |
+| site | seaside ground and sea; marble platform; timber stage and steps; orange under construction; three builders; matching top-down plate of the same set; plain ground (sand, far larger than the view); tiled ground pattern; blurred leaf-shadow texture |
 | prune | marble column and urn; young orange tree (branches as separate layers so one can fall); gardener |
 | fall | falling orange; two rows of orange trees left and right (2 depths each); rainbow ring mask |
 | faq | orchard plates reused; sparkle sprite |

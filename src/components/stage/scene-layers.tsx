@@ -18,6 +18,7 @@ import { Plate } from "./plate";
 import { PluckArt } from "./pluck-art";
 import { mountedScenes, scenePresence } from "./presence";
 import { ShareArt } from "./share-art";
+import { SiteArt } from "./site-art";
 import { WorkArt } from "./work-art";
 import { SceneLayerContext, type SceneLayer } from "./stage-context";
 import { configureTextures, preloadTextures } from "./textures";
@@ -45,6 +46,7 @@ export const SCENE_ART: Partial<Record<SceneId, React.ComponentType<SceneArtProp
   share: ShareArt,
   work: WorkArt,
   blueprint: BlueprintArt,
+  site: SiteArt,
 };
 
 const SCENE_IDS: readonly SceneId[] = SCENES.map((s) => s.id);

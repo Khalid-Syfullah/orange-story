@@ -80,7 +80,7 @@ Positions are in screens of scrolling from the top of the stage (0 to 49).
 
 **7. Blueprint, 16.27 to 19.60.** The camera holds on the scaffold, then pushes into the plan from 17.43 as it unfolds. The paper unfold starts at 19.13 and covers the screen fully from 19.52 to 19.68 (the camera reframes unseen at 19.52), then opens onto the next scene by 20.07. The chrome and hairlines turn ink on milk from 19.27 to 20.07. The ruler switches to The Terms at 19.60.
 
-**8. Site, 19.60 to 23.52.** From ground level at 19.68 the camera rises to a straight top-down view by 21.25, then pulls out (21.25 to 22.34) as the view shrinks into the left half and holds. The right half is milk white from 21.17 until the dust covers it at 23.48 (ink chrome and text). The terms block sits in the right column from 21.40 to 23.28. The rising dust starts at 23.21, covers the screen from 23.48 to 23.56 and clears by 23.85.
+**8. Site, 19.60 to 23.52.** The camera holds at ground level from 19.68 (builders working a little: `SITE.work`), then rises to a straight top-down view by 21.25 (from 20.38). The matching top-down set, the plain sand ground and the first tiles fade in from 20.70 to 21.09 while the side plates fade out from 20.85 to 21.17; the sea and its sky leave last (21.09 to 21.25), so the top-down view has no sky. Then the camera pulls out (21.25 to 22.34) while the whole site shifts into the middle of the left half (`siteShift`, aware of the aspect ratio) and the tiled field grows around it (`SITE.tiles`, 21.09 to 22.42). The right half becomes the milk-white panel from 21.17 to 21.56 (`SitePanel`: DOM, with two slowly drifting, heavily blurred leaf-shadow layers made from the `site/leaf-shadow` plate) until the dust covers it at 23.48 (ink chrome and text from 21.09). The terms block sits in the right column from 21.40 to 23.28. The rising dust starts at 23.21, covers the screen from 23.48 to 23.56 and clears by 23.85.
 
 **9. Prune, 23.52 to 27.20.** The camera holds on the gardener from 23.56. "The Terms" starts rising from the bottom in very large type at 23.96 and shrinks as it climbs until it docks in the top-left corner by 25.36. The fit text and its "In plain terms" aside arrive bottom left at 25.18. Both stay until the orange falls.
 
@@ -227,7 +227,8 @@ The camera rig (`src/components/stage/camera-rig.tsx`) builds one paused GSAP ti
 | blueprint | 0.3320 | hold | 0, 9, 13 | 0, 9.5, 0 | 38 |
 | blueprint | 0.3558 | push | 0, 9, 13 | 0, 9.5, 0 | 38 |
 | blueprint | 0.3984 | reframe | 0, 9.6, 5 | 0, 9.6, 0 | 34 |
-| site | 0.4016 | dolly-up | 0, 1.2, 12 | 0, 1, 0 | 38 |
+| site | 0.4016 | hold | 0, 1.2, 12 | 0, 1, 0 | 38 |
+| site | 0.4160 | dolly-up | 0, 1.2, 12 | 0, 1, 0 | 38 |
 | site | 0.4336 | pull | 0, 13, 0.01 | 0, 0, 0 | 38 |
 | site | 0.4560 | hold | 0, 24, 0.01 | 0, 0, 0 | 38 |
 | site | 0.4792 | reframe | 0, 24, 0.01 | 0, 0, 0 | 38 |
@@ -268,7 +269,7 @@ The hairline grid moves on cues, each an envelope: it starts, reaches full stren
 | viewfinder (finale) | 0.9490 | 0.9847 | never | never |
 
 - Progress line `found-line`: draws along the top hairline from 0.1462 to 0.1584 as "We get you found." arrives, and erases from 0.1666 to 0.1727 as it leaves.
-- Tone: the chrome, the hairlines and the text turn ink on milk during the paper unfold (0.3933 to 0.4096) and over the top-down site with its milk panel (0.4320 to 0.4792). Everywhere else they are white on sky.
+- Tone: the chrome, the hairlines and the text turn ink on milk during the paper unfold (0.3933 to 0.4096) and over the top-down site with its milk panel (0.4304 to 0.4792). Everywhere else they are white on sky.
 
 ## Navigation
 

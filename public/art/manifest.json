@@ -715,13 +715,13 @@
       "scenes": ["site"],
       "role": "plate",
       "src": "/art/site/sea.webp",
-      "size": [2048, 1024],
+      "size": [2048, 1280],
       "depth": 12.5,
-      "anchor": [0.5, 0.62],
+      "anchor": [0.5, 0.496],
       "position": [0, 1.2],
-      "height": 17,
-      "note": "Seaside: sky, the sea, and the level ground in front of it (horizon at 62% from the top).",
-      "placeholder": { "kind": "sea" }
+      "height": 21.25,
+      "note": "Seaside: sky, a narrow band of sea, and the level ground in front of it, which runs to the bottom edge (horizon at 49.6% from the top, shore about 6% below it).",
+      "placeholder": { "kind": "sea", "horizon": 0.496, "band": 0.06 }
     },
     {
       "id": "site/platform",
@@ -814,6 +814,20 @@
       "rotation": [-90, 0, 0],
       "note": "The same set from straight above: the orange's crown, the marble, the timber stage, the builders' heads. Lies flat on the ground.",
       "placeholder": { "kind": "topdown" }
+    },
+    {
+      "id": "site/ground",
+      "scenes": ["site"],
+      "role": "plate",
+      "src": "/art/site/ground.webp",
+      "size": [256, 256],
+      "depth": 0,
+      "anchor": [0.5, 0.5],
+      "position": [0, -0.02],
+      "height": 120,
+      "rotation": [-90, 0, 0],
+      "note": "Plain ground seen from above, far larger than any view: the sand of the seaside ground, under the tiled field, so the top-down view never shows sky or empty stage.",
+      "placeholder": { "kind": "ground" }
     },
     {
       "id": "site/tiles",

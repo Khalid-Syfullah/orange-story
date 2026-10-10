@@ -533,13 +533,14 @@ const KINDS = {
     return out;
   },
 
-  sea: (W, H) => {
-    const horizon = H * 0.62;
+  sea: (W, H, s) => {
+    const horizon = H * (s.horizon ?? 0.62);
+    const band = H * (s.band ?? 0.2);
     let out = `<defs><linearGradient id="s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${C.sky}"/><stop offset="1" stop-color="${C.skySoft}"/></linearGradient><linearGradient id="w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${mix(C.sky, C.skySoft, 0.3)}"/><stop offset="1" stop-color="${shade(C.sky, 0.15)}"/></linearGradient></defs>`;
-    out += rect(0, 0, W, horizon, "url(#s)") + rect(0, horizon, W, H * 0.2, "url(#w)") + rect(0, horizon + H * 0.2, W, H - horizon - H * 0.2, SAND);
+    out += rect(0, 0, W, horizon, "url(#s)") + rect(0, horizon, W, band, "url(#w)") + rect(0, horizon + band, W, H - horizon - band, SAND);
     const rand = seeded("sea");
     for (let i = 0; i < 26; i++) {
-      const y = horizon + H * 0.01 + rand() * H * 0.18;
+      const y = horizon + band * 0.05 + rand() * band * 0.9;
       const x = rand() * W;
       out += line(x, y, x + W * (0.02 + rand() * 0.05), y, C.white, Math.max(1, H * 0.003), { opacity: 0.35 });
     }
@@ -591,6 +592,9 @@ const KINDS = {
     ]) out += ellipse(W * x, H * y, W * 0.07, W * 0.038, C.white, { stroke: shade(C.white, 0.2), "stroke-width": W * 0.003 }) + circle(W * x, H * y, W * 0.02, C.ink, { opacity: 0.9 });
     return out;
   },
+
+  // The plain ground the tiled field grows over: the same sand as the seaside ground, seen from above.
+  ground: (W, H) => rect(0, 0, W, H, SAND),
 
   tiles: (W, H) => {
     const k = 4;
