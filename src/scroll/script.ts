@@ -28,8 +28,10 @@ import type {
   BeatLeave,
   CameraKey,
   CameraMove,
+  CardCorner,
   ChapterDef,
   ProgressLineCue,
+  QuestionCardDef,
   SceneId,
   SlotId,
   StoryScript,
@@ -137,13 +139,16 @@ function beat({ from, to, length = BEAT_SCREENS, ramp = RAMP, ...plan }: BeatPla
 }
 
 /**
- * Five question cards share one place, one after another along the questions scene. Five cards
- * fit its 6.9 screens at 1.2 screens each with a short gap, so a leaving card has fully swung away
- * before the next one zooms in.
+ * Five question cards take turns in one place, the center, along the questions scene: each holds
+ * 1.3 screens (the reference beat), arrives over 0.35 screen and leaves over 0.35. They abut: a card
+ * has swung fully away to the left at the very point where the next one starts to arrive from the
+ * right, so the deck moves on without a pause and the slot never holds two cards (see `FAQ`).
  */
 const QUESTION_FIRST = 0.035;
-const QUESTION_STEP = 0.194;
-const QUESTION_SCREENS = 1.2;
+const QUESTION_SCREENS = 1.3;
+const QUESTION_RAMP: readonly [number, number] = [0.35, 0.35];
+
+const questionStart = (n: number) => round6(at("faq", QUESTION_FIRST) + (n - 1) * QUESTION_SCREENS * SCREEN);
 
 const question = (n: 1 | 2 | 3 | 4 | 5): BeatDef =>
   beat({
@@ -153,8 +158,9 @@ const question = (n: 1 | 2 | 3 | 4 | 5): BeatDef =>
     enter: "zoom",
     leave: n === 5 ? "smoke" : "swing-left",
     copy: `questions.items.${n - 1}`,
-    from: at("faq", QUESTION_FIRST + QUESTION_STEP * (n - 1)),
-    length: QUESTION_SCREENS,
+    from: questionStart(n),
+    to: questionStart(n + 1),
+    ramp: QUESTION_RAMP,
   });
 
 const QUESTIONS = [question(1), question(2), question(3), question(4), question(5)] as const;
@@ -662,6 +668,50 @@ export const FALL = {
   fade: [at("fall", 0.84), at("fall", 1)] as ProgressRange,
 } as const;
 
+/**
+ * The questions' deck (`src/components/story/question-plan.ts`, drawn by `question-deck.tsx`). All
+ * five cards live in one pinned container and move along one arc: the first zooms up from small in
+ * the center, the others arrive from the right; each swings left along the arc as it leaves (the
+ * last one dissolves upward as smoke instead, with the section title). One shared connector ties the
+ * card on screen to an orange in the orchard: the line's end is fixed on that orange (a named point
+ * on a near orchard plate, projected to the screen every frame) and its small square stays locked to
+ * the card's corner while the card moves. The anchors alternate between the left and right rows, and
+ * each card locks to a different corner than the one before it, so the line runs at about 45 degrees
+ * while the card is read. The line draws out from the orange to the corner as the card arrives
+ * (`draw`). The camera climbs between the rows one step per card (`climb`, see CAMERA), each step
+ * landing while its card arrives, so the orange holds still on screen while the card is read.
+ */
+const lineDraw = (q: BeatDef): ProgressRange => [round6(q.in + 0.45 * (q.hold[0] - q.in)), round6(q.hold[0] + 0.2 * SCREEN)];
+
+const questionCard = (n: 1 | 2 | 3 | 4 | 5, row: "left" | "right", corner: CardCorner): QuestionCardDef => ({
+  beat: `question-${n}`,
+  arrive: n === 1 ? "zoom" : "arc",
+  anchor: { plate: `fall/trees-${row}-near`, point: `question-${n}` },
+  corner,
+  draw: lineDraw(QUESTIONS[n - 1]),
+});
+
+export const FAQ = {
+  cards: [
+    questionCard(1, "left", "top-left"),
+    questionCard(2, "right", "bottom-right"),
+    questionCard(3, "left", "bottom-left"),
+    questionCard(4, "right", "top-right"),
+    questionCard(5, "left", "top-left"),
+  ] as readonly QuestionCardDef[],
+  /** Camera height (world y) as the questions start, and how far it climbs per card. */
+  climb: { from: 1, step: 0.7 },
+} as const;
+
+/** Camera position (and target, a little above it) after `n` climbing steps of the questions. */
+const faqCamera = (n: number): [Vec3, Vec3] => {
+  const y = round6(FAQ.climb.from + FAQ.climb.step * n);
+  return [
+    [0, y, 12],
+    [0, round6(y + 1), 0],
+  ];
+};
+
 export const CAMERA: readonly CameraKey[] = [
   // Hero: wide and still.
   key("hero", at("hero", 0), "hold", HERO_WIDE, [0, 0, 0], 35),
@@ -703,9 +753,11 @@ export const CAMERA: readonly CameraKey[] = [
   key("fall", at("fall", 0.22), "dolly-down", [0.4, 2.2, 6.5], [0.4, 2.2, 0], 32),
   key("fall", at("fall", 0.45), "push", [0, -3, 5], [0, -3, 0], 32),
   key("fall", FALL.push[1], "dolly-up", [0, -4, 2.6], [0, -4, 0], 30),
-  // Questions: drift up between the rows, then forward into the blue under the fabric sky.
-  key("faq", at("faq", 0), "dolly-up", [0, 1, 12], [0, 2, 0], 40),
-  key("faq", at("faq", 0.9), "push", [0, 4.5, 12], [0, 5.5, 0], 40),
+  // Questions: climb between the rows one step per card (each step lands as its card arrives), then
+  // forward into the blue as the last card dissolves, under the fabric sky.
+  key("faq", at("faq", 0), "dolly-up", ...faqCamera(0), 40),
+  ...QUESTIONS.slice(1).map((q, i) => key("faq", q.in, "dolly-up", ...faqCamera(i + 1), 40)),
+  key("faq", LAST_QUESTION.hold[1], "push", ...faqCamera(QUESTIONS.length), 40),
   key("faq", FABRIC_COVERED, "reframe", [0, 5, 6], [0, 6, 0], 38),
   // Stars: the astronomer and the growing constellation.
   key("stars", FABRIC_CLEARING, "hold", STARGAZER, [0, 6.5, 0], 38),

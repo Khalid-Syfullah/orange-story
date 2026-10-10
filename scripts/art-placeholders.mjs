@@ -647,6 +647,19 @@ const KINDS = {
       out += line(cx, cy, cx + (rand() - 0.5) * W * 0.1, H, trunk, W * 0.05);
       out += crown({ cx, cy, rx: W * 0.36, ry: H * 0.13, leaves: 120, oranges: 14, seed: `${s.seed}-${i}`, size: W * 0.09, tone: haze });
     }
+    // Named points (the oranges the question lines are fixed on): a sprig of leaves with an orange
+    // centred exactly on the point, drawn last so nothing covers it.
+    for (const [name, [u, v]] of Object.entries(s.points ?? {})) {
+      const x = u * W;
+      const y = v * H;
+      const r = W * 0.09 * 0.4;
+      const sprig = seeded(`${s.seed}-${name}`);
+      for (let i = 0; i < 7; i++) {
+        const a = (i / 7) * Math.PI * 2 + sprig() * 0.6;
+        out += leaf(x + Math.cos(a) * r * 0.9, y + Math.sin(a) * r * 0.9, r * (1.3 + sprig() * 0.5), (a * 180) / Math.PI + 90, leafTones(haze)[i % 4]);
+      }
+      out += orangeBall(x, y, r, { leafy: true, tone: haze });
+    }
     return out;
   },
 
@@ -748,7 +761,8 @@ function svgFor(entry) {
   const spec = entry.placeholder;
   const draw = KINDS[spec.kind];
   if (!draw) throw new Error(`${entry.id}: unknown placeholder kind "${spec.kind}"`);
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${draw(W, H, spec)}</svg>`;
+  // The entry's named points (fractions of the image) reach the drawing with the spec.
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${draw(W, H, { ...spec, points: entry.points })}</svg>`;
 }
 
 async function render(entry) {

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { CAMERA } from "@/scroll/script";
 
-import { createCameraPath, poseOf, type CameraPose } from "./camera-path";
+import { createCameraPath, poseOf, projectPoint, unprojectToPlane, type CameraPose } from "./camera-path";
 
 const FIELDS: readonly (keyof CameraPose)[] = ["px", "py", "pz", "tx", "ty", "tz", "fov"];
 /** The pose's values only (GSAP keeps its own bookkeeping on the target object). */
@@ -49,6 +49,40 @@ describe("the camera path", () => {
         }
         previous = pose;
       }
+    }
+    path.kill();
+  });
+
+  it("projects world points to the stage like the rig's camera, and back", () => {
+    const path = createCameraPath(CAMERA);
+    const pose = copy(path.seek(0.7));
+    // The target is in the middle of the stage, in front of the camera.
+    const center = projectPoint(pose, [pose.tx, pose.ty, pose.tz], 1440, 900);
+    expect(center.x).toBeCloseTo(720, 6);
+    expect(center.y).toBeCloseTo(450, 6);
+    expect(center.depth).toBeGreaterThan(0);
+    // Up is up on screen, right is right.
+    const above = projectPoint(pose, [pose.tx, pose.ty + 1, pose.tz], 1440, 900);
+    const right = projectPoint(pose, [pose.tx + 1, pose.ty, pose.tz], 1440, 900);
+    expect(above.y).toBeLessThan(450);
+    expect(right.x).toBeGreaterThan(720);
+    // A level camera: the top of the view at the target's distance is the top edge of the stage,
+    // and the side of the view (at the stage's aspect) is its side edge.
+    const level: CameraPose = { px: 0, py: 0, pz: 10, tx: 0, ty: 0, tz: 0, fov: 40 };
+    const halfHeight = 10 * Math.tan((40 * Math.PI) / 360);
+    expect(projectPoint(level, [0, halfHeight, 0], 1440, 900).y).toBeCloseTo(0, 6);
+    expect(projectPoint(level, [halfHeight * 1.6, 0, 0], 1440, 900).x).toBeCloseTo(1440, 6);
+    // A stage pixel unprojected onto a plane projects back onto the same pixel.
+    for (const [x, y] of [
+      [100, 120],
+      [1300, 820],
+      [720, 450],
+    ] as const) {
+      const world = unprojectToPlane(pose, x, y, 1440, 900, -0.5);
+      expect(world[2]).toBe(-0.5);
+      const back = projectPoint(pose, world, 1440, 900);
+      expect(back.x).toBeCloseTo(x, 6);
+      expect(back.y).toBeCloseTo(y, 6);
     }
     path.kill();
   });

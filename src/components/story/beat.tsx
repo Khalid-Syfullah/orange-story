@@ -99,8 +99,11 @@ function SmokeFrame({ beat, range, progress, children }: { beat: BeatDef; range:
  * The mounted content of a beat. A `load` beat's timed intro is decided when the content mounts:
  * only its first mount in a page view plays it. Content that unmounted (scrolled far away) and
  * mounts again on the way back returns scrubbed only, so scrolling up never replays the intro.
+ *
+ * Groups that place their beats themselves (the question deck) wrap each beat's content in it, so
+ * `BeatLine` rows inside keep that beat's timing.
  */
-function BeatBody({ beat, progress, children }: { beat: BeatDef; progress: MotionValue<number>; children: React.ReactNode }) {
+export function BeatBody({ beat, progress, children }: { beat: BeatDef; progress: MotionValue<number>; children: React.ReactNode }) {
   const [intro] = React.useState(() => beat.enter === "load" && !introsPlayed.has(beat.id));
 
   React.useEffect(() => {

@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { SCENES } from "@/scroll/script";
 import type { SceneId } from "@/scroll/types";
 
-import { drawnPlates, MANIFEST, plateEntry, plateWorldSize, PLATES, preloadPlates, scenePlates, type PlateRole } from "./manifest";
+import { drawnPlates, MANIFEST, plateEntry, platePoint, plateWorldSize, PLATES, preloadPlates, scenePlates, type PlateRole } from "./manifest";
 
 const ROOT = path.resolve(__dirname, "../..");
 const SCENE_IDS = SCENES.map((s) => s.id);
@@ -52,6 +52,10 @@ describe("the art manifest", () => {
       if (plate.repeat) expect(plate.repeat.every((r) => r > 0), `${name} repeat`).toBe(true);
       if (plate.repeat && (plate.repeat[0] !== 1 || plate.repeat[1] !== 1)) expect(plate.tile, `${name} repeats but does not tile`).toBe(true);
       if (plate.frame !== undefined) expect(Number.isInteger(plate.frame) && plate.frame >= 0, `${name} frame`).toBe(true);
+      for (const [point, at] of Object.entries(plate.points ?? {})) {
+        expect(point, `${name} point name`).toMatch(/^[a-z0-9-]+$/);
+        expect(at.length === 2 && at.every(inUnit), `${name} point "${point}" lies on the image`).toBe(true);
+      }
       expect(plate.note.length, `${name} needs a note`).toBeGreaterThan(0);
       if (plate.placeholder) expect(typeof plate.placeholder.kind, `${name} placeholder kind`).toBe("string");
     }
@@ -118,5 +122,18 @@ describe("the art manifest", () => {
 
   it("throws on an unknown plate", () => {
     expect(() => plateEntry("hero/nowhere")).toThrow(/Unknown plate/);
+  });
+
+  it("places named points on the plate in the world", () => {
+    const row = plateEntry("fall/trees-left-near");
+    const [w, h] = plateWorldSize(row);
+    for (const [name, [u, v]] of Object.entries(row.points ?? {})) {
+      const [x, y, z] = platePoint(row.id, name);
+      expect(x).toBeCloseTo(row.position[0] + (u - row.anchor[0]) * w, 9);
+      expect(y).toBeCloseTo(row.position[1] + (row.anchor[1] - v) * h, 9);
+      expect(z).toBe(-row.depth);
+    }
+    expect(Object.keys(row.points ?? {}).length).toBeGreaterThan(0);
+    expect(() => platePoint(row.id, "nowhere")).toThrow(/has no point/);
   });
 });

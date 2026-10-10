@@ -7,7 +7,7 @@ import { useMotionValue } from "motion/react";
 // Lenis's recommended base styles (html height, stopped state, nested scroll areas).
 import "lenis/dist/lenis.css";
 
-import { chrome } from "@/content/copy";
+import { chrome, questions } from "@/content/copy";
 import { cn } from "@/lib/utils";
 import { segmentsFromStops, type RulerChapter } from "@/components/chrome/chapters";
 import { Hairlines } from "@/components/chrome/hairlines";
@@ -21,6 +21,7 @@ import type { BeatId } from "@/scroll/types";
 import { validateScript } from "@/scroll/validate";
 
 import { Beat } from "./beat";
+import { QUESTION_BEATS, QuestionList } from "./question-list";
 import { SitePanel } from "./site-panel";
 import { TransitionLayer } from "./transition-layer";
 
@@ -30,7 +31,8 @@ import { TransitionLayer } from "./transition-layer";
  * 1. the WebGL canvas with the scene plates;
  * 2. the transition canvas;
  * 3. the hairlines (and the progress lines that run along them);
- * 4. the DOM text layer: every beat of the script, each in its slot;
+ * 4. the DOM text layer: every beat of the script, each in its slot (the five question cards as
+ *    one pinned deck with its connector line, `QuestionDeck`);
  * 5. the chrome (mark, menu, Apply, ruler, percent counter).
  *
  * Everything reads the one `progress` motion value, written by the scroll engine
@@ -45,8 +47,14 @@ const StageCanvas = dynamic(() => import("@/components/stage/stage-canvas"), { s
 const DevTimeline =
   process.env.NODE_ENV === "development" ? dynamic(() => import("./dev-timeline").then((m) => m.DevTimeline), { ssr: false }) : null;
 
+/** The question deck (scene 11): client only, with the camera path and the orchard's anchor points. */
+const QuestionDeck = dynamic(() => import("./question-deck"), { ssr: false });
+
 /** Custom content per beat, registered by the scene phases. Unlisted beats render their copy key. */
 const BEAT_CONTENT: Partial<Record<BeatId, React.ComponentType>> = {};
+
+/** Beats drawn as one group instead of one `Beat` each: the five question cards. */
+const QUESTION_SET = new Set<BeatId>(QUESTION_BEATS);
 
 const RULER_CHAPTERS: RulerChapter[] = CHAPTERS.map((chapter) => {
   const copy = chrome.chapters.find((c) => c.id === chapter.id);
@@ -118,6 +126,16 @@ export function StoryStage({ year }: { year: number }) {
             )}
           >
             {BEATS.map((beat) => {
+              if (QUESTION_SET.has(beat.id)) {
+                // The question cards are one group: the pinned deck with its connector, and the same
+                // questions as a list for screen readers (always present, wherever the scroll is).
+                return beat.id === QUESTION_BEATS[0] ? (
+                  <React.Fragment key="questions">
+                    <QuestionList className="sr-only" label={questions.title} />
+                    {live ? <QuestionDeck /> : null}
+                  </React.Fragment>
+                ) : null;
+              }
               const Content = BEAT_CONTENT[beat.id];
               return (
                 <Beat key={beat.id} id={beat.id}>

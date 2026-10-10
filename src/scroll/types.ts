@@ -175,6 +175,24 @@ export interface CameraKey {
   move: CameraMove;
 }
 
+/** A corner of a card (the question cards' connector lines lock to one). */
+export type CardCorner = "top-left" | "top-right" | "bottom-left" | "bottom-right";
+
+/**
+ * One question card of the deck in the questions scene: its beat, how it arrives, the orange its
+ * connector line is fixed on (a named point on an orchard plate, see `points` in the art manifest)
+ * and the corner of the card the line's square locks to.
+ */
+export interface QuestionCardDef {
+  beat: BeatId;
+  /** `zoom`: grows from small in the center (the first card). `arc`: arrives from the right along the arc. */
+  arrive: "zoom" | "arc";
+  anchor: { plate: string; point: string };
+  corner: CardCorner;
+  /** The line draws from the orange to the corner over this range, as the card arrives. */
+  draw: ProgressRange;
+}
+
 /** A thin line that draws itself along a hairline, scrubbed by progress. */
 export interface ProgressLineCue {
   id: string;

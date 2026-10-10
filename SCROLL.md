@@ -12,7 +12,7 @@ The whole story is data in `src/scroll/script.ts`: chapters, scenes, text beats,
 | Unit tests (`npm test`) | `src/scroll/script.test.ts`, `src/scroll/stage-scroll.test.ts` |
 | Scroll engine (Lenis, ScrollTrigger, `progress` and `velocity`) | `src/scroll/stage-scroll.ts` |
 | React access to the story (context and hooks) | `src/scroll/story-scroll.tsx` |
-| The pinned stage, the beats, the dev timeline, the reduced-motion page | `src/components/story/` |
+| The pinned stage, the beats, the question deck, the dev timeline, the reduced-motion page | `src/components/story/` |
 | Art manifest (every plate, its file, size and place in depth) | `public/art/manifest.json`, read by `src/art/manifest.ts` |
 | Stage canvas: plates, morph, twinkle, sway, camera rig, scene presence | `src/components/stage/` |
 | Transitions: choreography, shaders, the transition canvas | `src/components/transitions/` |
@@ -86,7 +86,7 @@ Positions are in screens of scrolling from the top of the stage (0 to 49).
 
 **10. Fall, 27.20 to 30.77.** The camera pushes toward the gardener's face (27.20 to 27.98), dollies down after the falling orange (27.98 to 28.80), pushes into it (28.80 to 29.16), then dollies up between the rows of trees (29.16 to 30.77). All the text blurs and sinks back into the picture between 27.97 and 28.38. The scene opens on the prune picture as it was left. At 27.45 the branch is cut: the still branch (fruit and all) hands over to a copy without its fruit (`fall/branch-cut`), which drops faster and faster, turning, while the orange sits where the fruit hung and falls on its own (27.50 to 28.80), the camera following; the gardener drifts right and out of frame (27.55 to 28.34). The orange is placed relative to the camera and settles at the ring's origin on screen (the middle, a little low). The rainbow ring sweeps out from the orange from 28.80 to 29.56: the old picture is cut away outside the ring (`reveal` with `side: "outside"` on its plates) and the orchard rows show only inside it (`reveal` inside), with sky between them, while the orange, which has no `reveal`, stays in front. It goes soft (28.80 to 29.77) and keeps falling out of the bottom of the frame (29.16 to 30.77), fading out by the end. Timings are the `FALL` object in the script, played by `src/components/stage/fall-art.tsx` through the pure functions in `fall-plan.ts`. The ruler switches to Questions at 30.77, with the hairlines sliding out from 30.47 and back by 31.37.
 
-**11. Questions, 30.77 to 37.63.** "Questions worth asking first." arrives top center at 30.77 and stays through all five cards. The cards take turns in the center: question 1 from 31.01 to 32.21, question 2 from 32.34 to 33.54, question 3 from 33.67 to 34.87, question 4 from 35.01 to 36.21, question 5 from 36.33 to 37.53. Each zooms in from small; cards 1 to 4 swing left along a curve as they leave, and the next one arrives 0.13 screen later. After the last card, the cards and the title dissolve upward like smoke (37.24 to 37.53). The camera dollies up between the rows until 36.95, then pushes forward into the blue. The fabric sky starts at 37.43, covers the screen from 37.58 to 37.68 (the camera reframes unseen) and clears by 38.12.
+**11. Questions, 30.77 to 37.63.** "Questions worth asking first." arrives top center at 30.77 and stays through all five cards. The cards take turns in the center, 1.3 screens each, end to end: question 1 from 31.01 to 32.31, question 2 to 33.61, question 3 to 34.91, question 4 to 36.21, question 5 to 37.51. The first zooms up from small in the center; the others arrive from the right along the arc; cards 1 to 4 swing left along the arc as they leave, and each has swung fully away at the very point where the next starts to arrive. Each card's connector line draws out from its orange as the card arrives (question 1 from 31.17 to 31.56, then 1.30 screens later for each card) and its square locks onto the card's corner. After the last card, the card, its line and the title dissolve upward like smoke (37.16 to 37.51). The camera climbs between the rows one step per card (keys at each card's arrival, so each step lands while the card arrives and the orange holds still while it is read), then pushes forward into the blue from 37.16 as the text dissolves. The fabric sky starts at 37.43, covers the screen from 37.58 to 37.68 (the camera reframes unseen) and clears by 38.12. The deck is `FAQ` in the script, played by `src/components/story/question-deck.tsx` through the pure functions in `question-plan.ts` (see "The questions' deck" below).
 
 **12. Stars, 37.63 to 40.08.** No text. The camera holds on the stargazer from 37.68 while the constellation grows.
 
@@ -144,12 +144,12 @@ Arrivals: `load` (already there; a short timed intro once per page load), `revea
 | `terms` | right | `terms.block` | 0.4368 | 0.4429 to 0.4691 | 0.4752 | 1.88 | reveal / fade |
 | `terms-title` | top-left | `terms.chapterTitle` | 0.4890 | 0.5176 to 0.5709 | 0.5791 | 4.41 | dock / sink |
 | `fit` | bottom-left | `terms.fit` | 0.5138 | 0.5199 to 0.5709 | 0.5791 | 3.20 | reveal / sink |
-| `questions-title` | top-center | `questions.title` | 0.6280 | 0.6351 to 0.7599 | 0.7660 | 6.76 | reveal / smoke |
-| `question-1` | center | `questions.items.0` | 0.6329 | 0.6390 to 0.6513 | 0.6574 | 1.20 | zoom / swing-left |
-| `question-2` | center | `questions.items.1` | 0.6601 | 0.6662 to 0.6784 | 0.6845 | 1.20 | zoom / swing-left |
-| `question-3` | center | `questions.items.2` | 0.6872 | 0.6933 to 0.7056 | 0.7117 | 1.20 | zoom / swing-left |
-| `question-4` | center | `questions.items.3` | 0.7144 | 0.7205 to 0.7327 | 0.7389 | 1.20 | zoom / swing-left |
-| `question-5` | center | `questions.items.4` | 0.7415 | 0.7477 to 0.7599 | 0.7660 | 1.20 | zoom / smoke |
+| `questions-title` | top-center | `questions.title` | 0.6280 | 0.6351 to 0.7594 | 0.7656 | 6.74 | reveal / smoke |
+| `question-1` | center | `questions.items.0` | 0.6329 | 0.6400 to 0.6523 | 0.6594 | 1.30 | zoom / swing-left |
+| `question-2` | center | `questions.items.1` | 0.6594 | 0.6666 to 0.6788 | 0.6860 | 1.30 | zoom (from the right) / swing-left |
+| `question-3` | center | `questions.items.2` | 0.6860 | 0.6931 to 0.7053 | 0.7125 | 1.30 | zoom (from the right) / swing-left |
+| `question-4` | center | `questions.items.3` | 0.7125 | 0.7196 to 0.7319 | 0.7390 | 1.30 | zoom (from the right) / swing-left |
+| `question-5` | center | `questions.items.4` | 0.7390 | 0.7462 to 0.7584 | 0.7656 | 1.30 | zoom (from the right) / smoke |
 | `apply-intro` | top-left | `questions.application` (tag, title, subtitle) | 0.8244 | 0.8305 to 0.9041 | 0.9102 | 4.21 | reveal / smoke |
 | `apply-form` | right | `questions.application` (fields, submit) | 0.8276 | 0.8337 to 0.9041 | 0.9102 | 4.05 | fade / smoke |
 | `finale` | center | `finale` (wordmark, subtitle, copyright, email) | 0.9592 | 0.9714 to 1.0000 | 1.0000 | 2.00 | reveal / hold |
@@ -158,7 +158,7 @@ Pacing, and where it bends on purpose:
 
 - The plain beats (`found`, `harvest`, the service cards) stay 1.3 screens (0.3 to arrive, 0.7 fully on screen, 0.3 to leave) with 0.3 screen between neighbours in the same slot, as measured on the reference.
 - The hero copy leaves within the first screen, as on the reference.
-- Five question cards share the 6.86 screens of the questions scene, so each holds 1.2 screens with 0.13 screen between them: a leaving card has fully swung away before the next one zooms in.
+- Five question cards share the 6.86 screens of the questions scene at the reference 1.3 screens each (0.35 to arrive, 0.6 fully on screen, 0.35 to leave), end to end with no gap: a leaving card has fully swung away at the very point where the next one starts to arrive, so the deck moves on without a pause and the slot never holds two cards.
 - Some blocks stay through a whole stretch of camera work: the terms block, the docking chapter title and the fit text, the questions title (through all five cards), the application, and the finale (to the end of the page).
 - Long stretches without any text (the ascent, the graft, the stars) are deliberate.
 
@@ -169,7 +169,7 @@ Gaps between beats in the same slot, in screens:
 - right: `card-1` to `card-2` 0.30, `card-2` to `card-3` 0.30, `card-3` to `terms` 4.74, `terms` to `apply-form` 17.27
 - top-left: `terms-title` to `apply-intro` 12.02
 - top-center: one beat
-- center: `question-1` to `question-2` 0.13, then 0.13 between each card, `question-5` to `finale` 9.47
+- center: `question-1` to `question-2` 0.00, then 0.00 between each card (they abut), `question-5` to `finale` 9.49
 
 ## Transitions
 
@@ -182,7 +182,7 @@ Covering transitions (sand, unfold, dust, fabric) straddle a scene boundary and 
 | `unfold` | unfold | blueprint to site | 0.3905 | 0.3984 to 0.4016 | 0.4096 | 0.94 | canvas |
 | `dust` | dust | site to prune | 0.4736 | 0.4792 to 0.4808 | 0.4868 | 0.64 | canvas |
 | `ring` | ring | fall | 0.5878 | none | 0.6032 | 0.75 | canvas |
-| `smoke` | smoke | faq | 0.7599 | none | 0.7660 | 0.30 | text |
+| `smoke` | smoke | faq | 0.7584 | none | 0.7656 | 0.35 | text |
 | `fabric` | fabric | faq to stars | 0.7638 | 0.7670 to 0.7690 | 0.7780 | 0.70 | canvas |
 | `viewfinder-finale` | viewfinder | finale | 0.9490 | 0.9847 to 1.0000 | 1.0000 | 2.50 | hairlines |
 
@@ -238,7 +238,11 @@ The camera rig (`src/components/stage/camera-rig.tsx`) builds one paused GSAP ti
 | fall | 0.5878 | push | 0, -3, 5 | 0, -3, 0 | 32 |
 | fall | 0.5952 | dolly-up | 0, -4, 2.6 | 0, -4, 0 | 30 |
 | faq | 0.6280 | dolly-up | 0, 1, 12 | 0, 2, 0 | 40 |
-| faq | 0.7540 | push | 0, 4.5, 12 | 0, 5.5, 0 | 40 |
+| faq | 0.6594 | dolly-up | 0, 1.7, 12 | 0, 2.7, 0 | 40 |
+| faq | 0.6860 | dolly-up | 0, 2.4, 12 | 0, 3.4, 0 | 40 |
+| faq | 0.7125 | dolly-up | 0, 3.1, 12 | 0, 4.1, 0 | 40 |
+| faq | 0.7390 | dolly-up | 0, 3.8, 12 | 0, 4.8, 0 | 40 |
+| faq | 0.7584 | push | 0, 4.5, 12 | 0, 5.5, 0 | 40 |
 | faq | 0.7670 | reframe | 0, 5, 6 | 0, 6, 0 | 38 |
 | stars | 0.7690 | hold | 0, 6, 7 | 0, 6.5, 0 | 38 |
 | apply | 0.8180 | hold | 0, 6, 7 | 0, 6.5, 0 | 38 |
@@ -254,6 +258,15 @@ The hero has custom art (`src/components/stage/hero-art.tsx`, registered in `SCE
 
 - **The intro**, once per page view, on time (`hero-intro.ts`): the sky, then the minaret and statue (with the orange as its own layer), then the onlookers by depth, then the text. The canvas starts it when the hero's plates have loaded; the hero text (a `load` beat) waits for its `INTRO.text` mark, or arrives `INTRO.fallback` seconds after load if the canvas never starts. Once played it never plays again: scrolling back finds the finished frame.
 - **The glow**, on idle time and always on (`glow-ripple.tsx`): about 300 instanced droplets travel outward from the orange in slow rings ("rain in reverse"), with a halo breathing behind the orange. It runs before the first scroll. Over the hero scene the glow *lift* (0 to 1, from `sceneProgress("hero", p)`) brightens it toward white and speeds the ripple up a little; scrolling up reverses it exactly (the speed-up changes the rate of an accumulated clock, so the ripple never jumps).
+
+### The questions' deck
+
+The five question cards are not five separate `Beat`s on the stage: they are one group (`QuestionDeck`, `src/components/story/question-deck.tsx`, loaded on the client once the stage is live) that mounts shortly before the first card and stays until shortly after the last. The script's `FAQ` lists, per card, its beat, how it arrives (`zoom` for the first, `arc` for the others), its anchor orange (a named point on a near orchard plate) and the corner its line locks to, plus when the line draws (`draw`) and how the camera climbs (`climb`). The pure functions in `question-plan.ts` turn that into poses:
+
+- **The arc.** The cards ride one wide curve with its top in the center, like the rim of a wheel turning from right to left (`ARC`): a card at either end is 34% of the stage width out, has sunk 8% of its height, is tilted 7 degrees along the curve, at 60% of its size, blurred 10 px and faded out. The first card zooms up from 55% in the center instead (`ZOOM`); the last one rises 3% and dissolves instead of swinging (`SMOKE`). A swinging card leaves as one piece; only its rows' arrival is staggered (title first, then the answer). The glass panel carries its own transform, opacity and blur, so its backdrop blur keeps working.
+- **One connector.** A single SVG line with a small square (`Connector`), re-pointed at the card on stage. Its end is fixed on the card's orange: the plate point (`points` in the art manifest, read with `platePoint`) projected through the stage camera at the current progress (`projectPoint` in `camera-path.ts`, the same keys and the same math as the rig), so it stays on the fruit while the camera climbs and pushes. The square sits on the card's chosen corner wherever the card's pose puts it (the card's laid-out size, measured on resize only, times the pose). The line draws out from the orange to the corner as the card arrives, then fades with the card; it fades out if its orange leaves the stage (narrow screens).
+- **The anchors.** Cards 1, 3 and 5 anchor in the left near row, 2 and 4 in the right one; the corners go top-left, bottom-right, bottom-left, top-right, top-left, so every card's corner differs from the one before. The points were placed so the line runs at 45 degrees on a 1440 by 900 stage while each card is read; the cards scale with the stage height (`FIT`, 0.85 to 1.2), as the orchard does, so the angle stays between about 40 and 50 degrees on common screens. The unit test (`question-plan.test.ts`) checks the angle on several screen sizes, that the line is fixed on the projected orange, that the square follows the moving corner, and that everything is a pure function of progress.
+- **Real content.** The animated deck is hidden from assistive technology; the same questions are on the stage as a visually hidden list (`QuestionList`), always present, and on the reduced-motion page that list is the visible, normal FAQ.
 
 ## Hairlines, progress lines and tone
 
@@ -314,4 +327,4 @@ In development, the backtick key toggles a panel along the bottom (it remembers 
 
 ## Reduced motion
 
-Visitors who prefer reduced motion get no pinned stage, no smooth scrolling and no canvas. CSS (`motion-reduce:`) shows them a normal stacked page instead, before any script runs: the four chapters and the finale in order, one still per scene (the placeholder plate as an image), and all the copy in reading order. The "Apply" link jumps to the application on that page.
+Visitors who prefer reduced motion get no pinned stage, no smooth scrolling and no canvas. CSS (`motion-reduce:`) shows them a normal stacked page instead, before any script runs: the four chapters and the finale in order, one still per scene (the placeholder plate as an image), and all the copy in reading order, with the five questions as a plain FAQ list. The "Apply" link jumps to the application on that page.

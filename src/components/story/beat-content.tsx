@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { motion } from "motion/react";
 
 import { finale as finaleCopy, type ArrowButton, type FormField } from "@/content/copy";
 import { cn } from "@/lib/utils";
@@ -17,6 +16,7 @@ import { useOptionalStory } from "@/scroll/story-scroll";
 import type { BeatDef, SlotId } from "@/scroll/types";
 
 import { BeatLine, useBeatContext, useBeatPresence } from "./beat";
+import { QuestionCard } from "./question-card";
 import { SLOTS, STAGE_COLUMNS } from "./slots";
 
 /**
@@ -302,20 +302,16 @@ function TitleBlock({ beat, text }: { beat: BeatDef; text: string }) {
   );
 }
 
-/** A question card: the question as its title, the answer inside, on a clear glass panel. */
+/**
+ * A single question card in its slot, fading with its beat. The stage draws the five cards as one
+ * deck instead (`question-deck.tsx`) and the reduced-motion page as a list (`QuestionList`); this
+ * keeps any other use of a question beat on the same card.
+ */
 function QuestionPanel({ beat, question, answer }: { beat: BeatDef; question: string; answer: string }) {
   const presence = useBeatPresence();
   return (
     <div className={SLOTS[beat.slot].column}>
-      <motion.div
-        style={presence ? { opacity: presence } : undefined}
-        className="rounded-[1.25rem] border border-white/20 bg-white/[0.07] p-7 backdrop-blur-md sm:p-9"
-      >
-        <Headline index={0} count={2} as="h3" text={question} textClassName="type-title" />
-        <BeatLine index={1} count={2} as="p" className={cn("type-body mt-5", SOFT_TEXT)}>
-          {answer}
-        </BeatLine>
-      </motion.div>
+      <QuestionCard question={question} answer={answer} style={presence ? { opacity: presence } : undefined} />
     </div>
   );
 }

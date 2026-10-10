@@ -62,6 +62,12 @@ export interface PlateEntry {
   sway?: number;
   /** Animation frame index inside a set of frames (the default scene shows frame 0 only). */
   frame?: number;
+  /**
+   * Named points on the image, as fractions from the left and from the top, that code ties things
+   * to (the oranges the question cards' connector lines are fixed on). Final art keeps a painted
+   * feature at each point, or moves the point to where the painting has it.
+   */
+  points?: Readonly<Record<string, Pair>>;
   /** What the plate shows. */
   note: string;
   placeholder?: PlaceholderSpec;
@@ -115,6 +121,20 @@ export function drawnPlates(scene: SceneId): readonly PlateEntry[] {
 export function plateWorldSize(entry: PlateEntry, height = entry.height, repeat: Pair = entry.repeat ?? [1, 1]): [number, number] {
   const [w, h] = entry.size;
   return [(height * (w * repeat[0])) / (h * repeat[1]), height];
+}
+
+/**
+ * World position `[x, y, z]` of a named point (`points`) of a plate standing at its manifest place.
+ * Only for plates without a rotation (the plate faces the camera, so the point is on its plane).
+ */
+export function platePoint(id: PlateId | string, name: string): [number, number, number] {
+  const entry = plateEntry(id);
+  const point = entry.points?.[name];
+  if (!point) throw new Error(`Plate "${id}" has no point "${name}" (see points in public/art/manifest.json)`);
+  if (entry.rotation?.some((angle) => angle !== 0)) throw new Error(`Plate "${id}" is rotated; its points are not on a facing plane`);
+  const [w, h] = plateWorldSize(entry);
+  const [ax, ay] = entry.anchor;
+  return [entry.position[0] + (point[0] - ax) * w, entry.position[1] + (ay - point[1]) * h, -entry.depth];
 }
 
 /**

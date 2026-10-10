@@ -7,12 +7,16 @@ import { BEATS, SCENES } from "@/scroll/script";
 import type { StoryPart } from "@/scroll/types";
 
 import { BeatContent } from "./beat-content";
+import { QUESTION_BEATS, QuestionList } from "./question-list";
+
+const QUESTION_SET = new Set<string>(QUESTION_BEATS);
 
 /**
  * The story for visitors who prefer reduced motion: no pinned stage, no smooth scrolling, no canvas.
  * The chapters are a normal stacked page with one still per scene and all the copy in reading
- * order. CSS decides which version shows (`motion-reduce:`), so the right one appears before any
- * script runs; this page renders on the server.
+ * order (the question cards as a plain FAQ list). CSS decides which version shows
+ * (`motion-reduce:`), so the right one appears before any script runs; this page renders on the
+ * server.
  */
 
 const PARTS: readonly StoryPart[] = ["model", "work", "terms", "questions", "end"];
@@ -45,15 +49,23 @@ export function ReducedStory({ year }: { year: number }) {
                   <PlaceholderStill scene={scene.id} className="aspect-video rounded-sm object-cover" />
                   <figcaption className="type-meta mt-3 text-milk/70">{storyScenes[scene.id].name}</figcaption>
                 </figure>
-                {BEATS.filter((beat) => beat.scene === scene.id).map((beat) => (
-                  <div
-                    key={beat.id}
-                    id={beat.id === "apply-form" ? chrome.apply.target : undefined}
-                    className={cn("mt-12", beat.slot === "center" && "grid place-items-center")}
-                  >
-                    <BeatContent beat={beat} year={year} />
-                  </div>
-                ))}
+                {BEATS.filter((beat) => beat.scene === scene.id).map((beat) => {
+                  // The question cards read as a normal FAQ here: one list, in place of the first card.
+                  if (QUESTION_SET.has(beat.id)) {
+                    return beat.id === QUESTION_BEATS[0] ? (
+                      <QuestionList key="questions" className="mt-10 ml-col-a mr-[calc(100%_-_var(--grid-right))] max-w-3xl" />
+                    ) : null;
+                  }
+                  return (
+                    <div
+                      key={beat.id}
+                      id={beat.id === "apply-form" ? chrome.apply.target : undefined}
+                      className={cn("mt-12", beat.slot === "center" && "grid place-items-center")}
+                    >
+                      <BeatContent beat={beat} year={year} />
+                    </div>
+                  );
+                })}
               </article>
             ))}
           </section>

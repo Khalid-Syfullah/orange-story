@@ -401,6 +401,30 @@
   }
 }
 
+/* Sparkles in a question card's corner: a four-point star that brightens, grows and turns a little,
+   on its own slow beat (idle, time-based). Each sparkle sets its own duration and delay. */
+@keyframes sparkle-twinkle {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(0.55) rotate(0deg);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1) rotate(18deg);
+  }
+  70% {
+    opacity: 0.65;
+    transform: scale(0.8) rotate(28deg);
+  }
+}
+@utility sparkle-twinkle {
+  animation: sparkle-twinkle 2.8s ease-in-out infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
 /* ------------------------------------------------------------------ */
 /* Base                                                                */
 /* ------------------------------------------------------------------ */

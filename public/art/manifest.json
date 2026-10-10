@@ -1016,7 +1016,8 @@
       "anchor": [0.5, 0.5],
       "position": [-6.2, 3],
       "height": 15,
-      "note": "Row of orange trees heavy with fruit, left, near.",
+      "points": { "question-1": [0.718, 0.346], "question-3": [0.741, 0.628], "question-5": [0.718, 0.158] },
+      "note": "Row of orange trees heavy with fruit, left, near. In the questions, the connector lines of cards 1, 3 and 5 are fixed on the oranges at its points (keep an orange at each point, or move the point).",
       "placeholder": { "kind": "trees-row", "side": "left", "seed": "left-near" }
     },
     {
@@ -1042,7 +1043,8 @@
       "anchor": [0.5, 0.5],
       "position": [6.2, 3],
       "height": 15,
-      "note": "Row of orange trees heavy with fruit, right, near.",
+      "points": { "question-2": [0.259, 0.675], "question-4": [0.282, 0.206] },
+      "note": "Row of orange trees heavy with fruit, right, near. In the questions, the connector lines of cards 2 and 4 are fixed on the oranges at its points (keep an orange at each point, or move the point).",
       "placeholder": { "kind": "trees-row", "side": "right", "seed": "right-near" }
     },
     {
