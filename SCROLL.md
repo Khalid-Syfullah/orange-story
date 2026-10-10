@@ -63,7 +63,12 @@ Positions are in screens of scrolling from the top of the stage (0 to 49).
 
 **1. Hero, 0.00 to 1.47.** The camera is wide and still. The hero copy is already on screen when the page opens: the title, subtitle and "Start a partnership" button center left, and the "What we do" tag and paragraph bottom left. They play a short timed intro once per page load, hold for a quarter screen (the bottom copy for 0.4), then blur and drift left, title first, and are gone by 1.00. Scrolling back up brings them back the same way, with no second intro.
 
-**2. Ascent, 1.47 to 3.92.** No text. The camera pushes in on the statue from 1.47, eases into a pan along the rising trunk at 2.82, dollies up from 3.55 and settles on a single branch at 3.92.
+**2. Ascent, 1.47 to 3.92.** No text (the hero copy has already drifted away). The camera pushes in on the statue from 1.47 (second leg at 2.16), eases into a pan along the rising trunk at 2.82, dollies up from 3.55 and settles on a single branch at 3.92. Its timings are the `ASCENT` object in the script, played by `src/components/stage/ascent-art.tsx` through the pure functions in `ascent-tree.ts`:
+
+- The statue, its orange and the top of the minaret rise together, slowly at first, then faster, to 10 world units by the end. The shaft is one tiling plate that grows from a fixed bottom (more tiles, never stretched).
+- The stone turns to bark through the morph mask along a front that climbs the shaft: it enters the frame as the camera pushes in (`ASCENT.front`, world heights) and has closed on the top of the trunk by 2.84 (`ASCENT.barked`).
+- Three branches scale out from the trunk once it is tall enough (from 2.94, 3.19 and 3.43), and their leaves unfurl with them (a bud turned toward the branch opens to rest).
+- The glow keeps the hero's full brightness and rides up with the orange (the ripple clock is shared with the hero's, so the two scenes' glows trade places without adding up); the statue, the orange and the glow fade once above the frame (`ASCENT.statueFade`).
 
 **3. Graft, 3.92 to 6.37.** No text. The camera holds on the branch while the hands graft the cutting (3.92 to 5.44), then dollies up and pulls out to the fruiting tree by 6.37.
 

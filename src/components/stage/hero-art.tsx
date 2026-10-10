@@ -29,7 +29,7 @@ import type { SceneArtProps } from "./scene-layers";
  */
 
 /** The orange's place in the world: where the glow comes from. */
-const ORANGE = plateEntry("hero/statue-orange").position;
+export const ORANGE = plateEntry("hero/statue-orange").position;
 
 /** World units the statue group and the crowd rise from as they appear. */
 const STATUE_RISE = 0.35;
@@ -37,10 +37,10 @@ const CROWD_RISE = 0.2;
 /** Blur (fraction of the view height) a plate arrives out of. */
 const ARRIVE_BLUR = 0.012;
 /** How much of the orange turns white at full lift. */
-const ORANGE_WHITENING = 0.45;
+export const ORANGE_WHITENING = 0.45;
 
 /** The halo behind the orange: one big soft droplet that breathes. */
-const HALO = [{ position: [ORANGE[0], ORANGE[1], 0], size: 2.6, phase: 0.6, speed: 0.16 }] as const;
+export const HALO = [{ position: [ORANGE[0], ORANGE[1], 0], size: 2.6, phase: 0.6, speed: 0.16 }] as const;
 
 function useIntroClock(): MotionValue<number> {
   const clock = useMotionValue(heroIntroElapsed());

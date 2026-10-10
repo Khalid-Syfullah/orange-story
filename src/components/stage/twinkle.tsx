@@ -80,6 +80,8 @@ export interface TwinkleProps {
   tintAmount?: Num;
   /** Add light instead of covering (glows, sparkles on sky). */
   additive?: boolean;
+  /** World height added to every point (a glow that rides a rising statue). */
+  y?: Num;
   /** Stacking inside the scene. */
   layer?: number;
   name?: string;
@@ -90,7 +92,7 @@ const tmpPosition = new Vector3();
 const tmpScale = new Vector3();
 const NO_ROTATION = new Quaternion();
 
-export function Twinkle({ sprite, points, opacity, reveal, tint, tintAmount, additive = false, layer = 0, name = "twinkle" }: TwinkleProps) {
+export function Twinkle({ sprite, points, opacity, reveal, tint, tintAmount, additive = false, y, layer = 0, name = "twinkle" }: TwinkleProps) {
   const texture = usePlateTexture(plateEntry(sprite));
   const scene = useSceneLayer();
   const progress = useStageProgress();
@@ -125,7 +127,7 @@ export function Twinkle({ sprite, points, opacity, reveal, tint, tintAmount, add
     [mesh, material],
   );
   React.useEffect(() => () => clock.drop(key), [clock, key]);
-  useInvalidateOnChange([opacity, reveal, tintAmount]);
+  useInvalidateOnChange([opacity, reveal, tintAmount, y]);
 
   const ref = React.useRef<InstancedMesh>(null);
   useFrame(() => {
@@ -135,6 +137,7 @@ export function Twinkle({ sprite, points, opacity, reveal, tint, tintAmount, add
     const alpha = read(opacity, 1) * (scene ? scene.presence(p) : 1);
     const shown = alpha > 0.001 && points.length > 0;
     instanced.visible = shown;
+    instanced.position.y = read(y, 0);
     if (shown && clock.inView(instanced)) clock.hold(key);
     else clock.drop(key);
     const twinkle = instanced.material as TwinkleMaterial;

@@ -44,6 +44,22 @@ export function rippleDrops(seed: string, count: number, size: number): Float32A
   return data;
 }
 
+/**
+ * Ripple time per effect name, shared by every instance of that name: the hero and the ascent draw
+ * the same glow in two scenes, and while they crossfade they must ripple in step. Whichever draws
+ * first in a frame advances the clock; the rest find it already current.
+ */
+const rippleClocks = new Map<string, { last: number; time: number }>();
+
+function rippleClock(name: string) {
+  let clock = rippleClocks.get(name);
+  if (!clock) {
+    clock = { last: 0, time: 0 };
+    rippleClocks.set(name, clock);
+  }
+  return clock;
+}
+
 export interface GlowRippleProps {
   /** The sprite of one droplet (a manifest entry). */
   sprite: PlateId;
@@ -53,6 +69,8 @@ export interface GlowRippleProps {
   opacity?: Num;
   /** 0 to 1: brightens toward white and speeds up. */
   lift?: Num;
+  /** World height added to the source's (the orange rises with the statue in the ascent). */
+  offsetY?: Num;
   /** How far the droplets spread, in world units. Default 7. */
   reach?: number;
   count?: number;
@@ -61,7 +79,7 @@ export interface GlowRippleProps {
   name?: string;
 }
 
-export function GlowRipple({ sprite, source, opacity, lift, reach = 7, count = 320, layer = -2, name = "glow-ripple" }: GlowRippleProps) {
+export function GlowRipple({ sprite, source, opacity, lift, offsetY, reach = 7, count = 320, layer = -2, name = "glow-ripple" }: GlowRippleProps) {
   const entry = plateEntry(sprite);
   const texture = usePlateTexture(entry);
   const scene = useSceneLayer();
@@ -89,9 +107,9 @@ export function GlowRipple({ sprite, source, opacity, lift, reach = 7, count = 3
     [geometry, material],
   );
   React.useEffect(() => () => clock.drop(key), [clock, key]);
-  useInvalidateOnChange([opacity, lift]);
+  useInvalidateOnChange([opacity, lift, offsetY]);
 
-  const state = React.useRef({ last: 0, time: 0 });
+  const state = React.useRef(rippleClock(name));
   const ref = React.useRef<Mesh>(null);
   useFrame(() => {
     const mesh = ref.current;
@@ -106,14 +124,16 @@ export function GlowRipple({ sprite, source, opacity, lift, reach = 7, count = 3
     const now = clock.time();
     const s = state.current;
     const level = read(lift, 0);
-    s.time += Math.max(0, now - s.last) * (1 + RIPPLE_SPEED_UP * level);
-    s.last = now;
+    if (now > s.last) {
+      s.time += (now - s.last) * (1 + RIPPLE_SPEED_UP * level);
+      s.last = now;
+    }
     const u = (mesh.material as RippleMaterial).uniforms;
     u.time.value = s.time;
     u.opacity.value = alpha;
     u.lift.value = level;
     u.reach.value = reach;
-    (u.source.value as Vector2).set(source[0], source[1]);
+    (u.source.value as Vector2).set(source[0], source[1] + read(offsetY, 0));
   });
 
   // The droplets move in the shader, so the mesh's own bounds are meaningless: never cull it.

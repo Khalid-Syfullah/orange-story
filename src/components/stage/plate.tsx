@@ -49,8 +49,8 @@ export interface PlatePlacement {
   position?: Pair;
   /** Distance behind the picture plane (z = -depth). */
   depth?: number;
-  /** Height in world units. */
-  height?: number;
+  /** Height in world units (a MotionValue lets a plate grow, like the rising minaret shaft). */
+  height?: Num;
   /** Image point placed at `position`, fractions from the left and from the top. */
   anchor?: Pair;
   /** Euler rotation in degrees (x, y, z). */
@@ -83,8 +83,8 @@ export interface PlateMotion {
   /** Stacking inside the scene for plates at the same depth. Default: the manifest's, or 0. */
   layer?: number;
   visible?: boolean;
-  /** Tiles across and down (tileable plates). Default: the manifest's `repeat`. */
-  uvRepeat?: Pair;
+  /** Tiles across and down (tileable plates). Default: the manifest's `repeat`. Either may move. */
+  uvRepeat?: readonly [Num, Num];
   /** Texture offset in tiles, e.g. to scroll a tileable shaft. */
   uvOffset?: readonly [Num, Num];
   /** Fill the view behind the scene and follow the camera. Default: the manifest's role. */
@@ -110,6 +110,8 @@ const DEG = Math.PI / 180;
 /** Backdrops sit this far in front of the camera, behind every plate. */
 const BACKDROP_DISTANCE = 150;
 const NO_REPEAT: Pair = [1, 1];
+/** Resolved repeat of the plate being updated (one object per module, overwritten every plate). */
+const tmpRepeat: [number, number] = [1, 1];
 
 const tmpPosition = new Vector3();
 const tmpDirection = new Vector3();
@@ -181,7 +183,7 @@ export function usePlateFrame(
   const backdrop = props.backdrop ?? entry.role === "backdrop";
   const sway = resolveSway(props.sway, entry, props.name ?? entry.id);
 
-  useInvalidateOnChange([props.x, props.y, props.z, props.scale, props.scaleX, props.scaleY, props.rotate, props.opacity, props.blur, props.uvOffset?.[0], props.uvOffset?.[1]]);
+  useInvalidateOnChange([props.x, props.y, props.z, props.scale, props.scaleX, props.scaleY, props.rotate, props.opacity, props.blur, props.height, props.uvRepeat?.[0], props.uvRepeat?.[1], props.uvOffset?.[0], props.uvOffset?.[1]]);
   React.useEffect(() => () => clock.drop(key), [clock, key]);
 
   useFrame((state) => {
@@ -200,8 +202,11 @@ export function usePlateFrame(
 
     const camera = state.camera as PerspectiveCamera;
     const u = material.uniforms;
-    const repeat = props.uvRepeat ?? entry.repeat ?? NO_REPEAT;
-    const [w, h] = plateWorldSize(entry, props.height ?? entry.height, repeat);
+    const baseRepeat = entry.repeat ?? NO_REPEAT;
+    tmpRepeat[0] = read(props.uvRepeat?.[0], baseRepeat[0]);
+    tmpRepeat[1] = read(props.uvRepeat?.[1], baseRepeat[1]);
+    const repeat = tmpRepeat;
+    const [w, h] = plateWorldSize(entry, read(props.height, entry.height), repeat);
 
     if (backdrop) {
       camera.getWorldDirection(tmpDirection);

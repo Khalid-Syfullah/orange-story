@@ -445,12 +445,43 @@ const TOP_DOWN_FAR: Vec3 = [0, 24, 0.01];
 const GARDENER: Vec3 = [0, 0, 12];
 const STARGAZER: Vec3 = [0, 6, 7];
 
+/**
+ * The ascent's own timings (progress). The art in `src/components/stage/ascent-tree.ts` choreographs
+ * on these: the statue and the minaret rise through the whole scene; the stone turns to bark along a
+ * front that climbs the shaft (`front` is world heights at fractions of the scene, so the front
+ * stays in view while the camera climbs); the three branches grow from the trunk once it is tall
+ * enough, and their leaves unfurl with them; the statue and its glow fade once they are above the
+ * frame.
+ */
+export const ASCENT = {
+  /** The statue and the minaret rise. */
+  rise: [at("ascent", 0), at("ascent", 1)] as ProgressRange,
+  /** The stone-to-bark front: [progress, world height] pairs, then it rides the top of the trunk. */
+  front: [
+    [at("ascent", 0), -5.2],
+    [at("ascent", 0.1), -2.2],
+    [at("ascent", 0.28), 1.1],
+    [at("ascent", 0.45), 2.9],
+  ] as readonly (readonly [number, number])[],
+  /** The stone is bark everywhere by here. */
+  barked: at("ascent", 0.56),
+  /** Each branch grows from the trunk (scale and fade), its leaves unfurling along the way. */
+  branches: {
+    "ascent/branch-1": [at("ascent", 0.6), at("ascent", 0.8)] as ProgressRange,
+    "ascent/branch-2": [at("ascent", 0.7), at("ascent", 0.9)] as ProgressRange,
+    "ascent/branch-3": [at("ascent", 0.8), at("ascent", 1)] as ProgressRange,
+  },
+  /** The statue, its orange and the glow leave the picture once above the frame. */
+  statueFade: [at("ascent", 0.84), at("ascent", 0.97)] as ProgressRange,
+} as const;
+
 export const CAMERA: readonly CameraKey[] = [
   // Hero: wide and still.
   key("hero", at("hero", 0), "hold", HERO_WIDE, [0, 0, 0], 35),
   // Ascent: push in on the statue, ease into a pan and dolly along the trunk, settle on one branch.
   key("ascent", at("ascent", 0), "push", HERO_WIDE, [0, 0, 0], 35),
-  key("ascent", at("ascent", 0.55), "pan", [2.6, 3.4, 7.5], [2.8, 3.6, 0], 32),
+  key("ascent", at("ascent", 0.28), "push", [2.1, 2.5, 9.6], [2.5, 2.9, 0], 33.5),
+  key("ascent", at("ascent", 0.55), "pan", [2.6, 4.6, 7.5], [2.8, 4.9, 0], 32),
   key("ascent", at("ascent", 0.85), "dolly-up", [2.2, 6.4, 6.5], [2.2, 6.6, 0], 31),
   // Graft: steady on the branch while the hands work, then dolly up and pull out to the fruiting tree.
   key("graft", at("graft", 0), "hold", BRANCH, [2, 8.4, 0], 30),

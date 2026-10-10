@@ -363,22 +363,8 @@ const KINDS = {
     return out;
   },
 
-  stone: (W, H) => {
-    const rand = seeded("stone");
-    const rows = 6;
-    const cols = 3;
-    const rh = H / rows;
-    const cw = W / cols;
-    let out = rect(0, 0, W, H, shade(C.marble, 0.22));
-    for (let r = 0; r < rows; r++) {
-      const off = r % 2 ? cw / 2 : 0;
-      for (let c = -1; c < cols; c++) {
-        const x = c * cw + off;
-        out += rect(x + 3, r * rh + 3, cw - 6, rh - 6, mix(C.marble, C.milk, rand() * 0.6), { rx: 4 });
-      }
-    }
-    return out;
-  },
+  // The ascent starts from the hero's minaret, so its stone is the same course pattern: the handover between the scenes is invisible.
+  stone: (W, H) => KINDS.minaret(W, H),
 
   bark: (W, H) => {
     const rand = seeded("bark");
