@@ -665,6 +665,34 @@ export const APPLY = {
 } as const;
 
 /**
+ * The finale's timings (progress). `src/components/stage/finale-plan.ts` choreographs on these: the
+ * astronomer and his platform sink the rest of the way out of the bottom (`sink`), the constellation
+ * drifts up and away (`stars`), the old cloud slides right (`cloud`), the tree rises from the bottom
+ * center (`tree`), the woman comes in from the left and the man from the right (`woman`, `man`) and
+ * settle either side of it. From `loop` on, the orchard keepers run on idle time and no longer
+ * depend on scrolling (she waters, he cuts an orange free, oranges drop now and then, the clouds
+ * drift right); `loop` is only the ramp that fades that loop in and out, so scrolling up still
+ * plays everything back. The hairlines and the wordmark (see HAIRLINES and the `finale` beat) close
+ * in around them.
+ */
+export const FINALE = {
+  /** The astronomer and his platform sink the rest of the way down (after the apply sink). */
+  sink: [at("finale", 0), at("finale", 0.26)] as ProgressRange,
+  /** The stars drift up and away, fading. */
+  stars: [at("finale", 0), at("finale", 0.3)] as ProgressRange,
+  /** The cloud that kept the bottom right clear slides away to the right. */
+  cloud: [at("finale", 0), at("finale", 0.4)] as ProgressRange,
+  /** The tree rises from the bottom center. */
+  tree: [at("finale", 0.18), at("finale", 0.4)] as ProgressRange,
+  /** The woman walks in from the left and settles. */
+  woman: [at("finale", 0.32), at("finale", 0.5)] as ProgressRange,
+  /** The man walks in from the right and settles. */
+  man: [at("finale", 0.34), at("finale", 0.52)] as ProgressRange,
+  /** The idle-time loop fades in once both have settled (and out again when scrolling back). */
+  loop: [at("finale", 0.52), at("finale", 0.58)] as ProgressRange,
+} as const;
+
+/**
  * The falling orange's timings (progress). `src/components/stage/fall-plan.ts` choreographs on
  * these: the cut branch drops (`cut`, `branch`), the gardener drifts right and out of frame
  * (`gardener`), the orange falls from the branch with the camera following it (`release`), the

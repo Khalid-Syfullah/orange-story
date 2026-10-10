@@ -92,7 +92,7 @@ Positions are in screens of scrolling from the top of the stage (0 to 49).
 
 **13. Apply, 40.08 to 44.00.** The application tag, title and subtitle arrive top left at 40.40; the form fades in on the right from 40.55. Both are fully on screen from about 40.85 to 44.30 (this is where "Apply" lands), then blur, rise and fade out by 44.60, in the finale.
 
-**14. Finale, 44.00 to 49.00.** The camera holds while the art moves. The hairlines slide out to the edges (45.75 to 46.50), then close in from there into a square viewfinder by 48.25 and stay closed. The wordmark, subtitle, copyright and email arrive inside the frame from 47.00 and never leave. The page ends at 49.00; further scrolling does nothing, and scrolling up plays everything back to the hero.
+**14. Finale, 44.00 to 49.00.** The camera holds while the art moves. The hairlines slide out to the edges (45.75 to 46.50), then close in from there into a square viewfinder by 48.25 and stay closed. The wordmark, subtitle, copyright and email arrive inside the frame from 47.00 and never leave. The page ends at 49.00; further scrolling does nothing, and scrolling up plays everything back to the hero. The art moves on `FINALE` (`src/scroll/script.ts`, drawn by `finale-art.tsx` from `finale-plan.ts`): the astronomer and platform sink on from the apply position and the stars drift up (44.00 to 45.50), the tree rises (44.90 to 46.00), the woman and man walk in (45.60 to 46.60) and settle, and from 46.60 their loop runs on idle time (watering, snipping, an orange cut free, oranges dropping, clouds drifting right); it pauses offscreen and fades out when scrolling back.
 
 ## Scenes
 

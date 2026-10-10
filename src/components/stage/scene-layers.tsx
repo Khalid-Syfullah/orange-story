@@ -14,6 +14,7 @@ import { ApplyArt } from "./apply-art";
 import { AscentArt } from "./ascent-art";
 import { BlueprintArt } from "./blueprint-art";
 import { FallArt } from "./fall-art";
+import { FinaleArt } from "./finale-art";
 import { GraftArt } from "./graft-art";
 import { HeroArt } from "./hero-art";
 import { Plate } from "./plate";
@@ -55,6 +56,7 @@ export const SCENE_ART: Partial<Record<SceneId, React.ComponentType<SceneArtProp
   fall: FallArt,
   stars: StarsArt,
   apply: ApplyArt,
+  finale: FinaleArt,
 };
 
 const SCENE_IDS: readonly SceneId[] = SCENES.map((s) => s.id);

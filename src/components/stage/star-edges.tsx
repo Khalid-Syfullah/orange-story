@@ -4,15 +4,17 @@ import * as React from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { BufferGeometry, DynamicDrawUsage, Float32BufferAttribute, LineBasicMaterial, LineSegments } from "three";
 
+import { read, type Num } from "./plate";
 import { plateRenderOrder, useSceneLayer, useStageProgress } from "./stage-context";
 import { constellation, edgeDraw, STAR_Z } from "./stars-plan";
 
 /**
  * The thin lines joining some of the constellation's stars. One draw call; every frame the free end
  * of each line is moved to how drawn it is (a pure function of progress), so scrolling back undraws
- * them. Faded with the scene's presence.
+ * them. Faded with the scene's presence. `y` lifts the whole graph and `opacity` fades it (the finale
+ * lets the stars drift up and away).
  */
-export function StarEdges({ layer = 1 }: { layer?: number }) {
+export function StarEdges({ layer = 1, y, opacity }: { layer?: number; y?: Num; opacity?: Num }) {
   const scene = useSceneLayer();
   const progress = useStageProgress();
   const invalidate = useThree((s) => s.invalidate);
@@ -57,8 +59,10 @@ export function StarEdges({ layer = 1 }: { layer?: number }) {
     });
     attr.needsUpdate = true;
     const material = lines.material as LineBasicMaterial;
-    material.opacity = 0.55 * presence;
-    lines.visible = any && presence > 0.001;
+    const alpha = presence * read(opacity, 1);
+    material.opacity = 0.55 * alpha;
+    lines.position.y = read(y, 0);
+    lines.visible = any && alpha > 0.001;
   });
 
   return <primitive ref={ref} object={object} renderOrder={plateRenderOrder(scene, layer)} />;
