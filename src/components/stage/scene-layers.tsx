@@ -10,6 +10,7 @@ import { SCENES } from "@/scroll/script";
 import { useSceneIndex } from "@/scroll/story-scroll";
 import type { SceneDef, SceneId } from "@/scroll/types";
 
+import { ApplyArt } from "./apply-art";
 import { AscentArt } from "./ascent-art";
 import { BlueprintArt } from "./blueprint-art";
 import { FallArt } from "./fall-art";
@@ -53,6 +54,7 @@ export const SCENE_ART: Partial<Record<SceneId, React.ComponentType<SceneArtProp
   prune: PruneArt,
   fall: FallArt,
   stars: StarsArt,
+  apply: ApplyArt,
 };
 
 const SCENE_IDS: readonly SceneId[] = SCENES.map((s) => s.id);

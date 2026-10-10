@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { finale as finaleCopy, type ArrowButton, type FormField } from "@/content/copy";
+import { finale as finaleCopy, type ArrowButton } from "@/content/copy";
 import { cn } from "@/lib/utils";
 import { SplitReveal } from "@/components/motion/split-reveal";
 import { Typewriter } from "@/components/motion/typewriter";
@@ -11,11 +11,12 @@ import { Button } from "@/components/ui/button";
 import { Tag } from "@/components/ui/tag";
 import { copyAtUnchecked } from "@/scroll/copy-path";
 import { beatLineRanges } from "@/scroll/helpers";
-import { ANCHORS } from "@/scroll/script";
 import { useOptionalStory } from "@/scroll/story-scroll";
 import type { BeatDef, SlotId } from "@/scroll/types";
 
 import { BeatLine, useBeatContext, useBeatPresence } from "./beat";
+import { ApplyForm } from "./apply-form";
+import { goToApply } from "./go-to-apply";
 import { QuestionCard } from "./question-card";
 import { SLOTS, STAGE_COLUMNS } from "./slots";
 
@@ -56,7 +57,7 @@ export function BeatContent({ beat: beatProp, year: yearProp }: BeatContentProps
   if (!isNode(node)) return null;
   if ("question" in node) return <QuestionPanel beat={beat} question={str(node.question)} answer={str(node.answer)} />;
   if ("wordmark" in node) return <Wordmark beat={beat} node={node} year={year} />;
-  if (beat.parts?.includes("fields")) return <FormPreview beat={beat} node={node} />;
+  if (beat.parts?.includes("fields")) return <ApplyForm />;
   return <TextBlock beat={beat} node={node} />;
 }
 
@@ -137,7 +138,7 @@ function ApplyButton({ button }: { button: ArrowButton }) {
     );
   }
   return (
-    <Button variant="ghost-pill" onClick={() => story.scrollTo(ANCHORS[button.target])}>
+    <Button variant="ghost-pill" onClick={() => goToApply(story)}>
       {button.label}
     </Button>
   );
@@ -312,37 +313,6 @@ function QuestionPanel({ beat, question, answer }: { beat: BeatDef; question: st
   return (
     <div className={SLOTS[beat.slot].column}>
       <QuestionCard question={question} answer={answer} style={presence ? { opacity: presence } : undefined} />
-    </div>
-  );
-}
-
-/**
- * The application form's place on the stage until the real form lands: the three fields as clear
- * glass pills, and the send button as a mail link so the page always offers a way to apply.
- */
-function FormPreview({ beat, node }: { beat: BeatDef; node: CopyNode }) {
-  const fields = (Array.isArray(node.fields) ? node.fields : []) as FormField[];
-  const submit = isNode(node.submit) ? str(node.submit.label) : "";
-  const pill = "flex h-12 items-center rounded-pill border border-white/25 bg-white/[0.06] px-5 type-label backdrop-blur-sm";
-  return (
-    <div className={SLOTS[beat.slot].column}>
-      <div className="grid grid-cols-2 gap-3">
-        {fields.slice(0, 2).map((field, i) => (
-          <BeatLine key={field.name} index={i} count={4}>
-            <div className={pill}>{field.label}</div>
-          </BeatLine>
-        ))}
-      </div>
-      {fields[2] ? (
-        <BeatLine index={2} count={4} className="mt-3">
-          <div className={cn(pill, "h-28 items-start rounded-[1.5rem] pt-4")}>{fields[2].label}</div>
-        </BeatLine>
-      ) : null}
-      <BeatLine index={3} count={4} className="mt-6">
-        <Button asChild variant="ghost-pill">
-          <a href={`mailto:${finaleCopy.email}`}>{submit}</a>
-        </Button>
-      </BeatLine>
     </div>
   );
 }

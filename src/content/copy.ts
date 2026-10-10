@@ -169,6 +169,14 @@ export const questions = {
     ] satisfies FormField[],
     submit: { label: "Send application" },
     success: "Received. We'll read it and reply within a week.",
+    /** Form states outside the copy deck: the sending label and the inline errors. */
+    sending: "Sending",
+    errors: {
+      name: "Tell us your name.",
+      email: "Enter a valid work email.",
+      grow: "Write at least a sentence about what should grow.",
+      send: "That did not go through. Please try again.",
+    },
   },
 } as const;
 

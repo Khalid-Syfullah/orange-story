@@ -655,6 +655,16 @@ export const STARS = {
 } as const;
 
 /**
+ * The application scene's timings (progress). `src/components/stage/apply-plan.ts` moves on these:
+ * the astronomer and his platform step down the sky (`sink`) so the top-left text has clear air,
+ * while the constellation stays. The finale carries on sinking them away.
+ */
+export const APPLY = {
+  /** The astronomer and his marble platform settle lower in the frame. */
+  sink: [at("apply", 0.06), at("apply", 0.2)] as ProgressRange,
+} as const;
+
+/**
  * The falling orange's timings (progress). `src/components/stage/fall-plan.ts` choreographs on
  * these: the cut branch drops (`cut`, `branch`), the gardener drifts right and out of frame
  * (`gardener`), the orange falls from the branch with the camera following it (`release`), the

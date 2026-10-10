@@ -21,6 +21,7 @@ import type { BeatId } from "@/scroll/types";
 import { validateScript } from "@/scroll/validate";
 
 import { Beat } from "./beat";
+import { goToApply } from "./go-to-apply";
 import { QUESTION_BEATS, QuestionList } from "./question-list";
 import { SitePanel } from "./site-panel";
 import { TransitionLayer } from "./transition-layer";
@@ -93,7 +94,7 @@ export function StoryStage({ year }: { year: number }) {
   const scrollTo = React.useCallback((p: number, options?: ScrollToProgressOptions) => engine.current?.scrollTo(p, options), []);
   const story = React.useMemo<Story>(() => ({ progress, velocity, scrollTo, year }), [progress, velocity, scrollTo, year]);
   const onChapterSelect = React.useCallback((chapter: RulerChapter) => scrollTo(ANCHORS[chapter.id]), [scrollTo]);
-  const onApply = React.useCallback(() => scrollTo(ANCHORS.apply), [scrollTo]);
+  const onApply = React.useCallback(() => goToApply(story), [story]);
   const onMilk = tone === "milk";
 
   return (
@@ -138,7 +139,7 @@ export function StoryStage({ year }: { year: number }) {
               }
               const Content = BEAT_CONTENT[beat.id];
               return (
-                <Beat key={beat.id} id={beat.id}>
+                <Beat key={beat.id} id={beat.id} keepMounted={beat.id === "apply-form"}>
                   {Content ? <Content /> : undefined}
                 </Beat>
               );
