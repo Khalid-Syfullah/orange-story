@@ -14,6 +14,7 @@ import { AscentArt } from "./ascent-art";
 import { GraftArt } from "./graft-art";
 import { HeroArt } from "./hero-art";
 import { Plate } from "./plate";
+import { PluckArt } from "./pluck-art";
 import { mountedScenes, scenePresence } from "./presence";
 import { SceneLayerContext, type SceneLayer } from "./stage-context";
 import { configureTextures, preloadTextures } from "./textures";
@@ -37,6 +38,7 @@ export const SCENE_ART: Partial<Record<SceneId, React.ComponentType<SceneArtProp
   hero: HeroArt,
   ascent: AscentArt,
   graft: GraftArt,
+  pluck: PluckArt,
 };
 
 const SCENE_IDS: readonly SceneId[] = SCENES.map((s) => s.id);

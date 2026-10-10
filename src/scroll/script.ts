@@ -503,6 +503,40 @@ export const GRAFT = {
   fruit: [at("graft", 0.64), at("graft", 0.96)] as ProgressRange,
 } as const;
 
+/**
+ * The pluck's own timings (progress). The art in `src/components/stage/pluck-harvest.ts` choreographs
+ * on these: the hand rises from the bottom center to the hero orange, closes on it (where the
+ * "We get you found." beat arrives), then the camera dollies down through the branches (`dolly`, the
+ * pluck camera keys) while the hand pulls the fruit free and carries it down with the camera. The
+ * foliage layers fall away behind the camera, the hand lets go, and the harvester is revealed
+ * holding the orange in his right hand (his arm arrives once the fruit has reached it).
+ */
+export const PLUCK = {
+  /** The hand rises from below the frame to the orange. */
+  rise: [at("pluck", 0.02), at("pluck", 0.24)] as ProgressRange,
+  /** The fingers close on the orange. */
+  grasp: [at("pluck", 0.22), at("pluck", 0.3)] as ProgressRange,
+  /** The tug: the fruit comes free of its branch. */
+  tug: [at("pluck", 0.33), at("pluck", 0.43)] as ProgressRange,
+  /** The camera dollies down to the harvester; the hand and the fruit travel with it. */
+  dolly: [at("pluck", 0.35), at("pluck", 0.78)] as ProgressRange,
+  /** The near and middle foliage fall away as the camera passes below the branches. */
+  foliage: {
+    near: [at("pluck", 0.36), at("pluck", 0.5)] as ProgressRange,
+    mid: [at("pluck", 0.44), at("pluck", 0.64)] as ProgressRange,
+  },
+  /**
+   * The harvester appears (body, arm with the orange, head) as the camera comes down to him. These
+   * ranges sit in the fast part of the dolly (its easing front-loads the move) and the camera then
+   * settles on him slowly until `dolly[1]`.
+   */
+  reveal: [at("pluck", 0.44), at("pluck", 0.66)] as ProgressRange,
+  /** The hand lets go and drops away, as the harvester's own hand takes the fruit (`handoff`). */
+  release: [at("pluck", 0.62), at("pluck", 0.74)] as ProgressRange,
+  /** The fruit becomes the one in the harvester's hand: his arm arrives as the hero orange gives way. */
+  handoff: [at("pluck", 0.62), at("pluck", 0.72)] as ProgressRange,
+} as const;
+
 export const CAMERA: readonly CameraKey[] = [
   // Hero: wide and still.
   key("hero", at("hero", 0), "hold", HERO_WIDE, [0, 0, 0], 35),
@@ -516,8 +550,8 @@ export const CAMERA: readonly CameraKey[] = [
   key("graft", at("graft", 0.62), "pull", BRANCH, [2, 8.4, 0], 30),
   // Pluck: the hand rises, then the camera dollies down through the branches to the harvester.
   key("pluck", at("pluck", 0), "hold", FRUITING_TREE, [1.6, 10.5, 0], 36),
-  key("pluck", at("pluck", 0.35), "dolly-down", FRUITING_TREE, [1.6, 10.5, 0], 36),
-  key("pluck", at("pluck", 0.78), "hold", HARVESTER, [1.4, 4.2, 0], 34),
+  key("pluck", PLUCK.dolly[0], "dolly-down", FRUITING_TREE, [1.6, 10.5, 0], 36),
+  key("pluck", PLUCK.dolly[1], "hold", HARVESTER, [1.4, 4.2, 0], 34),
   // Share: the cut, a push into the orange, the halves held, a push into the halves under the sand.
   key("share", at("share", 0), "hold", HARVESTER, [1.4, 4.2, 0], 34),
   key("share", at("share", 0.22), "push", HARVESTER, [1.4, 4.2, 0], 34),
