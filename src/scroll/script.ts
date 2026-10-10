@@ -475,6 +475,34 @@ export const ASCENT = {
   statueFade: [at("ascent", 0.84), at("ascent", 0.97)] as ProgressRange,
 } as const;
 
+/**
+ * The graft's own timings (progress). The art in `src/components/stage/graft-hands.ts` choreographs
+ * on these: the hands come in carrying the cutting, fit it to the cleft, wrap the twine, tie the
+ * knot in three steps (each step swaps in the next knot frame), then withdraw. The camera is steady
+ * on the branch until `pullOut` (see CAMERA), when it dollies up and pulls out; the fruiting tree
+ * fills in with oranges among the leaves while it does.
+ */
+export const GRAFT = {
+  /** The hands enter from the lower corners. */
+  enter: [at("graft", 0.02), at("graft", 0.16)] as ProgressRange,
+  /** The cutting is fitted to the cleft. */
+  fit: [at("graft", 0.16), at("graft", 0.28)] as ProgressRange,
+  /** The twine winds around the joint. */
+  wrap: [at("graft", 0.28), at("graft", 0.38)] as ProgressRange,
+  /** The knot: three steps, [start, end] each. */
+  knot: [
+    [at("graft", 0.38), at("graft", 0.44)],
+    [at("graft", 0.44), at("graft", 0.5)],
+    [at("graft", 0.5), at("graft", 0.56)],
+  ] as readonly ProgressRange[],
+  /** The hands let go and leave. */
+  exit: [at("graft", 0.56), at("graft", 0.64)] as ProgressRange,
+  /** The camera dollies up and pulls out from here (the second graft camera key). */
+  pullOut: [at("graft", 0.62), at("pluck", 0)] as ProgressRange,
+  /** Oranges and leaves fill the tree. */
+  fruit: [at("graft", 0.64), at("graft", 0.96)] as ProgressRange,
+} as const;
+
 export const CAMERA: readonly CameraKey[] = [
   // Hero: wide and still.
   key("hero", at("hero", 0), "hold", HERO_WIDE, [0, 0, 0], 35),

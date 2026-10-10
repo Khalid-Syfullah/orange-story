@@ -11,6 +11,7 @@ import { useSceneIndex } from "@/scroll/story-scroll";
 import type { SceneDef, SceneId } from "@/scroll/types";
 
 import { AscentArt } from "./ascent-art";
+import { GraftArt } from "./graft-art";
 import { HeroArt } from "./hero-art";
 import { Plate } from "./plate";
 import { mountedScenes, scenePresence } from "./presence";
@@ -35,6 +36,7 @@ export interface SceneArtProps {
 export const SCENE_ART: Partial<Record<SceneId, React.ComponentType<SceneArtProps>>> = {
   hero: HeroArt,
   ascent: AscentArt,
+  graft: GraftArt,
 };
 
 const SCENE_IDS: readonly SceneId[] = SCENES.map((s) => s.id);

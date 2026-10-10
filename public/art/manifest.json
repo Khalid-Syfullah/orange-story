@@ -326,7 +326,7 @@
       "anchor": [0.5, 0.5],
       "position": [1.6, 9.2],
       "height": 20,
-      "sway": 0.15,
+      "sway": 0.5,
       "note": "Far foliage with oranges, hazy.",
       "placeholder": { "kind": "foliage", "seed": "far", "leaves": 420, "oranges": 40, "size": 0.05, "haze": 0.35 }
     },
@@ -340,7 +340,7 @@
       "anchor": [0.5, 0.5],
       "position": [1.6, 10.5],
       "height": 13,
-      "sway": 0.3,
+      "sway": 0.9,
       "note": "Middle foliage with oranges.",
       "placeholder": { "kind": "foliage", "seed": "mid", "leaves": 300, "oranges": 26, "size": 0.06, "haze": 0.12 }
     },
@@ -354,7 +354,7 @@
       "anchor": [0.5, 0.5],
       "position": [1.6, 10.4],
       "height": 10,
-      "sway": 0.45,
+      "sway": 1.3,
       "note": "Near foliage framing the edges (clear in the middle); the camera dollies down past it.",
       "placeholder": { "kind": "foliage", "seed": "near", "leaves": 200, "oranges": 12, "size": 0.08, "hole": true }
     },
