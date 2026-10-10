@@ -158,6 +158,28 @@ export function useOptionalPlateTexture(entry: PlateEntry | null): Texture | nul
 }
 
 /**
+ * The texture of a plate without suspending: null until it has loaded, and while `entry` is null.
+ * Holds the texture while `entry` is set, so a caller can ask for art only when it is about to need
+ * it (the transition canvas, before a transition that reads the ring mask or the cloud).
+ */
+export function useLazyPlateTexture(entry: PlateEntry | null): Texture | null {
+  const [loaded, setLoaded] = React.useState<{ src: string; texture: Texture } | null>(null);
+  React.useEffect(() => {
+    if (!entry) return;
+    let alive = true;
+    retain(entry);
+    void loadTexture(entry).then((texture) => {
+      if (alive) setLoaded({ src: entry.src, texture });
+    });
+    return () => {
+      alive = false;
+      release(entry);
+    };
+  }, [entry]);
+  return entry && loaded?.src === entry.src ? loaded.texture : null;
+}
+
+/**
  * Loads and uploads the given plates ahead of time. Textures nobody mounts within a while are
  * released again.
  */

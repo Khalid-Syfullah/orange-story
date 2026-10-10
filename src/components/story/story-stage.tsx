@@ -96,7 +96,7 @@ export function StoryStage({ year }: { year: number }) {
             {live ? <StageCanvas progress={progress} /> : null}
           </div>
 
-          <TransitionLayer progress={progress} />
+          <TransitionLayer progress={progress} live={live} />
 
           <div data-layer="hairlines" className={cn("pointer-events-none absolute inset-0 transition-colors duration-300", onMilk ? "text-ink" : "text-white")}>
             <Hairlines progress={progress} cues={HAIRLINES} position="absolute" />

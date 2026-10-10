@@ -25,6 +25,9 @@ import { seeded } from "@/lib/progress";
  *   into bark), with an optional glow along the edge.
  * - `TwinkleMaterial`: instanced sprites that pulse on idle time and appear as `reveal` passes
  *   each one's threshold (stars, sparkles).
+ *
+ * Plates and morphs can also be cut to a screen-space circle (`revealMask`): the rainbow ring shows
+ * the new scene inside it and the old one outside.
  */
 
 const VERTEX = /* glsl */ `
@@ -44,6 +47,22 @@ vec4 toOutput(vec4 color, float opacity) {
 }
 `;
 
+/**
+ * A screen-space circle that hides the plate outside it (or inside it): the rainbow ring revealing
+ * the new scene. `revealCircle` is in drawing-buffer pixels (centre x, centre y from the bottom,
+ * radius, soft half-width); `revealSide` is 0 (off), 1 (show inside) or -1 (show outside).
+ */
+const REVEAL = /* glsl */ `
+uniform vec4 revealCircle;
+uniform float revealSide;
+float revealMask() {
+  if (revealSide == 0.0) return 1.0;
+  float d = distance(gl_FragCoord.xy, revealCircle.xy);
+  float inside = 1.0 - smoothstep(revealCircle.z - revealCircle.w, revealCircle.z + revealCircle.w, d);
+  return revealSide > 0.0 ? inside : 1.0 - inside;
+}
+`;
+
 const PLATE_FRAGMENT = /* glsl */ `
 uniform sampler2D map;
 uniform vec4 uvTransform;
@@ -54,6 +73,7 @@ uniform vec2 blurRadius;
 uniform float blurBias;
 varying vec2 vUv;
 ${OUTPUT}
+${REVEAL}
 vec4 sampleMap(vec2 uv) {
   if (blurRadius.x <= 0.0 && blurRadius.y <= 0.0) return texture2D(map, uv);
   vec4 sum = texture2D(map, uv, blurBias) * 2.0;
@@ -68,7 +88,7 @@ vec4 sampleMap(vec2 uv) {
 void main() {
   vec4 color = sampleMap(vUv * uvTransform.xy + uvTransform.zw);
   color.rgb = mix(color.rgb, tint * color.a, tintAmount);
-  gl_FragColor = toOutput(color, opacity);
+  gl_FragColor = toOutput(color, opacity * revealMask());
   if (gl_FragColor.a < 0.002) discard;
 }
 `;
@@ -86,6 +106,7 @@ uniform float edgeAmount;
 uniform float opacity;
 varying vec2 vUv;
 ${OUTPUT}
+${REVEAL}
 void main() {
   vec2 uv = vUv * uvTransform.xy + uvTransform.zw;
   vec4 a = texture2D(mapA, uv);
@@ -97,7 +118,7 @@ void main() {
   vec4 color = mix(b, a, keep);
   float band = 1.0 - abs(2.0 * keep - 1.0);
   color.rgb += edgeColor * (band * band * edgeAmount * color.a);
-  gl_FragColor = toOutput(color, opacity);
+  gl_FragColor = toOutput(color, opacity * revealMask());
   if (gl_FragColor.a < 0.002) discard;
 }
 `;
@@ -161,9 +182,15 @@ export class PlateMaterial extends ShaderMaterial {
         tintAmount: { value: 0 },
         blurRadius: { value: new Vector2(0, 0) },
         blurBias: { value: 0 },
+        ...revealUniforms(),
       },
     });
   }
+}
+
+/** Uniforms of the reveal circle (off by default). */
+function revealUniforms() {
+  return { revealCircle: { value: new Vector4(0, 0, 0, 1) }, revealSide: { value: 0 } };
 }
 
 export class MorphMaterial extends ShaderMaterial {
@@ -186,6 +213,7 @@ export class MorphMaterial extends ShaderMaterial {
         // Shared with the plate frame (unused by the morph, kept so one updater fits both).
         blurRadius: { value: new Vector2(0, 0) },
         blurBias: { value: 0 },
+        ...revealUniforms(),
       },
     });
   }

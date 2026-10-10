@@ -91,6 +91,7 @@ Column A holds titles and tags; column B, one tab-width to the right, holds para
 - **Typewriter lines** that type letter by letter as you scroll, and un-type when you scroll back, with a thin caret.
 - **Slow camera moves**: long push-ins, pans and dollies through painted plates. Nothing snaps; nothing bounces.
 - **Hairlines move with the chapters**: vertical lines slide out sideways, horizontal lines up or down, corner stars lock into the corners; in viewfinder moments the lines close into a square frame.
+- **Transitions cover, then uncover**: blue sand blown across, a white page that unfolds like a folded sheet, blue dust rising with white specks, a cloud billowing out of a sky turned to cloth. Each starts on the untouched old scene and ends on the untouched new one; the rainbow ring is the one soft spectral color, and it sweeps instead of covering. Fronts that sweep across the screen move in step with the scroll (the hand is their pacing); fades and folds use the curve. Text leaves the questions as smoke: blur, rise, and soft holes of smoke noise. All of them play on `/design`.
 - Small UI transitions (hover, focus, the form field stack) take about 0.3s on the same curve.
 
 ## Do not

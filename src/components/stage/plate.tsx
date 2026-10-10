@@ -3,9 +3,12 @@
 import * as React from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { isMotionValue, type MotionValue } from "motion/react";
-import { PlaneGeometry, Vector3, type Color, type Group, type Mesh, type PerspectiveCamera, type ShaderMaterial } from "three";
+import { PlaneGeometry, Vector2, Vector3, type Color, type Group, type Mesh, type PerspectiveCamera, type ShaderMaterial, type Vector4 } from "three";
 
 import { plateEntry, plateWorldSize, type Pair, type PlateEntry, type PlateId } from "@/art/manifest";
+import { revealCircle } from "@/components/transitions/choreography";
+import { transitionOf } from "@/scroll/helpers";
+import type { TransitionId } from "@/scroll/types";
 
 import { phaseOf, swayAngle, useIdleClock, type SwayOptions } from "./idle";
 import { PlateMaterial } from "./materials";
@@ -22,11 +25,20 @@ import { usePlateTexture } from "./textures";
  * multiplied by the scene's presence, so plates crossfade with their scene. Depth of field adds blur
  * by distance from the camera's focus. Sway (leaves, fruit) rotates the plate about its anchor on
  * idle time, paused offscreen and with reduced motion. Backdrops follow the camera and fill the view.
+ * `reveal` cuts the plate to the circle of a sweeping transition: the rainbow ring shows the plates
+ * of the new scene inside it (`side: "inside"`) and can hide the old ones there (`"outside"`).
  *
  * Children are attached at the anchor and move, scale and sway with the plate.
  */
 
 export type Num = number | MotionValue<number>;
+
+/** Cut a plate to the expanding circle of a transition (the rainbow ring), scrubbed by progress. */
+export interface PlateReveal {
+  transition: TransitionId;
+  /** `inside` (default): shown inside the circle only, the new scene. `outside`: the old scene. */
+  side?: "inside" | "outside";
+}
 
 /** The value of a number or MotionValue right now. */
 export const read = (value: Num | undefined, fallback: number): number => (value === undefined ? fallback : typeof value === "number" ? value : value.get());
@@ -77,6 +89,8 @@ export interface PlateMotion {
   uvOffset?: readonly [Num, Num];
   /** Fill the view behind the scene and follow the camera. Default: the manifest's role. */
   backdrop?: boolean;
+  /** Show only inside (or outside) a transition's expanding circle. */
+  reveal?: PlateReveal;
   name?: string;
 }
 
@@ -99,6 +113,31 @@ const NO_REPEAT: Pair = [1, 1];
 
 const tmpPosition = new Vector3();
 const tmpDirection = new Vector3();
+const tmpBuffer = new Vector2();
+
+/**
+ * Sets a material's reveal circle for progress p (drawing-buffer pixels, as `gl_FragCoord`).
+ * Returns false when the plate is entirely cut away.
+ */
+function applyReveal(material: ShaderMaterial, reveal: PlateReveal | undefined, p: number, gl: { getDrawingBufferSize(target: Vector2): Vector2 }, width: number, height: number): boolean {
+  const u = material.uniforms;
+  if (!u.revealSide) return true; // a material without the reveal uniforms
+  if (!reveal) {
+    u.revealSide.value = 0;
+    return true;
+  }
+  const circle = revealCircle(transitionOf(reveal.transition), p, width, height);
+  const inside = reveal.side !== "outside";
+  const far = Math.max(Math.hypot(circle.x, circle.y), Math.hypot(width - circle.x, circle.y), Math.hypot(circle.x, height - circle.y), Math.hypot(width - circle.x, height - circle.y));
+  if (inside && circle.radius + circle.softness <= 0) return false;
+  if (!inside && circle.radius - circle.softness >= far) return false;
+  gl.getDrawingBufferSize(tmpBuffer);
+  const sx = tmpBuffer.x / Math.max(1, width);
+  const sy = tmpBuffer.y / Math.max(1, height);
+  u.revealSide.value = inside ? 1 : -1;
+  (u.revealCircle.value as Vector4).set(circle.x * sx, tmpBuffer.y - circle.y * sy, circle.radius * sy, Math.max(1, circle.softness * sy));
+  return true;
+}
 
 /** Re-renders the on-demand canvas when a MotionValue prop changes outside of scroll. */
 export function useInvalidateOnChange(values: readonly (Num | undefined)[]) {
@@ -150,8 +189,9 @@ export function usePlateFrame(
     const m = meshRef.current;
     if (!g || !m) return;
     const p = progress?.get() ?? 0;
+    const material = m.material as ShaderMaterial;
     const opacity = read(props.opacity, 1) * (layer ? layer.presence(p) : 1);
-    const shown = props.visible !== false && opacity > 0.001;
+    const shown = props.visible !== false && opacity > 0.001 && applyReveal(material, props.reveal, p, state.gl, state.size.width, state.size.height);
     g.visible = shown;
     if (!shown) {
       clock.drop(key);
@@ -159,7 +199,6 @@ export function usePlateFrame(
     }
 
     const camera = state.camera as PerspectiveCamera;
-    const material = m.material as ShaderMaterial;
     const u = material.uniforms;
     const repeat = props.uvRepeat ?? entry.repeat ?? NO_REPEAT;
     const [w, h] = plateWorldSize(entry, props.height ?? entry.height, repeat);

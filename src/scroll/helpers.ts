@@ -142,6 +142,16 @@ export function activeTransitions(p: number): TransitionDef[] {
   return TRANSITIONS.filter((t) => p >= t.start && (p < t.end || (t.end >= 1 && p <= 1)));
 }
 
+/**
+ * Where a beat that leaves as smoke dissolves: across the text transition that lists it (so a group
+ * dissolves together), otherwise across its own leave. Null for beats that leave another way.
+ */
+export function smokeRange(beat: BeatDef): ProgressRange | null {
+  if (beat.leave !== "smoke") return null;
+  const group = TRANSITIONS.find((t) => t.kind === "smoke" && t.beats?.includes(beat.id));
+  return group ? [group.start, group.end] : [beat.hold[1], beat.out];
+}
+
 /* Tone, units */
 
 /** Ground under the chrome at p: milk inside a milk cue, sky everywhere else. */

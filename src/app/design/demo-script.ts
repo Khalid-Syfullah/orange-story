@@ -2,8 +2,8 @@ import { chrome } from "@/content/copy";
 import { segmentsFromStops, type RulerChapter } from "@/components/chrome/chapters";
 import type { FrameRect } from "@/components/chrome/hairlines";
 import type { ProgressRange } from "@/lib/progress";
-import { ANCHORS, CHAPTERS, HAIRLINES, RULER_STOPS, TRANSITIONS } from "@/scroll/script";
-import type { TransitionId } from "@/scroll/types";
+import { ANCHORS, CHAPTERS, HAIRLINES, RULER_STOPS, SCENES, TRANSITIONS } from "@/scroll/script";
+import type { SceneId, TransitionDef, TransitionId } from "@/scroll/types";
 
 /**
  * Values for the dev-only /design playground. The chrome on its stage runs on the real story
@@ -34,6 +34,20 @@ export const demoTargets = {
   share: viewfinderTarget("viewfinder-share"),
   finale: viewfinderTarget("viewfinder-finale"),
 } as const;
+
+/**
+ * The two placeholder plates a transition plays between on /design: the scenes it hands over, or
+ * for the ring (which happens inside the falling orange's scene) that scene and the orchard it
+ * reveals, which is what the next scene shows. Viewfinders and the smoke stay on their own scene.
+ */
+export function demoTransitionPlates(def: TransitionDef): readonly [SceneId, SceneId] {
+  if (def.from !== def.to) return [def.from, def.to];
+  if (def.kind === "ring") {
+    const next = SCENES[SCENES.findIndex((s) => s.id === def.from) + 1];
+    return [def.from, next?.id ?? def.from];
+  }
+  return [def.from, def.from];
+}
 
 export const demoRanges = {
   splitReveal: [0.04, 0.36] as ProgressRange,

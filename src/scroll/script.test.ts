@@ -153,6 +153,15 @@ describe("validateScript", () => {
     expect(scriptProblems(missing).some((p) => p.includes("is not in src/content/copy.ts"))).toBe(true);
   });
 
+  it("rejects canvas transitions that overlap (there is one transition canvas)", () => {
+    const sand = SCRIPT.transitions.find((t) => t.id === "sand")!;
+    const overlapping: StoryScript = {
+      ...SCRIPT,
+      transitions: SCRIPT.transitions.map((t) => (t.id === "unfold" ? { ...t, start: sand.end - SCREEN } : t)),
+    };
+    expect(scriptProblems(overlapping).some((p) => p.includes("overlap on the transition canvas"))).toBe(true);
+  });
+
   it("lists every problem at once", () => {
     const card1 = beatOf("card-1");
     const broken = replaceBeat(replaceBeat(SCRIPT, "card-2", { in: card1.out - SCREEN / 2 }), "found", { slot: "nowhere" as BeatDef["slot"] });

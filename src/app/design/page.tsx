@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 
 import { PlateLab } from "./plate-lab";
 import { Playground } from "./playground";
+import { TransitionLab } from "./transition-lab";
 
 export const metadata: Metadata = {
   title: designPage.title,
@@ -161,6 +162,12 @@ export default function DesignPage() {
       <section className="px-col-a py-12">
         <SectionLabel>{designPage.sections.plates}</SectionLabel>
         <PlateLab />
+      </section>
+
+      {/* Every scene transition on its real script range, between placeholder plates. */}
+      <section className="px-col-a py-12">
+        <SectionLabel>{designPage.sections.transitions}</SectionLabel>
+        <TransitionLab />
       </section>
 
       {/* Easing */}

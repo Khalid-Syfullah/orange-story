@@ -15,13 +15,15 @@ The whole story is data in `src/scroll/script.ts`: chapters, scenes, text beats,
 | The pinned stage, the beats, the dev timeline, the reduced-motion page | `src/components/story/` |
 | Art manifest (every plate, its file, size and place in depth) | `public/art/manifest.json`, read by `src/art/manifest.ts` |
 | Stage canvas: plates, morph, twinkle, sway, camera rig, scene presence | `src/components/stage/` |
+| Transitions: choreography, shaders, the transition canvas | `src/components/transitions/` |
+| Smoke-out for text | `src/components/motion/smoke-out.tsx` |
 
 ## The stage
 
 The site is one `<section>` that is `STAGE_VH` tall (5000vh), scrolled natively. Inside it a sticky frame, exactly one viewport tall, holds every layer, bottom to top:
 
 1. the WebGL canvas with the scene plates;
-2. the transition canvas (sand, paper unfold, dust, rainbow ring, fabric sky);
+2. the transition canvas (sand, paper unfold, dust, rainbow ring, fabric sky), shown and rendered only while one of them runs;
 3. the hairlines, and the progress lines that run along them;
 4. the DOM text layer: every beat of the script, each in its slot;
 5. the chrome: mark, chapter menu, "Apply", ruler, percent counter.
@@ -179,6 +181,23 @@ Covering transitions (sand, unfold, dust, fabric) straddle a scene boundary and 
 | `fabric` | fabric | faq to stars | 0.7638 | 0.7670 to 0.7690 | 0.7780 | 0.70 | canvas |
 | `viewfinder-finale` | viewfinder | finale | 0.9490 | 0.9847 to 1.0000 | 1.0000 | 2.50 | hairlines |
 
+How each one plays, all scrubbed by progress and so exactly reversible. Every effect draws nothing at its start (the old scene, untouched) and nothing at its end (the new scene, untouched); the covering ones cover every pixel across "Full". The unit test (`src/components/transitions/choreography.test.ts`) proves those three points from the same bounds the shaders use.
+
+- **Sand.** Deep blue sand blows in from the left on a ragged, wind-streaked front, loose grains flying ahead of it, and covers everything. While it covers, its grains keep drifting on idle time. Then it blows on to the right, uncovering The Work from the left.
+- **Paper unfold.** The white spreads from the middle until the frame is milk paper (the chrome turns ink). Then the next scene opens out of the white like a folded sheet: the middle column's top panel lifts and falls open, then the left and right columns swing out from behind it, each shaded while it tilts; the creases fade as the sheet settles flat.
+- **Rising dust.** Blue rises from the bottom behind a billowing, lit edge, white specks lifting in it and ahead of it, until it covers the screen; then it lifts off the top, uncovering the gardener from the bottom up.
+- **Rainbow ring.** A soft spectral band (violet inside, red outside) expands from `origin` (the falling orange) past the farthest corner. Inside it the new scene shows: a plate passes `reveal={{ transition: "ring" }}` to show only inside the ring (and `side: "outside"` to show only outside it), so the orchard rows appear inside the ring while the falling orange, which has no `reveal`, stays in front throughout. The fall scene's art (phase 15) puts `reveal` on its orchard plates.
+- **Fabric sky.** The sky turns to rippling cloth, spreading from the middle toward the trees, while a cloud billows from the top centre toward the viewer until it fills the screen. Then a ragged hole opens through it from the middle onto the blue cloth, which clears onto the stargazer.
+- **Smoke.** The beats it lists (the last question and the questions title) dissolve together across its range: their lines blur and rise, first line first, and soft holes of smoke noise open in them and drift upward (a CSS mask). Every beat that leaves as `smoke` gets the same mask over its own leave. `SmokeOut` (BlurFade drifting up, plus the mask) does the same for any other group of text.
+- **Viewfinders.** The hairlines' `viewfinder` cue (see below): the lines close in from wherever they are into a square around `target`.
+
+Where they are drawn:
+
+- The covering and sweeping ones draw on the transition canvas (`TransitionCanvas`, React Three Fiber): one full-screen shader pass per transition, premultiplied over the stage. Fronts, folds, radii and fades are computed in `choreography.ts`; `shaders.ts` adds the texture (ragged edges, grain, specks, paper fibre, fold shading, the spectrum, the cloth and the cloud). Sweeping fronts move in step with the scroll; fades and folds use the story curve.
+- The canvas renders only while a transition runs, plus one clearing frame as it ends; while the sand, the dust or the fabric is on screen it keeps rendering on idle time for its drift. Its pixel ratio is capped at `TRANSITION_MAX_DPR`, its shaders compile while the browser is idle, and its art loads `TRANSITION_PRELOAD_SCREENS` before it is needed: `fall/ring-mask` (the ring's band, a radial image, bright where the ring is), `stars/fabric-sky` (the cloth) and `stars/cloud` (the billowing cloud). Until the art arrives, the shaders draw stand-ins.
+- Only one canvas transition runs at a time (`validateScript()` checks it).
+- In development, `/design` plays every transition on its real range between placeholder plates of the scenes it joins.
+
 ## Camera
 
 The camera rig (`src/components/stage/camera-rig.tsx`) builds one paused GSAP timeline from these keys (`camera-path.ts`), with the story's easing curve on every move, and seeks it to the progress every frame, so the camera always interpolates and plays backwards exactly. Each key is a camera position, a target and a vertical field of view (world units: x right, y up, z toward the viewer; plates sit at z 0 or behind), plus the kind of move that starts there and runs to the next key: `hold`, `push`, `pull`, `pan`, `dolly-up`, `dolly-down`, or `reframe`. The camera always interpolates between keys and never cuts; a `reframe` happens only while a transition fully covers the screen. Every scene has at least one key, and keys never share a position.
@@ -260,7 +279,7 @@ The ruler's progress line has one segment per stretch between `RULER_STOPS`: eve
 - the scenes follow the storyboard order and tile 0 to 1 exactly: no gaps, no overlaps, each as long as its share;
 - the chapters start inside 0 to 1, in order;
 - no two beats in the same slot overlap, every beat lasts at least one screen, every hold is inside its range, a beat that never leaves runs to 1, and every copy key (and part) exists in the copy deck;
-- every transition has a valid range and peak, is sorted by start, and a transition that hands one scene to the next straddles their boundary and fully covers the screen at it;
+- every transition has a valid range and peak, is sorted by start, starts on the stage (a ring's `origin`), and a transition that hands one scene to the next straddles their boundary and fully covers the screen at it; transitions on the one transition canvas never overlap;
 - the camera starts at 0, its keys increase strictly, every scene has a key, fields of view stay between 10 and 90 degrees, and every `reframe` sits inside a full cover;
 - hairline envelopes are in order, progress lines draw before they erase, and tones and anchors stay inside 0 to 1.
 
@@ -271,7 +290,8 @@ From `src/scroll/helpers.ts`, pure and safe on the server, in tests and inside s
 - `sceneProgress(id, p)`: how far through a scene p is, 0 to 1, clamped. Art inside a scene choreographs on this.
 - `currentScene(p)` and `currentChapter(p)`: the scene and the ruler chapter at p.
 - `beatVisible(id, p)`: whether a beat is on stage at p (arriving, holding or leaving).
-- Also `sceneAt(id, t)` (the inverse of `sceneProgress`), `visibleBeats(p)`, `beatEnterAmount` and `beatLeaveAmount`, `beatLineRanges` (the per-line stagger), `transitionProgress(id, p)`, `activeTransitions(p)` and `toneAt(p)`.
+- Also `sceneAt(id, t)` (the inverse of `sceneProgress`), `visibleBeats(p)`, `beatEnterAmount` and `beatLeaveAmount`, `beatLineRanges` (the per-line stagger), `transitionProgress(id, p)`, `activeTransitions(p)`, `smokeRange(beat)` (where a beat dissolves as smoke) and `toneAt(p)`.
+- For transitions, `src/components/transitions/choreography.ts` adds `transitionPhase(def, p)` (how far through its covering ramp, peak and clearing ramp p is), `canvasTransitionAt(p, defs)`, the per-effect frames (`sandFrame`, `unfoldFrame`, `dustFrame`, `ringFrame`, `fabricFrame`) and `revealCircle(def, p, width, height)`.
 
 In components, `useStory()` gives the `progress` and `velocity` motion values and `scrollTo(p)`. To show something in a scene, map `progress` through `sceneProgress` with `useTransform`, or write to the DOM from `progress.on("change")`; to render content for a beat, register a component for its id in `BEAT_CONTENT` (`src/components/story/story-stage.tsx`) and build it from `BeatLine`, `Headline` and `TypedLine` so it keeps the beat's timing.
 

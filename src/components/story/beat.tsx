@@ -5,7 +5,8 @@ import { motion, useMotionValue, useTransform, type MotionStyle, type MotionValu
 
 import { cn } from "@/lib/utils";
 import { ease, remap } from "@/lib/progress";
-import { beatEnterAmount, beatLeaveAmount, beatLineRanges, beatOf, inBeat } from "@/scroll/helpers";
+import { useSmokeMask } from "@/components/motion/smoke-out";
+import { beatEnterAmount, beatLeaveAmount, beatLineRanges, beatOf, inBeat, smokeRange } from "@/scroll/helpers";
 import { useBeatMounted, useStory } from "@/scroll/story-scroll";
 import type { BeatDef, BeatEnter, BeatId, BeatLeave } from "@/scroll/types";
 import { EASE } from "@/styles/tokens";
@@ -23,6 +24,8 @@ import { SLOTS } from "./slots";
  * - The box itself does the whole-block moves (zoom, dock, swing, sink, smoke rise). Lines inside
  *   use `useBeatLine` for their staggered fade, blur and drift, so custom content from the scene
  *   phases gets the same timing by rendering `<BeatLine>` rows.
+ * - A beat that leaves as smoke also dissolves through the smoke noise mask (`useSmokeMask`), over
+ *   the range of its smoke transition, so a group of beats dissolves together.
  *
  * Children replace the default content (`BeatContent`, which renders the beat's copy key).
  */
@@ -56,18 +59,37 @@ export function Beat({ id, children, keepMounted = false, className }: BeatProps
   const beat = beatOf(id);
   const mounted = useBeatMounted(beat, progress, keepMounted);
   const style = useBlockStyle(beat, progress);
+  const smoke = smokeRange(beat);
   const slot = SLOTS[beat.slot];
 
-  return (
+  const block = (
+    <motion.div className={cn(slot.box, className)} style={{ ...style, transformOrigin: slot.origin }}>
+      {mounted ? (
+        <BeatBody beat={beat} progress={progress}>
+          {children ?? <BeatContent />}
+        </BeatBody>
+      ) : null}
+    </motion.div>
+  );
+
+  return smoke ? (
+    <SmokeFrame beat={beat} range={smoke} progress={progress}>
+      {block}
+    </SmokeFrame>
+  ) : (
     <div data-beat={id} data-slot={beat.slot} className="pointer-events-none absolute inset-0">
-      <motion.div className={cn(slot.box, className)} style={{ ...style, transformOrigin: slot.origin }}>
-        {mounted ? (
-          <BeatBody beat={beat} progress={progress}>
-            {children ?? <BeatContent />}
-          </BeatBody>
-        ) : null}
-      </motion.div>
+      {block}
     </div>
+  );
+}
+
+/** The full-stage frame of a beat that leaves as smoke: it carries the smoke mask, so the rising, blurring text never leaves it. */
+function SmokeFrame({ beat, range, progress, children }: { beat: BeatDef; range: readonly [number, number]; progress: MotionValue<number>; children: React.ReactNode }) {
+  const mask = useSmokeMask(progress, range);
+  return (
+    <motion.div data-beat={beat.id} data-slot={beat.slot} className="pointer-events-none absolute inset-0" style={mask}>
+      {children}
+    </motion.div>
   );
 }
 

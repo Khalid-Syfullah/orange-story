@@ -8,7 +8,8 @@ import type { BeatDef, CameraMove, SceneId, SlotId, StoryScript, TransitionKind 
  * - scenes tile 0 to 1 in order, with no gaps or overlaps;
  * - beats in the same slot never overlap, and every beat lasts at least one screen;
  * - every beat's copy key exists in `src/content/copy.ts`;
- * - chapters, transitions, camera keys, cues and anchors are inside 0 to 1 and in order.
+ * - chapters, transitions, camera keys, cues and anchors are inside 0 to 1 and in order;
+ * - transitions on the one transition canvas never overlap.
  */
 
 /** Two positions closer than this are equal (positions are rounded to 6 decimals). */
@@ -147,7 +148,13 @@ function checkTransitions(script: StoryScript, problems: string[]) {
         problems.push(`${name} must fully cover the screen at the scene boundary (${fmt(next.start)})`);
     }
     for (const id of t.beats ?? []) if (!script.beats.some((b) => b.id === id)) problems.push(`${name} names an unknown beat "${id}"`);
+    if (t.origin && !t.origin.every((v) => inUnit(v))) problems.push(`${name} starts outside the stage (origin ${t.origin.join(", ")})`);
   });
+  // One transition canvas: its transitions take turns.
+  const canvas = script.transitions.filter((t) => t.layer === "canvas");
+  for (let i = 1; i < canvas.length; i++)
+    if (canvas[i].start < canvas[i - 1].end - EPSILON)
+      problems.push(`transitions "${canvas[i - 1].id}" and "${canvas[i].id}" overlap on the transition canvas (${fmt(canvas[i].start)} < ${fmt(canvas[i - 1].end)})`);
 }
 
 function checkCamera(script: StoryScript, problems: string[]) {

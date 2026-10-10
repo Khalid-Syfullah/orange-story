@@ -7,6 +7,15 @@
 export const MIN_DPR = 1;
 export const MAX_DPR = 1.5;
 
+/**
+ * Highest pixel ratio of the transition canvas. Its effects are soft (fronts, noise, fine grains),
+ * so it renders at a lower resolution than the plates: every pixel runs a full-screen shader.
+ */
+export const TRANSITION_MAX_DPR = 1.25;
+
+/** Screens of scrolling before a transition when its art (ring mask, cloud) starts to load. */
+export const TRANSITION_PRELOAD_SCREENS = 3;
+
 /** Longest side of a plate texture on the GPU, in pixels. Larger images are scaled down on load. */
 export const TEXTURE_CAP = 2048;
 /** The same on low-memory and small touch devices. */
