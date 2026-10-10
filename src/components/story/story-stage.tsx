@@ -11,6 +11,7 @@ import { chrome } from "@/content/copy";
 import { cn } from "@/lib/utils";
 import { segmentsFromStops, type RulerChapter } from "@/components/chrome/chapters";
 import { Hairlines } from "@/components/chrome/hairlines";
+import { ServiceThread } from "@/components/chrome/service-thread";
 import { ProgressLine } from "@/components/chrome/progress-line";
 import { StoryChrome } from "@/components/chrome/story-chrome";
 import { ANCHORS, BEATS, CHAPTERS, HAIRLINES, PROGRESS_LINES, RULER_STOPS, STAGE_VH } from "@/scroll/script";
@@ -103,6 +104,7 @@ export function StoryStage({ year }: { year: number }) {
             {PROGRESS_LINES.map((line) => (
               <ProgressLine key={line.id} progress={progress} range={line.draw} erase={line.erase} className="absolute" style={ALONG_TOP} />
             ))}
+            <ServiceThread progress={progress} />
           </div>
 
           <div

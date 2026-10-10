@@ -565,6 +565,19 @@ export const SHARE = {
   together: [at("share", 0.46), at("share", 0.58)] as ProgressRange,
 } as const;
 
+/**
+ * The work's own timings (progress). The art in `src/components/stage/work-sky.ts` choreographs on
+ * these: the clouds drift right on idle time and shift right as the story scrolls (`clouds`, the
+ * stretch over which the scroll shift runs, so clouds pass on both sides of card 2), and the giant
+ * orange on its minaret rises into view with the builder during the third card.
+ */
+export const WORK = {
+  /** The scroll shift of the clouds. */
+  clouds: [at("work", 0), at("work", 1)] as ProgressRange,
+  /** The giant orange and the builder rise into view (card 3). */
+  rise: [at("work", 0.77), at("work", 0.99)] as ProgressRange,
+} as const;
+
 export const CAMERA: readonly CameraKey[] = [
   // Hero: wide and still.
   key("hero", at("hero", 0), "hold", HERO_WIDE, [0, 0, 0], 35),
@@ -588,6 +601,7 @@ export const CAMERA: readonly CameraKey[] = [
   key("share", SAND_COVERED, "reframe", [1.5, 4.5, 2.2], [1.5, 4.5, 0], 28),
   // Work: a slow dolly upward through the clouds.
   key("work", SAND_CLEARING, "dolly-up", [0, 0, 14], [0, 0.5, 0], 40),
+  key("work", at("work", 0.97), "dolly-up", [0, 7.4, 14], [0, 7.9, 0], 40),
   // Blueprint: the scaffold, then a push into the plan as it unfolds.
   key("blueprint", at("blueprint", 0), "hold", [0, 9, 13], [0, 9.5, 0], 38),
   key("blueprint", at("blueprint", 0.35), "push", [0, 9, 13], [0, 9.5, 0], 38),
