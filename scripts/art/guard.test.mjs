@@ -29,8 +29,15 @@ describe("the texture guard", () => {
     expect(verdict.reasons.join(" ")).toMatch(/colours|high-frequency/);
   });
 
-  it("passes a painted plate (the gardener's stand-in study)", async () => {
+  it("passes a finished painted gardener", async () => {
     const m = await measureFile(path.join(ROOT, "public/art/prune/gardener.webp"));
+    expect(judgeTexture(m)).toEqual({ ok: true, reasons: [] });
+  });
+
+  it("accepts finely blended linen while retaining the flat-art checks", async () => {
+    const m = await measureFile(path.join(ROOT, "public/art/pluck/harvester-body.webp"));
+    expect(m.colors).toBeGreaterThan(1000);
+    expect(m.lumStd).toBeGreaterThan(0.15);
     expect(judgeTexture(m)).toEqual({ ok: true, reasons: [] });
   });
 });

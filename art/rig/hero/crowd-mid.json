@@ -1,1 +1,12 @@
-{}
+{
+  "fit": "canvas",
+  "points": {
+    "look-at": [
+      0.375,
+      0
+    ]
+  },
+  "matte": {
+    "defringe": 0
+  }
+}

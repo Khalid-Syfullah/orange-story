@@ -12,12 +12,14 @@
  * of hair on a skin-coloured disc spreads luminance too, so spread alone proves nothing), 8 to 255
  * colours and hf at most 0.0018; the painted studies measure lumStd 0.10 and up, 460 colours and
  * up and hf 0.010 and up. Each limit sits between the two, low enough for a real painting's
- * smoother finish: a flat fill fails all three, a vector drawing fails colours and hf.
+ * smoother finish: the finished harvester's finely blended linen measures hf 0.00498,
+ * so the limit allows that finish while remaining well above the flat studies' 0.0018.
+ * A flat fill fails all three, a vector drawing fails colours and hf.
  */
 
 import sharp from "sharp";
 
-export const THRESHOLDS = { lumStd: 0.05, colors: 350, hf: 0.005 };
+export const THRESHOLDS = { lumStd: 0.05, colors: 350, hf: 0.0045 };
 
 /** Texture metrics of a straight-alpha RGBA buffer. */
 export function measureTexture(rgba, W, H) {

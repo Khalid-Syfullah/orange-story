@@ -1,1 +1,12 @@
-{}
+{
+  "fit": "canvas",
+  "points": {
+    "shears-tip": [
+      0.08,
+      0.543636
+    ]
+  },
+  "matte": {
+    "defringe": 0
+  }
+}

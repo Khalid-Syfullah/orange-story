@@ -110,21 +110,25 @@ async function importOne(entry, file, side) {
   const guessed = !side.rig;
   const rig = side.rig ? remapRig(side.rig, fit, [W, H], entry.size) : guessRig(canvas, CW, CH, { ...rigGuessFor(entry.id), anchor: entry.anchor, points: { ...(entry.points ?? {}), ...points } });
 
-  let quality = 86;
+  let quality = 90;
+  let alphaQuality = 92;
   let buffer;
   for (;;) {
     buffer = await sharp(Buffer.from(canvas.buffer), { raw: { width: CW, height: CH, channels: 4 } })
-      .webp({ quality, alphaQuality: 92, effort: 5, smartSubsample: true })
+      .webp({ quality, alphaQuality, effort: 6, smartSubsample: true })
       .toBuffer();
-    if (buffer.length <= MAX_BYTES || quality <= 50) break;
-    quality -= 6;
+    if (buffer.length <= MAX_BYTES) break;
+    if (quality > 70) quality = Math.max(70, quality - 4);
+    else if (!fullBleed(entry) && alphaQuality > 32) alphaQuality = Math.max(32, alphaQuality - 12);
+    else if (quality > 34) quality = Math.max(34, quality - 4);
+    else break;
   }
 
   const warnings = [];
   const edge = edgeReport(canvas, CW, CH, key);
   if (!fullBleed(entry) && edge.margin < 1) warnings.push("cut by its own image edge");
   if (edge.fringe > 0.02) warnings.push(`${(edge.fringe * 100).toFixed(1)}% of the edge still key-coloured`);
-  if (buffer.length > MAX_BYTES) warnings.push("over 600 KB at quality 50");
+  if (buffer.length > MAX_BYTES) warnings.push("over 600 KB at minimum quality");
   for (const name of Object.keys(entry.points ?? {})) if (!(name in points)) warnings.push(`point "${name}" kept from the manifest: calibrate it (plate lab, /design)`);
   if (guessed && rig) warnings.push("rig guessed from the cut-out: check it on /design and give the sidecar its own");
   if (entry.rig && !rig) warnings.push("rig kept from the manifest (the stand-in's): give the sidecar its own");
