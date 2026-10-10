@@ -15,6 +15,7 @@ import { BlueprintArt } from "./blueprint-art";
 import { GraftArt } from "./graft-art";
 import { HeroArt } from "./hero-art";
 import { Plate } from "./plate";
+import { PruneArt } from "./prune-art";
 import { PluckArt } from "./pluck-art";
 import { mountedScenes, scenePresence } from "./presence";
 import { ShareArt } from "./share-art";
@@ -47,6 +48,7 @@ export const SCENE_ART: Partial<Record<SceneId, React.ComponentType<SceneArtProp
   work: WorkArt,
   blueprint: BlueprintArt,
   site: SiteArt,
+  prune: PruneArt,
 };
 
 const SCENE_IDS: readonly SceneId[] = SCENES.map((s) => s.id);

@@ -936,8 +936,36 @@
       "anchor": [0.5, 1],
       "position": [0.75, -0.7],
       "height": 2.9,
-      "note": "Gardener in classical dress with shears, trimming the tree.",
-      "placeholder": { "kind": "figure", "robe": "marble", "pose": "shears", "facing": "left" }
+      "note": "Gardener in classical dress: body (his arms with the shears are separate layers).",
+      "placeholder": { "kind": "figure", "robe": "marble", "pose": "stand", "facing": "left", "arms": false }
+    },
+    {
+      "id": "prune/gardener-arms-1",
+      "scenes": ["prune", "fall"],
+      "role": "plate",
+      "src": "/art/prune/gardener-arms-1.webp",
+      "size": [512, 512],
+      "depth": 0,
+      "anchor": [0.88, 0.38],
+      "position": [0.584, 1.58],
+      "height": 0.911,
+      "frame": 0,
+      "note": "His arms with the shears, frame 1 of 2 (open).",
+      "placeholder": { "kind": "arm", "hold": "shears", "from": "right", "frame": 0 }
+    },
+    {
+      "id": "prune/gardener-arms-2",
+      "scenes": ["prune", "fall"],
+      "role": "plate",
+      "src": "/art/prune/gardener-arms-2.webp",
+      "size": [512, 512],
+      "depth": 0,
+      "anchor": [0.88, 0.38],
+      "position": [0.584, 1.58],
+      "height": 0.911,
+      "frame": 1,
+      "note": "His arms with the shears, frame 2 of 2 (closed).",
+      "placeholder": { "kind": "arm", "hold": "shears", "from": "right", "frame": 1 }
     },
     {
       "id": "fall/falling-orange",

@@ -623,6 +623,18 @@ export const SITE = {
   end: DUST_COVERED,
 } as const;
 
+/**
+ * The gardener's timings (progress). `src/components/stage/prune-plan.ts` choreographs on these: he
+ * trims while the title docks and the fit text arrives (`trim`, `snips` open-and-close cycles of the
+ * shears), and the left branch comes in a little shorter as he shapes the tree.
+ */
+export const PRUNE = {
+  /** The shears work. */
+  trim: [at("prune", 0.1), at("prune", 0.85)] as ProgressRange,
+  /** How many times the shears close and open over `trim`. */
+  snips: 7,
+} as const;
+
 export const CAMERA: readonly CameraKey[] = [
   // Hero: wide and still.
   key("hero", at("hero", 0), "hold", HERO_WIDE, [0, 0, 0], 35),
