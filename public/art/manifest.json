@@ -360,7 +360,7 @@
     },
     {
       "id": "pluck/hero-orange",
-      "scenes": ["pluck"],
+      "scenes": ["pluck", "share"],
       "role": "plate",
       "src": "/art/pluck/hero-orange.webp",
       "size": [256, 256],
@@ -425,16 +425,29 @@
       "placeholder": { "kind": "head", "facing": "left" }
     },
     {
+      "id": "share/arm-open",
+      "scenes": ["share"],
+      "role": "plate",
+      "src": "/art/share/arm-open.webp",
+      "size": [768, 768],
+      "depth": 0.9,
+      "anchor": [0.88, 0.12],
+      "position": [2.43, 5.25],
+      "height": 1.3,
+      "note": "His right arm exactly as `pluck/harvester-arm` but holding nothing: the scene draws the whole orange, and then its halves, in his hand.",
+      "placeholder": { "kind": "arm", "hold": "none", "from": "right", "sleeve": "white", "shoulder": [0.88, 0.12], "hand": [0.25, 0.76] }
+    },
+    {
       "id": "share/knife-hand",
       "scenes": ["share"],
       "role": "plate",
       "src": "/art/share/knife-hand.webp",
       "size": [1024, 512],
-      "depth": 0.7,
+      "depth": 0.3,
       "anchor": [0.26, 0.5],
       "position": [1.5, 4.62],
       "height": 0.7,
-      "note": "His left hand with a knife (the blade tip is the anchor), cutting through the orange in his right.",
+      "note": "His left hand with a knife (the blade tip is the anchor; the blade points left), cutting through the orange in his right. In front of the orange. The scene turns it so the blade points down and plunges.",
       "placeholder": { "kind": "hand", "from": "right", "hold": "knife" }
     },
     {

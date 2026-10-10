@@ -537,6 +537,34 @@ export const PLUCK = {
   handoff: [at("pluck", 0.62), at("pluck", 0.72)] as ProgressRange,
 } as const;
 
+/**
+ * The share's own timings (progress). The art in `src/components/stage/share-cut.ts` choreographs
+ * on these: his left hand comes in with the knife and plunges it down through the orange he holds
+ * (the whole orange gives way to its two peels as the blade passes), the knife withdraws, the halves
+ * open and their cut faces are revealed, a second hand reaches in from center left and takes the
+ * left half, and both hands bring the halves together and hold them (the harvest, shared). The
+ * camera pushes into the orange from `cut[0]`, holds on the halves, and pushes in again under the
+ * viewfinder and the sand.
+ */
+export const SHARE = {
+  /** The knife hand comes in above the orange. */
+  knifeIn: [at("share", 0.02), at("share", 0.11)] as ProgressRange,
+  /** The blade plunges down through the orange. */
+  cut: [at("share", 0.11), at("share", 0.2)] as ProgressRange,
+  /** Under the blade: the whole orange gives way to its two peels. */
+  split: [at("share", 0.117), at("share", 0.127)] as ProgressRange,
+  /** The knife hand withdraws. */
+  knifeOut: [at("share", 0.2), at("share", 0.29)] as ProgressRange,
+  /** The halves part and their cut faces are revealed. */
+  open: [at("share", 0.19), at("share", 0.31)] as ProgressRange,
+  /** The second hand reaches in from center left to the left half. */
+  reach: [at("share", 0.27), at("share", 0.38)] as ProgressRange,
+  /** It takes the half and draws it a little away. */
+  take: [at("share", 0.38), at("share", 0.46)] as ProgressRange,
+  /** Both hands bring the halves together; then they hold. */
+  together: [at("share", 0.46), at("share", 0.58)] as ProgressRange,
+} as const;
+
 export const CAMERA: readonly CameraKey[] = [
   // Hero: wide and still.
   key("hero", at("hero", 0), "hold", HERO_WIDE, [0, 0, 0], 35),

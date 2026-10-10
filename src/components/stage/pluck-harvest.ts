@@ -61,6 +61,11 @@ function travel(): Offset {
   return { x: HELD[0] - rest.x, y: HELD[1] - rest.y };
 }
 
+/** Offsets from the hero orange's manifest place that put it in the harvester's hand (where the pluck ends). */
+export function heldOffset(): Offset {
+  return travel();
+}
+
 /** 0 while the hand holds the fruit, 1 once it let go. */
 export function releaseAt(p: number): number {
   return eased(p, PLUCK.release);
