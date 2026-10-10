@@ -6,12 +6,28 @@
 /** Device pixel ratio range of the stage canvas: never below 1, never above `MAX_DPR`. */
 export const MIN_DPR = 1;
 export const MAX_DPR = 1.5;
+/** The same on a stacked screen (a phone): a lower ceiling, since the screen is small and the battery is not. */
+export const MAX_DPR_STACKED = 1.25;
+
+/** The stage canvas's pixel ratio range for a layout. */
+export const stageDpr = (stacked: boolean): [number, number] => [MIN_DPR, stacked ? MAX_DPR_STACKED : MAX_DPR];
 
 /**
  * Highest pixel ratio of the transition canvas. Its effects are soft (fronts, noise, fine grains),
  * so it renders at a lower resolution than the plates: every pixel runs a full-screen shader.
  */
 export const TRANSITION_MAX_DPR = 1.25;
+/** The same on a stacked screen. */
+export const TRANSITION_MAX_DPR_STACKED = 1;
+
+/** The transition canvas's pixel ratio range for a layout. */
+export const transitionDpr = (stacked: boolean): [number, number] => [1, stacked ? TRANSITION_MAX_DPR_STACKED : TRANSITION_MAX_DPR];
+
+/** Share of the loose particles (glow droplets, the sand's grains) drawn on a stacked screen. */
+export const PARTICLE_SCALE_STACKED = 0.5;
+
+/** How many of `count` particles to draw on a layout. */
+export const particleCount = (count: number, stacked: boolean): number => (stacked ? Math.max(1, Math.round(count * PARTICLE_SCALE_STACKED)) : count);
 
 /** Screens of scrolling before a transition when its art (ring mask, cloud) starts to load. */
 export const TRANSITION_PRELOAD_SCREENS = 3;

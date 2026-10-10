@@ -12,6 +12,8 @@ import { useProgressState } from "@/scroll/story-scroll";
  * (CSS, an idle effect) and exists only while the panel does. Decorative: it sits under the text
  * layer, so the terms block reads on it, and takes no pointer events.
  *
+ * On a stacked (phone) screen the panel is the lower half instead, and the picture shrinks into the upper half.
+ *
  * The leaf shapes come from the `site/leaf-shadow` plate, used as a mask over ink, so any final art
  * with an alpha channel works unchanged.
  */
@@ -44,7 +46,7 @@ export function SitePanel({ progress }: { progress: MotionValue<number> }) {
   const leaves = useTransform(progress, leavesOpacity);
 
   return (
-    <motion.div aria-hidden data-site-panel className="pointer-events-none absolute inset-y-0 right-0 w-1/2 overflow-hidden bg-milk" style={{ opacity: milk, visibility: mounted ? "visible" : "hidden" }}>
+    <motion.div aria-hidden data-site-panel className="pointer-events-none absolute inset-y-0 right-0 w-1/2 overflow-hidden bg-milk max-md:inset-x-0 max-md:top-1/2 max-md:w-full" style={{ opacity: milk, visibility: mounted ? "visible" : "hidden" }}>
       {mounted ? (
         <motion.div className="absolute inset-0" style={{ opacity: leaves }}>
           <Leaves className="leaf-drift-a" blur={34} size="64%" opacity={0.2} />

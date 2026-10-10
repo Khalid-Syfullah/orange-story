@@ -5,10 +5,12 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useMotionValue, useTransform } from "motion/react";
 import type { Group, PerspectiveCamera } from "three";
 
+import { useStacked } from "@/lib/use-stacked";
+
 import { Plate } from "./plate";
 import type { SceneArtProps } from "./scene-layers";
 import { useStageProgress } from "./stage-context";
-import { builderSwing, seaOpacity, sideOpacity, siteShift, tileField, tilesOpacity, topDownOpacity } from "./site-plan";
+import { builderSwing, seaOpacity, sideOpacity, siteShift, siteShiftStacked, tileField, tilesOpacity, topDownOpacity } from "./site-plan";
 
 /**
  * Scene 8, the building site by the sea (`site-plan.ts`, timings in `SITE`).
@@ -32,18 +34,27 @@ function SiteFrame({ children }: { children: React.ReactNode }) {
   const group = React.useRef<Group>(null);
   const progress = useStageProgress();
   const invalidate = useThree((s) => s.invalidate);
+  const stacked = useStacked();
 
   useFrame((state) => {
     const g = group.current;
     if (!g) return;
     const camera = state.camera as PerspectiveCamera;
-    // Straight above, the ground under the camera is camera.position.y away: half the view width there.
-    const halfWidth = Math.abs(camera.position.y) * Math.tan((camera.fov * Math.PI) / 360) * camera.aspect;
-    g.position.x = siteShift(progress?.get() ?? 0, halfWidth);
+    const p = progress?.get() ?? 0;
+    // Straight above, the ground under the camera is camera.position.y away: that is half the view height there.
+    const halfHeight = Math.abs(camera.position.y) * Math.tan((camera.fov * Math.PI) / 360);
+    if (stacked) {
+      // A phone: into the upper half (up on the screen is -z when looking straight down).
+      g.position.x = 0;
+      g.position.z = siteShiftStacked(p, halfHeight);
+    } else {
+      g.position.x = siteShift(p, halfHeight * camera.aspect);
+      g.position.z = 0;
+    }
   });
   React.useEffect(() => {
     invalidate();
-  }, [invalidate]);
+  }, [invalidate, stacked]);
 
   return <group ref={group} name="site-frame">{children}</group>;
 }

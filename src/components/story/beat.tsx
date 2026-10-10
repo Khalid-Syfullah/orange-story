@@ -49,6 +49,21 @@ export function useBeatContext(): BeatContextValue | null {
 /** `load` beats whose timed intro has already played in this page view. */
 const introsPlayed = new Set<BeatId>();
 
+/**
+ * Beats hidden from assistive technology: the stage draws every beat as scrubbed, short-lived
+ * decoration, and the same words are always on the page in reading order (`StoryOutline`). The
+ * form is the one beat that is the real thing, so it is not hidden.
+ */
+export const decorativeBeat = (id: BeatId) => id !== "apply-form";
+
+/**
+ * Whether links and buttons inside can be reached with the Tab key. Controls inside decorative
+ * beats are not: they sit in a hidden subtree, and their keyboard equivalents (the Apply pill, the
+ * skip link, the outline's links for screen readers) go to the same places. The reduced-motion
+ * page leaves everything tabbable.
+ */
+export const TabbableContext = React.createContext(true);
+
 export interface BeatProps {
   id: BeatId;
   children?: React.ReactNode;
@@ -79,7 +94,7 @@ export function Beat({ id, children, keepMounted = false, className }: BeatProps
       {block}
     </SmokeFrame>
   ) : (
-    <div data-beat={id} data-slot={beat.slot} className="pointer-events-none absolute inset-0">
+    <div data-beat={id} data-slot={beat.slot} aria-hidden={decorativeBeat(id) || undefined} className="pointer-events-none absolute inset-0">
       {block}
     </div>
   );
@@ -89,7 +104,7 @@ export function Beat({ id, children, keepMounted = false, className }: BeatProps
 function SmokeFrame({ beat, range, progress, children }: { beat: BeatDef; range: readonly [number, number]; progress: MotionValue<number>; children: React.ReactNode }) {
   const mask = useSmokeMask(progress, range);
   return (
-    <motion.div data-beat={beat.id} data-slot={beat.slot} className="pointer-events-none absolute inset-0" style={mask}>
+    <motion.div data-beat={beat.id} data-slot={beat.slot} aria-hidden={decorativeBeat(beat.id) || undefined} className="pointer-events-none absolute inset-0" style={mask}>
       {children}
     </motion.div>
   );
@@ -111,7 +126,11 @@ export function BeatBody({ beat, progress, children }: { beat: BeatDef; progress
   }, [beat]);
 
   const context = React.useMemo(() => ({ beat, progress, intro }), [beat, progress, intro]);
-  return <BeatContext value={context}>{children}</BeatContext>;
+  return (
+    <BeatContext value={context}>
+      <TabbableContext value={!decorativeBeat(beat.id)}>{children}</TabbableContext>
+    </BeatContext>
+  );
 }
 
 /* ------------------------------------------------------------------ */

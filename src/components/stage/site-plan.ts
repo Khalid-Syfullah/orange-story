@@ -51,6 +51,16 @@ export function siteShift(p: number, halfWidth: number): number {
   return -LEFT_HALF_CENTER * halfWidth * shrinkAt(p);
 }
 
+/**
+ * On a stacked (phone) screen the top-down view shrinks into the upper half instead, and the milk
+ * panel is the lower half. Looking straight down, up on the screen is world -z, so this is the
+ * shift of the site along z (negative, toward the top of the screen), for the half-height of the
+ * view at the ground.
+ */
+export function siteShiftStacked(p: number, halfHeight: number): number {
+  return -LEFT_HALF_CENTER * halfHeight * shrinkAt(p);
+}
+
 /** The tiled ground: its side length (world units) and how many tiles it repeats across and down. */
 export function tileField(p: number): { size: number; tiles: number } {
   const size = FIELD_FROM + (FIELD_TO - FIELD_FROM) * fade(p, SITE.tiles);

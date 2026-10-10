@@ -9,7 +9,10 @@ import { colors } from "@/styles/tokens";
 
 import { CameraRig } from "./camera-rig";
 import { IdleClockProvider } from "./idle";
-import { MAX_DPR, MIN_DPR } from "./quality";
+import { useStacked } from "@/lib/use-stacked";
+
+import { PauseWhenHidden } from "./pause-when-hidden";
+import { stageDpr } from "./quality";
 import { SceneLayers } from "./scene-layers";
 import { StageProgressContext } from "./stage-context";
 
@@ -29,10 +32,12 @@ function RenderOnProgress({ progress }: { progress: MotionValue<number> }) {
 const FIRST = CAMERA[0];
 
 export default function StageCanvas({ progress }: { progress: MotionValue<number> }) {
+  // A lower pixel ratio on a phone.
+  const dpr = stageDpr(useStacked());
   return (
     <Canvas
       frameloop="demand"
-      dpr={[MIN_DPR, MAX_DPR]}
+      dpr={dpr}
       flat
       resize={{ scroll: false }}
       gl={{ antialias: false, alpha: false, powerPreference: "high-performance" }}
@@ -43,6 +48,7 @@ export default function StageCanvas({ progress }: { progress: MotionValue<number
       <color attach="background" args={[colors.sky]} />
       <StageProgressContext value={progress}>
         <RenderOnProgress progress={progress} />
+        <PauseWhenHidden />
         <CameraRig progress={progress} />
         <IdleClockProvider>
           <SceneLayers progress={progress} />

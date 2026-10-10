@@ -6,7 +6,9 @@ import type { MotionValue } from "motion/react";
 import { Mesh, NoBlending, PlaneGeometry, ShaderMaterial, Vector2, Vector4, type IUniform } from "three";
 
 import { plateEntry } from "@/art/manifest";
-import { IDLE_MAX_STEP, TRANSITION_MAX_DPR, TRANSITION_PRELOAD_SCREENS } from "@/components/stage/quality";
+import { IDLE_MAX_STEP, TRANSITION_PRELOAD_SCREENS, transitionDpr } from "@/components/stage/quality";
+import { PauseWhenHidden } from "@/components/stage/pause-when-hidden";
+import { useStacked } from "@/lib/use-stacked";
 import { useLazyPlateTexture } from "@/components/stage/textures";
 import { usePrefersReducedMotion } from "@/lib/use-prefers-reduced-motion";
 import { SCREEN } from "@/scroll/script";
@@ -267,16 +269,18 @@ function TransitionEffect({ progress, transitions }: TransitionCanvasProps) {
 }
 
 export default function TransitionCanvas(props: TransitionCanvasProps) {
+  const dpr = transitionDpr(useStacked());
   return (
     <Canvas
       frameloop="demand"
-      dpr={[1, TRANSITION_MAX_DPR]}
+      dpr={dpr}
       flat
       resize={{ scroll: false }}
       gl={{ alpha: true, premultipliedAlpha: true, antialias: false, depth: false, stencil: false, powerPreference: "high-performance" }}
       aria-hidden
       style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
     >
+      <PauseWhenHidden />
       <TransitionEffect {...props} />
     </Canvas>
   );

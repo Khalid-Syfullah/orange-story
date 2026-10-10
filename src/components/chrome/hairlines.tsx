@@ -6,7 +6,7 @@ import type { MotionValue } from "motion/react";
 import { cn } from "@/lib/utils";
 import { envelope, lerp, seeded, type ProgressEnvelope } from "@/lib/progress";
 import { useElementSize } from "@/lib/use-element-size";
-import { grid, HAIRLINE_ALPHA } from "@/styles/tokens";
+import { DESKTOP_GRID_LINES, HAIRLINE_ALPHA, type GridLines } from "@/styles/tokens";
 
 import { STAR_PATH } from "./star-mark";
 
@@ -67,6 +67,8 @@ export interface HairlinesProps {
   cues?: readonly HairlineCue[];
   /** `fixed` on the story stage; `absolute` to fill a positioned container (e.g. on /design). */
   position?: "fixed" | "absolute";
+  /** Where the left, right and top lines sit. Default: the desktop grid. */
+  lines?: GridLines;
   className?: string;
 }
 
@@ -122,7 +124,7 @@ interface Square {
 }
 
 /** Positions of every part at progress p, for a stage of w by h px. */
-export function hairlineGeometry(p: number, w: number, h: number, cues: readonly HairlineCue[]) {
+export function hairlineGeometry(p: number, w: number, h: number, cues: readonly HairlineCue[], gridLines: GridLines = DESKTOP_GRID_LINES) {
   let e = 0;
   let v = 0;
   let square: Square | null = null;
@@ -140,9 +142,9 @@ export function hairlineGeometry(p: number, w: number, h: number, cues: readonly
   }
   const sq = square ?? { l: 0, r: w, t: 0, b: h };
 
-  const gl = grid.left * w;
-  const gr = grid.right * w;
-  const gt = Math.min(grid.top * w, h / 3);
+  const gl = gridLines.left(w);
+  const gr = gridLines.right(w);
+  const gt = Math.min(gridLines.top(w), h / 3);
 
   const leftX = lerp(lerp(gl, -OFF, e), sq.l, v);
   const rightX = lerp(lerp(gr, w + OFF, e), sq.r, v);
@@ -172,7 +174,7 @@ export function hairlineGeometry(p: number, w: number, h: number, cues: readonly
   return { lines, crosses, exit: e, viewfinder: v };
 }
 
-export function Hairlines({ progress, cues = [], position = "fixed", className }: HairlinesProps) {
+export function Hairlines({ progress, cues = [], position = "fixed", lines = DESKTOP_GRID_LINES, className }: HairlinesProps) {
   const [measureRef, size] = useElementSize<HTMLDivElement>();
   const nodes = React.useRef<Record<string, SVGElement | null>>({});
   const rootRef = React.useRef<HTMLDivElement | null>(null);
@@ -181,7 +183,7 @@ export function Hairlines({ progress, cues = [], position = "fixed", className }
     const { width: w, height: h } = size;
     if (!w || !h) return;
     const draw = (p: number) => {
-      const g = hairlineGeometry(p, w, h, cues);
+      const g = hairlineGeometry(p, w, h, cues, lines);
       for (const [id, [a, b]] of Object.entries(g.lines)) nodes.current[id]?.setAttribute("d", wobblyPath(id, a, b));
       for (const [id, [x, y]] of Object.entries(g.crosses))
         nodes.current[id]?.setAttribute("transform", `translate(${x.toFixed(2)} ${y.toFixed(2)})`);
@@ -193,7 +195,7 @@ export function Hairlines({ progress, cues = [], position = "fixed", className }
     };
     draw(progress.get());
     return progress.on("change", draw);
-  }, [progress, cues, size]);
+  }, [progress, cues, size, lines]);
 
   const setRoot = React.useCallback(
     (el: HTMLDivElement | null) => {

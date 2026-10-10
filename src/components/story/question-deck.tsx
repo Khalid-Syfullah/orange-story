@@ -34,6 +34,14 @@ import { SLOTS } from "./slots";
 
 const LAST = DECK[DECK.length - 1];
 
+/**
+ * On a stacked (phone) screen the cards are two thirds of the screen wide, which leaves a strip at each
+ * side. The near orchard rows fill those strips (the camera widens to show them, `fitFov`), so each
+ * card's orange sits just outside the card and the connector runs from it to the card's corner on
+ * the near side: a short line at a slant, drawn out as the card arrives like on a wide screen.
+ */
+const STACKED_CARD = "max-md:w-[66%] max-md:p-5";
+
 /** Laid-out sizes (before transforms) of a set of elements, measured on resize only. */
 function useLayoutSizes(count: number) {
   const nodes = React.useRef<(HTMLElement | null)[]>([]);
@@ -97,7 +105,7 @@ function DeckCardView({ card, progress, stage, measure, textStyle }: DeckCardVie
         question={question}
         answer={answer}
         sparkles={card.sparkles}
-        className={cn("absolute", SLOTS.center.column)}
+        className={cn("absolute", SLOTS.center.column, STACKED_CARD)}
         style={{ left: `${CARD_REST.x * 100}%`, top: `${CARD_REST.y * 100}%`, transform, opacity, filter, visibility }}
         textStyle={textStyle}
       />

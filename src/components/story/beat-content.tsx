@@ -14,7 +14,8 @@ import { beatLineRanges } from "@/scroll/helpers";
 import { useOptionalStory } from "@/scroll/story-scroll";
 import type { BeatDef, SlotId } from "@/scroll/types";
 
-import { BeatLine, useBeatContext, useBeatPresence } from "./beat";
+import { ApplyLink } from "./apply-link";
+import { BeatLine, TabbableContext, useBeatContext, useBeatPresence } from "./beat";
 import { ApplyForm } from "./apply-form";
 import { goToApply } from "./go-to-apply";
 import { QuestionCard } from "./question-card";
@@ -130,15 +131,16 @@ export function TypedLine({ text, className }: { text: string; className?: strin
 /** "Start a partnership" and friends: scrolls to the form on the stage, links to it elsewhere. */
 function ApplyButton({ button }: { button: ArrowButton }) {
   const story = useOptionalStory();
+  const tabbable = React.useContext(TabbableContext);
   if (!story) {
     return (
       <Button asChild variant="ghost-pill">
-        <a href={`#${button.target}`}>{button.label}</a>
+        <ApplyLink tabIndex={tabbable ? undefined : -1}>{button.label}</ApplyLink>
       </Button>
     );
   }
   return (
-    <Button variant="ghost-pill" onClick={() => goToApply(story)}>
+    <Button variant="ghost-pill" tabIndex={tabbable ? undefined : -1} onClick={() => goToApply(story)}>
       {button.label}
     </Button>
   );
@@ -152,15 +154,15 @@ function PairRow({ slot, tag, index, count, className, children }: RowProps & { 
   if (slot === "bottom-left") {
     return (
       <BeatLine index={index} count={count} className={cn(STAGE_COLUMNS, "items-start", className)}>
-        <div className="col-start-2 pt-0.5">
+        <div className="col-start-2 pt-0.5 max-md:col-end-4">
           <Tag>{tag}</Tag>
         </div>
-        <div className="col-start-3 max-w-[52ch] pr-4">{children}</div>
+        <div className="col-start-3 max-w-[52ch] pr-4 max-md:col-start-2 max-md:col-end-4 max-md:mt-3 max-md:pr-0">{children}</div>
       </BeatLine>
     );
   }
   return (
-    <BeatLine index={index} count={count} className={cn("flex items-start gap-6", className)}>
+    <BeatLine index={index} count={count} className={cn("flex items-start gap-6 max-md:flex-col max-md:gap-3", className)}>
       <Tag className="mt-0.5 shrink-0">{tag}</Tag>
       <div className="min-w-0 flex-1">{children}</div>
     </BeatLine>
@@ -320,6 +322,7 @@ function QuestionPanel({ beat, question, answer }: { beat: BeatDef; question: st
 /** The finale: the wordmark, the subtitle, then the copyright line and the contact email. */
 function Wordmark({ beat, node, year }: { beat: BeatDef; node: CopyNode; year: number | null }) {
   const email = str(node.email);
+  const tabbable = React.useContext(TabbableContext);
   return (
     <div className={cn(SLOTS[beat.slot].column, "flex flex-col items-center text-center")}>
       <Headline index={0} count={4} text={str(node.wordmark)} textClassName="type-display-xxl" />
@@ -332,7 +335,7 @@ function Wordmark({ beat, node, year }: { beat: BeatDef; node: CopyNode; year: n
         </BeatLine>
       ) : null}
       <BeatLine index={3} count={4} className="type-meta mt-2">
-        <a href={`mailto:${email}`} className="underline-offset-4 hover:underline">
+        <a href={`mailto:${email}`} tabIndex={tabbable ? undefined : -1} className="underline-offset-4 hover:underline">
           {email}
         </a>
       </BeatLine>

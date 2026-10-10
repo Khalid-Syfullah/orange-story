@@ -1,4 +1,4 @@
-import { chrome, storyScenes } from "@/content/copy";
+import { chrome, finale, storyScenes } from "@/content/copy";
 import { cn } from "@/lib/utils";
 import { OrangeMark } from "@/components/chrome/orange-mark";
 import { PlaceholderStill } from "@/components/stage/placeholder-still";
@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { BEATS, SCENES } from "@/scroll/script";
 import type { StoryPart } from "@/scroll/types";
 
+import { ApplyLink } from "./apply-link";
 import { BeatContent } from "./beat-content";
 import { QUESTION_BEATS, QuestionList } from "./question-list";
 
@@ -27,7 +28,7 @@ export function ReducedStory({ year }: { year: number }) {
       <header className="flex items-center justify-between px-col-a pt-8">
         <OrangeMark label={chrome.mark.label} />
         <Button asChild variant="ghost-pill">
-          <a href={`#${chrome.apply.target}`}>{chrome.apply.label}</a>
+          <ApplyLink>{chrome.apply.label}</ApplyLink>
         </Button>
       </header>
 
@@ -35,7 +36,7 @@ export function ReducedStory({ year }: { year: number }) {
         const chapter = chrome.chapters.find((c) => c.id === part);
         const headingId = `reduced-${part}`;
         return (
-          <section key={part} id={part} aria-labelledby={chapter ? headingId : undefined} className="pt-16">
+          <section key={part} id={part} aria-labelledby={chapter ? headingId : undefined} aria-label={chapter ? undefined : finale.wordmark} className="pt-16">
             {chapter ? (
               <h2 id={headingId} className="flex items-baseline gap-4 px-col-a">
                 <span className="type-meta text-milk/70">{chapter.short}</span>

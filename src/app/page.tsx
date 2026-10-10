@@ -1,3 +1,4 @@
+import { SkipLink } from "@/components/story/apply-link";
 import { ReducedStory } from "@/components/story/reduced-story";
 import { StoryStage } from "@/components/story/story-stage";
 import { storyYear } from "@/lib/story-year";
@@ -10,6 +11,7 @@ export default async function Home() {
   const year = await storyYear();
   return (
     <main>
+      <SkipLink />
       <StoryStage year={year} />
       <ReducedStory year={year} />
     </main>

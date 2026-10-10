@@ -58,10 +58,10 @@ export function StoryChrome({
         className,
       )}
     >
-      {/* Top left: the mark, and the grid button under it. */}
+      {/* Top left: the mark, and the grid button under it (beside it on small screens, in the top row above the top hairline). */}
       <div
-        className="pointer-events-auto absolute flex -translate-x-1/2 -translate-y-3.5 flex-col items-center gap-3"
-        style={{ left: "max(1.375rem, calc(var(--grid-left) / 2))", top: corner }}
+        className="pointer-events-auto absolute flex -translate-x-1/2 -translate-y-3.5 flex-col items-center gap-3 max-md:translate-x-0 max-md:-translate-y-1/2 max-md:flex-row max-md:gap-2"
+        style={{ left: "var(--chrome-mark-left)", top: corner }}
       >
         <OrangeMark label={chrome.mark.label} />
         <ChapterMenu chapters={chapters} active={active} onSelect={onChapterSelect} />
@@ -69,7 +69,7 @@ export function StoryChrome({
 
       {/* Top right: Apply. Centered in the right margin on wide screens. */}
       <div
-        className="pointer-events-auto absolute right-4 -translate-y-1/2 md:right-[calc((100%-var(--grid-right))/2)] md:translate-x-1/2"
+        className="pointer-events-auto absolute right-[calc((100%-var(--grid-right))+0.75rem)] -translate-y-1/2 md:right-[calc((100%-var(--grid-right))/2)] md:translate-x-1/2"
         style={{ top: corner }}
       >
         <Button variant={tone === "sky" ? "ghost-pill" : "pill"} onClick={onApply}>
@@ -88,7 +88,7 @@ export function StoryChrome({
 
       {/* Bottom right: overall progress. */}
       <div
-        className="absolute right-4 translate-y-1/2 md:right-[calc((100%-var(--grid-right))/2)] md:translate-x-1/2"
+        className="absolute right-[calc((100%-var(--grid-right))+0.75rem)] translate-y-1/2 md:right-[calc((100%-var(--grid-right))/2)] md:translate-x-1/2"
         style={{ bottom: corner }}
       >
         <PercentCounter progress={progress} />

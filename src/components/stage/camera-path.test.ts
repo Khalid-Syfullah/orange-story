@@ -1,8 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { CAMERA } from "@/scroll/script";
 
-import { createCameraPath, poseOf, projectPoint, unprojectToPlane, type CameraPose } from "./camera-path";
+import { createCameraPath, fitFov, FIT_BELOW, fovScale, getStageAspect, panAmount, poseOf, projectPoint, REFERENCE_ASPECT, setStageAspect, unprojectToPlane, type CameraPose } from "./camera-path";
 
 const FIELDS: readonly (keyof CameraPose)[] = ["px", "py", "pz", "tx", "ty", "tz", "fov"];
 /** The pose's values only (GSAP keeps its own bookkeeping on the target object). */
@@ -97,6 +97,76 @@ describe("the camera path", () => {
     path.seek(0.95);
     const jumped = copy(path.seek(0.12));
     expect(jumped).toEqual(forward[2]);
+    path.kill();
+  });
+});
+
+describe("fitting the camera to the screen", () => {
+  afterEach(() => setStageAspect(0));
+
+  it("leaves every laptop, desktop and landscape tablet exactly as authored", () => {
+    for (const aspect of [FIT_BELOW, 1.33, 1.6, REFERENCE_ASPECT, 2.4, 3.6]) {
+      expect(fovScale(aspect)).toBe(1);
+      expect(fitFov(35, aspect)).toBe(35);
+      expect(panAmount(aspect)).toBe(0);
+    }
+    setStageAspect(1.6);
+    const path = createCameraPath(CAMERA);
+    for (const key of CAMERA) {
+      const view = { ...path.seek(key.at) };
+      const expected = poseOf(key);
+      for (const field of FIELDS) expect(view[field], `${key.scene} ${field}`).toBeCloseTo(expected[field], 6);
+    }
+    path.kill();
+  });
+
+  it("widens the field of view as the screen gets taller and narrower, without limit cases going wrong", () => {
+    let last = 35;
+    for (const aspect of [1.2, 1, 0.8, 0.6, 0.46, 0.3]) {
+      const fov = fitFov(35, aspect);
+      expect(fov).toBeGreaterThan(last);
+      expect(fov).toBeLessThan(120);
+      last = fov;
+    }
+    expect(fovScale(0)).toBe(1);
+    expect(fovScale(Number.NaN)).toBe(1);
+  });
+
+  it("shows what sits to the side: the statue and the crowd fit on a phone, only the middle did without the fit", () => {
+    const path = createCameraPath(CAMERA);
+    const statue: [number, number, number] = [3.45, 1.5, 0];
+    const crowd: [number, number, number] = [4.8, -3.35, -1.6];
+    const phone = { width: 390, height: 844 };
+    setStageAspect(0);
+    const before = projectPoint(path.seek(0), statue, phone.width, phone.height);
+    expect(before.x).toBeGreaterThan(phone.width);
+    setStageAspect(phone.width / phone.height);
+    const view = path.seek(0);
+    for (const point of [statue, crowd]) {
+      const at = projectPoint(view, point, phone.width, phone.height);
+      expect(at.x).toBeGreaterThan(0);
+      expect(at.x).toBeLessThan(phone.width);
+      expect(at.y).toBeGreaterThan(0);
+      expect(at.y).toBeLessThan(phone.height);
+    }
+    expect(getStageAspect()).toBeCloseTo(phone.width / phone.height, 9);
+    path.kill();
+  });
+
+  it("eases the pan along with the rest of the move and keeps it between keys", () => {
+    setStageAspect(0.46);
+    const path = createCameraPath(CAMERA);
+    const heroX = path.seek(0).px;
+    expect(heroX).toBeGreaterThan(1);
+    // The ascent's second key sets the pan back to nothing: by then the camera is on its own x again.
+    const ascent = CAMERA.find((k) => k.scene === "ascent" && k.pan)!;
+    expect(path.seek(ascent.at).px).toBeCloseTo(ascent.position[0], 6);
+    let previous = heroX;
+    for (let p = 0; p <= ascent.at; p += ascent.at / 80) {
+      const x = path.seek(p).px;
+      expect(Math.abs(x - previous)).toBeLessThan(0.25);
+      previous = x;
+    }
     path.kill();
   });
 });

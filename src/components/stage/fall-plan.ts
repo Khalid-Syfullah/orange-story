@@ -3,7 +3,7 @@ import { clamp01, ease, lerp, remap } from "@/lib/progress";
 import { transitionOf } from "@/scroll/helpers";
 import { CAMERA, FALL } from "@/scroll/script";
 
-import { createCameraPath, type CameraPath } from "./camera-path";
+import { createCameraPath, getStageAspect, type CameraPath } from "./camera-path";
 
 /**
  * Scene 10, the falling orange, as pure functions of progress (no React, no three). Timings live in
@@ -113,21 +113,22 @@ export interface OrangeFrame {
   screenY: number;
 }
 
-let start: { dx: number; sy: number } | null = null;
-let cached: { p: number; frame: OrangeFrame } | null = null;
+let start: { aspect: number; dx: number; sy: number } | null = null;
+let cached: { p: number; aspect: number; frame: OrangeFrame } | null = null;
 
 /** Offsets of the fruit from the camera at the moment it lets go (world x, device y). */
 function releaseOffsets() {
-  if (!start) {
+  // The camera is fitted to the stage's shape, so the fruit's place in the view depends on it.
+  if (!start || start.aspect !== getStageAspect()) {
     const cam = cameraAt(FALL.release[0]);
-    start = { dx: BRANCH_FRUIT.x - cam.x, sy: (BRANCH_FRUIT.y - cam.y) / cam.halfHeight };
+    start = { aspect: getStageAspect(), dx: BRANCH_FRUIT.x - cam.x, sy: (BRANCH_FRUIT.y - cam.y) / cam.halfHeight };
   }
   return start;
 }
 
 /** The orange at progress p. */
 export function orangeFrame(p: number): OrangeFrame {
-  if (cached && cached.p === p) return cached.frame;
+  if (cached && cached.p === p && cached.aspect === getStageAspect()) return cached.frame;
   const from = releaseOffsets();
   const cam = cameraAt(p);
   const e = smooth(remap(p, FALL.release[0], FALL.release[1]));
@@ -147,6 +148,6 @@ export function orangeFrame(p: number): OrangeFrame {
     opacity: cutAmount(p) * (1 - clamp01(ease(remap(p, FALL.fade[0], FALL.fade[1])))),
     screenY,
   };
-  cached = { p, frame };
+  cached = { p, aspect: getStageAspect(), frame };
   return frame;
 }

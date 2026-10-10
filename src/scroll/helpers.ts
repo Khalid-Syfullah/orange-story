@@ -102,6 +102,12 @@ export function beatLeaveAmount(beat: BeatDef, p: number): number {
   return remap(p, beat.hold[1], beat.out);
 }
 
+/** Where the last line of a beat has finished arriving: from here until the hold ends, everything is on screen. */
+export function beatArrivedAt(beat: BeatDef): number {
+  const holdLength = Math.max(0, beat.hold[1] - beat.hold[0]);
+  return beat.hold[0] + Math.min(holdLength * 0.35, 0.3 * SCREEN);
+}
+
 /**
  * Staggered ranges for line `index` of `count` inside a beat: when it arrives and when it leaves.
  * Arrivals spread across the arrival ramp and a little of the hold; leaves spread across the leave
@@ -115,8 +121,7 @@ export function beatLineRanges(beat: BeatDef, index: number, count: number): { a
     const offset = ((length - each) * index) / (count - 1);
     return [start + offset, start + offset + each];
   };
-  const holdLength = Math.max(0, beat.hold[1] - beat.hold[0]);
-  const arriveEnd = beat.hold[0] + Math.min(holdLength * 0.35, 0.3 * SCREEN);
+  const arriveEnd = beatArrivedAt(beat);
   return {
     arrive: span(beat.in, arriveEnd, 0.55),
     leave: span(beat.hold[1], beat.out, 0.6),

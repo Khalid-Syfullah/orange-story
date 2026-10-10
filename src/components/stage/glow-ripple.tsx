@@ -6,9 +6,11 @@ import { InstancedBufferAttribute, InstancedBufferGeometry, Mesh, Sphere, Vector
 
 import { plateEntry, type Pair, type PlateId } from "@/art/manifest";
 import { seeded } from "@/lib/progress";
+import { useStacked } from "@/lib/use-stacked";
 
 import { useIdleClock } from "./idle";
 import { RippleMaterial } from "./materials";
+import { particleCount } from "./quality";
 import { read, UNIT_PLANE, useInvalidateOnChange, type Num } from "./plate";
 import { plateRenderOrder, useSceneLayer, useStageProgress } from "./stage-context";
 import { usePlateTexture } from "./textures";
@@ -79,7 +81,9 @@ export interface GlowRippleProps {
   name?: string;
 }
 
-export function GlowRipple({ sprite, source, opacity, lift, offsetY, reach = 7, count = 320, layer = -2, name = "glow-ripple" }: GlowRippleProps) {
+export function GlowRipple({ sprite, source, opacity, lift, offsetY, reach = 7, count: wanted = 320, layer = -2, name = "glow-ripple" }: GlowRippleProps) {
+  // Half as many droplets on a phone.
+  const count = particleCount(wanted, useStacked());
   const entry = plateEntry(sprite);
   const texture = usePlateTexture(entry);
   const scene = useSceneLayer();

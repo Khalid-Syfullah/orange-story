@@ -58,6 +58,12 @@ export const chrome = {
   /** Title of the chapter menu sheet and accessible name of the ruler. */
   menu: { title: "Chapters" },
   apply: { label: "Apply", target: "apply" } satisfies ArrowButton,
+  /** Accessible names for the keyboard and screen reader paths (not shown unless focused). */
+  skip: { label: "Skip to the application form" },
+  /** Where a screen reader finds the form from anywhere in the story. */
+  formLink: { label: "Go to the application form" },
+  /** The story in reading order, for screen readers. */
+  outline: { label: "The story" },
   chapters: [
     { id: "model", name: "The Model", short: "Ch. 1" },
     { id: "work", name: "The Work", short: "Ch. 2" },

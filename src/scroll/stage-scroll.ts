@@ -5,7 +5,10 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import type { MotionValue } from "motion/react";
 
 import { clamp01, ease } from "@/lib/progress";
+import { isStacked } from "@/lib/use-stacked";
 import { EASE, EASE_GSAP_NAME } from "@/styles/tokens";
+
+import { scrollMapFor } from "./mobile";
 
 /**
  * The one scroll system (browser only):
@@ -15,7 +18,9 @@ import { EASE, EASE_GSAP_NAME } from "@/styles/tokens";
  * - one ScrollTrigger maps the section to `progress` (0 to 1) and `velocity` (screens per second).
  *   Both are motion values, so nothing sets React state per frame. Instant jumps (a seek, the
  *   restore after a resize) are not motion: velocity reads 0 through them;
- * - a resize or orientation change keeps the same progress, not the same pixel offset.
+ * - a resize or orientation change keeps the same progress, not the same pixel offset;
+ * - on a phone the stage is shorter and the scroll bends at the scene boundaries (`mobile.ts`), so
+ *   the same script plays over fewer screens: this file is the only place that knows.
  */
 
 export interface ScrollToProgressOptions {
@@ -96,6 +101,9 @@ export function createStageScroll({ section, frame, progress, velocity }: StageS
     velocity.set(0);
   };
 
+  /** The scroll map of the layout on screen right now (read live, so a resize across the breakpoint just works). */
+  const map = () => scrollMapFor(isStacked());
+
   const trigger = ScrollTrigger.create({
     trigger: section,
     start: "top top",
@@ -103,13 +111,13 @@ export function createStageScroll({ section, frame, progress, velocity }: StageS
     invalidateOnRefresh: true,
     onUpdate(self) {
       if (frozen) return;
-      progress.set(self.progress);
+      progress.set(map().toProgress(self.progress));
       velocity.set(performance.now() < quietUntil ? 0 : self.getVelocity() / frameHeight);
       lastUpdate = gsap.ticker.time;
     },
   });
 
-  const offsetOf = (p: number) => trigger.start + clamp01(p) * (trigger.end - trigger.start);
+  const offsetOf = (p: number) => trigger.start + map().toScroll(clamp01(p)) * (trigger.end - trigger.start);
 
   const freeze = () => {
     if (frozen) return;
@@ -132,7 +140,7 @@ export function createStageScroll({ section, frame, progress, velocity }: StageS
     geometry = measure();
     frameHeight = geometry.frame || window.innerHeight;
     if (!frozen) return;
-    if (Math.abs(trigger.progress - saved) > 1e-5) {
+    if (Math.abs(map().toProgress(trigger.progress) - saved) > 1e-5) {
       jumped();
       lenis.resize();
       lenis.scrollTo(offsetOf(saved), { immediate: true, force: true });
@@ -158,7 +166,7 @@ export function createStageScroll({ section, frame, progress, velocity }: StageS
   ScrollTrigger.addEventListener("refreshInit", onRefreshInit);
   ScrollTrigger.addEventListener("refresh", onRefresh);
 
-  progress.set(trigger.progress);
+  progress.set(map().toProgress(trigger.progress));
 
   return {
     offsetOf,

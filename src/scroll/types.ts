@@ -173,6 +173,13 @@ export interface CameraKey {
   fov: number;
   /** The move that starts at this key and runs until the next one. */
   move: CameraMove;
+  /**
+   * World offset (x, y) added to the camera and its target on a tall, narrow screen, in full on a
+   * phone and fading to nothing as the screen widens. It re-centers art that sits to one side on a
+   * wide stage (or leaves room for text above or below it). A key without `pan` keeps the one
+   * before it; the offset eases from key to key like everything else.
+   */
+  pan?: readonly [number, number];
 }
 
 /** A corner of a card (the question cards' connector lines lock to one). */

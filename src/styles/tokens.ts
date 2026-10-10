@@ -42,5 +42,35 @@ export const grid = {
   colB: 0.24,
 } as const;
 
+/**
+ * The same grid on a stacked (phone) screen: the right line mirrors the left, and the top line sits
+ * a fixed distance down (`top` in px), clear of the mark and the Apply pill in the top row. Keep in
+ * sync with the stacked values of `--grid-right` and `--grid-top` in `src/app/globals.css`.
+ */
+export const stackedGrid = {
+  left: 0.053,
+  right: 0.947,
+  topPx: 56,
+} as const;
+
+/** A hairline grid in pixels for a stage `width` px wide: where the left, right and top lines sit. */
+export interface GridLines {
+  left: (width: number) => number;
+  right: (width: number) => number;
+  top: (width: number) => number;
+}
+
+export const DESKTOP_GRID_LINES: GridLines = {
+  left: (w) => grid.left * w,
+  right: (w) => grid.right * w,
+  top: (w) => grid.top * w,
+};
+
+export const STACKED_GRID_LINES: GridLines = {
+  left: (w) => stackedGrid.left * w,
+  right: (w) => stackedGrid.right * w,
+  top: () => stackedGrid.topPx,
+};
+
 /** Hairline opacity relative to the foreground color. */
 export const HAIRLINE_ALPHA = 0.2;

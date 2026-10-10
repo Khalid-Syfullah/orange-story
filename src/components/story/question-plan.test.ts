@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
-import { createCameraPath, projectPoint } from "@/components/stage/camera-path";
+import { createCameraPath, projectPoint, setStageAspect } from "@/components/stage/camera-path";
 import { BEATS, CAMERA, FAQ, SCENES } from "@/scroll/script";
 
 import {
@@ -238,6 +238,62 @@ describe("the connector", () => {
       }
     }
     expect(cardPose(0, midHold(0), { width: 1920, height: 1080 }).scale).toBeCloseTo(1.2, 9);
+  });
+
+  describe("on a phone", () => {
+    afterEach(() => setStageAspect(0));
+
+    // The cards are two thirds of the screen wide (`STACKED_CARD`), about three lines of title and answer tall.
+    const PHONES: readonly Size[] = [
+      { width: 390, height: 844 },
+      { width: 360, height: 740 },
+      { width: 430, height: 932 },
+      { width: 375, height: 667 },
+    ];
+    const cardOn = (stage: Size): Size => ({ width: stage.width * 0.66, height: 300 });
+
+    it("keeps every orange on the screen: the camera widens to show the orchard rows", () => {
+      for (const stage of PHONES) {
+        setStageAspect(stage.width / stage.height);
+        for (const card of DECK) {
+          const anchor = anchorOnScreen(card.index, midHold(card.index), stage);
+          expect(onStage(anchor, stage), `${card.beat} on ${stage.width}x${stage.height}`).toBe(1);
+        }
+      }
+    });
+
+    it("runs a short line from the orange to the card's near corner", () => {
+      for (const stage of PHONES) {
+        setStageAspect(stage.width / stage.height);
+        const sizes = DECK.map(() => cardOn(stage));
+        for (const card of DECK) {
+          const frame = connectorFrame(midHold(card.index), stage, sizes)!;
+          expect(frame.opacity, `${card.beat} on ${stage.width}x${stage.height}`).toBe(1);
+          const length = Math.hypot(frame.anchor[0] - frame.corner[0], frame.anchor[1] - frame.corner[1]);
+          expect(length, `${card.beat} length`).toBeGreaterThan(24);
+          expect(length, `${card.beat} length`).toBeLessThan(stage.width / 2);
+          // Steeper than on a wide screen (the oranges sit close to the card's side), but never flat along the card.
+          expect(lineAngle(frame), `${card.beat} angle`).toBeGreaterThan(25);
+          // The orange is on the same side of the screen as the corner it connects to.
+          const side = card.corner.endsWith("left") ? -1 : 1;
+          expect(Math.sign(frame.anchor[0] - frame.corner[0]), `${card.beat} side`).toBe(side);
+        }
+      }
+    });
+
+    it("is the same camera for everyone who asks: the line's end sits on the projected orange", () => {
+      const stage = PHONES[0];
+      setStageAspect(stage.width / stage.height);
+      const path = createCameraPath(CAMERA);
+      for (const card of DECK) {
+        const p = midHold(card.index);
+        const frame = connectorFrame(p, stage, DECK.map(() => cardOn(stage)))!;
+        const direct = projectPoint(path.seek(p), card.world, stage.width, stage.height);
+        expect(frame.anchor[0]).toBeCloseTo(direct.x, 6);
+        expect(frame.anchor[1]).toBeCloseTo(direct.y, 6);
+      }
+      path.kill();
+    });
   });
 
   it("draws out from the orange as the card arrives, then locks its square to the corner", () => {

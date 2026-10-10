@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { EASE } from "@/styles/tokens";
 
 import { BeatLine } from "./beat";
-import { APPLY_FIELD_ID } from "./apply-form-ids";
+import { APPLY_FIELD_ATTRIBUTE } from "./apply-form-ids";
 import { SLOTS } from "./slots";
 
 /**
@@ -143,7 +143,7 @@ export function ApplyForm() {
       ) : (
         <Form {...form}>
           <form noValidate onSubmit={form.handleSubmit(onSubmit)}>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
               <BeatLine index={0} count={4} className={DEPTH}>
                 <StackItem name="name" active={active} setActive={setActive}>
                   <FormField
@@ -153,7 +153,7 @@ export function ApplyForm() {
                       <FormItem className="gap-0">
                         {label(name)}
                         <FormControl>
-                          <Input {...field} id={APPLY_FIELD_ID} autoComplete={AUTOCOMPLETE.name} className={cn(GLASS, "h-12")} />
+                          <Input {...field} {...{ [APPLY_FIELD_ATTRIBUTE]: "" }} autoComplete={AUTOCOMPLETE.name} className={cn(GLASS, "h-12")} />
                         </FormControl>
                         <FormMessage className="type-meta mt-2 ml-4 text-[color:var(--destructive)] normal-case" />
                       </FormItem>

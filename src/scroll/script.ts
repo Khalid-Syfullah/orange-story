@@ -427,13 +427,14 @@ function peakOf(id: TransitionId): ProgressRange {
 /* Camera: keyframes per scene                                         */
 /* ------------------------------------------------------------------ */
 
-const key = (scene: SceneId, p: number, move: CameraMove, position: Vec3, target: Vec3, fov: number): CameraKey => ({
+const key = (scene: SceneId, p: number, move: CameraMove, position: Vec3, target: Vec3, fov: number, pan?: readonly [number, number]): CameraKey => ({
   scene,
   at: round6(p),
   position,
   target,
   fov,
   move,
+  ...(pan ? { pan } : {}),
 });
 
 const [SAND_COVERED, SAND_CLEARING] = peakOf("sand");
@@ -442,6 +443,8 @@ const [DUST_COVERED, DUST_CLEARING] = peakOf("dust");
 const [FABRIC_COVERED, FABRIC_CLEARING] = peakOf("fabric");
 
 const HERO_WIDE: Vec3 = [0, 0, 14];
+/** On a phone the statue and the crowd sit in the middle band: the camera slides toward them and up, below the title. */
+const HERO_PAN = [2, 0.75] as const;
 const BRANCH: Vec3 = [2, 8.4, 5.5];
 const FRUITING_TREE: Vec3 = [1.6, 11, 12];
 const HARVESTER: Vec3 = [1.4, 4.2, 9];
@@ -765,10 +768,10 @@ const faqCamera = (n: number): [Vec3, Vec3] => {
 
 export const CAMERA: readonly CameraKey[] = [
   // Hero: wide and still.
-  key("hero", at("hero", 0), "hold", HERO_WIDE, [0, 0, 0], 35),
+  key("hero", at("hero", 0), "hold", HERO_WIDE, [0, 0, 0], 35, HERO_PAN),
   // Ascent: push in on the statue, ease into a pan and dolly along the trunk, settle on one branch.
   key("ascent", at("ascent", 0), "push", HERO_WIDE, [0, 0, 0], 35),
-  key("ascent", at("ascent", 0.28), "push", [2.1, 2.5, 9.6], [2.5, 2.9, 0], 33.5),
+  key("ascent", at("ascent", 0.28), "push", [2.1, 2.5, 9.6], [2.5, 2.9, 0], 33.5, [0, 0]),
   key("ascent", at("ascent", 0.55), "pan", [2.6, 4.6, 7.5], [2.8, 4.9, 0], 32),
   key("ascent", at("ascent", 0.85), "dolly-up", [2.2, 6.4, 6.5], [2.2, 6.6, 0], 31),
   // Graft: steady on the branch while the hands work, then dolly up and pull out to the fruiting tree.
@@ -876,6 +879,42 @@ export const TONES: readonly ToneCue[] = [
   { tone: "milk", start: round6(UNFOLD_COVERED - 0.25 * SCREEN), end: UNFOLD.end },
   { tone: "milk", start: SITE.topDownIn[1], end: SITE.end }, // once the sand and tiles have replaced the sea
 ];
+
+/* ------------------------------------------------------------------ */
+/* Phones                                                              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The same script on a phone (a stacked screen, under `STACKED_MAX_WIDTH`): the stage is shorter,
+ * and each scene keeps a share of it. `weights` multiply a scene's share of the scroll before the
+ * result is scaled to the shorter stage (`src/scroll/mobile.ts`), so the scenes that carry text
+ * keep their reading time while the long camera moves tighten. Nothing else changes: every
+ * progress value in this file is the same on every screen, and only the scroll distance between
+ * them differs.
+ */
+export const MOBILE = {
+  /** Width (px) under which the page is laid out stacked: one column, text above and below the art. */
+  stackedMaxWidth: 767,
+  /** The stage is this share of the desktop stage's height (about 70%). */
+  stageScale: 0.7,
+  /** Per scene: how much of its desktop scroll length it keeps, before the stage is scaled to fit. */
+  weights: {
+    hero: 1.15,
+    ascent: 0.62,
+    graft: 0.62,
+    pluck: 0.98,
+    share: 0.72,
+    work: 1,
+    blueprint: 0.64,
+    site: 0.82,
+    prune: 0.82,
+    fall: 0.62,
+    faq: 0.92,
+    stars: 0.52,
+    apply: 0.82,
+    finale: 0.62,
+  } satisfies Record<SceneId, number>,
+} as const;
 
 /* ------------------------------------------------------------------ */
 /* Navigation                                                          */
