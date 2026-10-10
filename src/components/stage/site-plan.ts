@@ -1,5 +1,7 @@
 import { ease, remap } from "@/lib/progress";
-import { SITE } from "@/scroll/script";
+import { CAMERA, SITE } from "@/scroll/script";
+
+import { cameraTravel } from "./camera-path";
 
 /**
  * Scene 8, the building site by the sea, as pure functions (no React, no three). Timings live in
@@ -41,10 +43,12 @@ export function topDownOpacity(p: number): number {
   return fade(p, SITE.topDownIn);
 }
 
-/** How far the top-down view has shrunk into the left half, 0 to 1. */
-export function shrinkAt(p: number): number {
-  return fade(p, SITE.shrink);
-}
+/**
+ * How far the top-down view has shrunk into the left half, 0 to 1: in step with the camera pulling
+ * out (the move between its keys at the ends of `SITE.shrink`), so the zoom and the slide read as
+ * one move.
+ */
+export const shrinkAt = cameraTravel(CAMERA, SITE.shrink[0], SITE.shrink[1]);
 
 /** Horizontal shift of the site, in world units, for the half-width of the view at the ground. */
 export function siteShift(p: number, halfWidth: number): number {

@@ -16,9 +16,9 @@ import { Hairlines } from "@/components/chrome/hairlines";
 import { ServiceThread } from "@/components/chrome/service-thread";
 import { ProgressLine } from "@/components/chrome/progress-line";
 import { StoryChrome } from "@/components/chrome/story-chrome";
-import { ANCHORS, BEATS, CHAPTERS, HAIRLINES, MOBILE, PROGRESS_LINES, RULER_STOPS, STAGE_VH } from "@/scroll/script";
+import { ANCHORS, BEATS, CHAPTERS, HAIRLINES, MOBILE, PROGRESS_LINES, RULER_STOPS, SCENES, STAGE_VH } from "@/scroll/script";
 import { createStageScroll, type ScrollToProgressOptions, type StageScroll } from "@/scroll/stage-scroll";
-import { StoryContext, usePrefersReducedMotion, useTone, type Story } from "@/scroll/story-scroll";
+import { StoryContext, useChapterIndex, usePrefersReducedMotion, useSceneIndex, useTone, type Story } from "@/scroll/story-scroll";
 import type { BeatId } from "@/scroll/types";
 import { validateScript } from "@/scroll/validate";
 
@@ -86,6 +86,10 @@ export function StoryStage({ year }: { year: number }) {
   const live = usePrefersReducedMotion() === false;
   const stacked = useStacked();
   const tone = useTone(progress);
+  // Discrete state, written on the stage as data attributes (they change only at scene and chapter
+  // boundaries): handy for styling and debugging, and read by the scroll test (e2e/story.spec.ts).
+  const scene = SCENES[useSceneIndex(progress)].id;
+  const chapter = CHAPTERS[useChapterIndex(progress)].id;
 
   React.useEffect(() => {
     if (!live || !section.current || !frame.current) return;
@@ -131,69 +135,72 @@ export function StoryStage({ year }: { year: number }) {
   return (
     <>
       <StoryOutline year={year} />
-    <StoryContext value={story}>
-      {/* The frame is one small viewport tall (stable while a mobile URL bar shows and hides); the
-          section's sky ground fills the strip below it when the bar is hidden. The section's height
-          is set in CSS from these two variables (the script's, on a phone and elsewhere). */}
-      <section
-        ref={section}
-        data-stage
-        className="relative bg-sky motion-reduce:hidden"
-        style={{ "--stage-vh": `${STAGE_VH}vh`, "--stage-vh-stacked": `${STAGE_VH * MOBILE.stageScale}vh` } as React.CSSProperties}
-      >
-        <div ref={frame} className="sticky top-0 h-svh w-full overflow-hidden bg-sky">
-          <div aria-hidden data-layer="scene" className="pointer-events-none absolute inset-0">
-            {live ? <StageCanvas progress={progress} /> : null}
+      <StoryContext value={story}>
+        {/* The frame is one small viewport tall (stable while a mobile URL bar shows and hides); the
+            section's sky ground fills the strip below it when the bar is hidden. The section's height
+            is set in CSS from these two variables (the script's, on a phone and elsewhere). */}
+        <section
+          ref={section}
+          data-stage
+          data-scene={scene}
+          data-chapter={chapter}
+          data-tone={tone}
+          className="relative bg-sky motion-reduce:hidden"
+          style={{ "--stage-vh": `${STAGE_VH}vh`, "--stage-vh-stacked": `${STAGE_VH * MOBILE.stageScale}vh` } as React.CSSProperties}
+        >
+          <div ref={frame} className="sticky top-0 h-svh w-full overflow-hidden bg-sky">
+            <div aria-hidden data-layer="scene" className="pointer-events-none absolute inset-0">
+              {live ? <StageCanvas progress={progress} /> : null}
+            </div>
+
+            {live ? <SitePanel progress={progress} /> : null}
+
+            <TransitionLayer progress={progress} live={live} />
+
+            <div data-layer="hairlines" className={cn("pointer-events-none absolute inset-0 transition-colors duration-300", onMilk ? "text-ink" : "text-white")}>
+              <Hairlines progress={progress} cues={HAIRLINES} position="absolute" lines={stacked ? STACKED_GRID_LINES : DESKTOP_GRID_LINES} />
+              {PROGRESS_LINES.map((line) => (
+                <ProgressLine key={line.id} progress={progress} range={line.draw} erase={line.erase} className="absolute" style={ALONG_TOP} />
+              ))}
+              {/* The thread beside the cards has no column to sit beside on a phone. */}
+              <ServiceThread progress={progress} className="max-md:hidden" />
+            </div>
+
+            <div
+              data-layer="text"
+              className={cn(
+                "absolute inset-0 transition-colors duration-300",
+                onMilk ? "text-ink [--story-soft:color-mix(in_oklab,var(--ink)_74%,transparent)]" : "text-white [--story-soft:var(--milk)]",
+              )}
+            >
+              {BEATS.map((beat) => {
+                if (QUESTION_SET.has(beat.id)) {
+                  // The question cards are one group: the pinned deck with its connector (decorative;
+                  // the same questions are a list in the outline for screen readers).
+                  return beat.id === QUESTION_BEATS[0] ? <React.Fragment key="questions">{live ? <QuestionDeck /> : null}</React.Fragment> : null;
+                }
+                const Content = BEAT_CONTENT[beat.id];
+                return (
+                  <Beat key={beat.id} id={beat.id} keepMounted={beat.id === "apply-form"}>
+                    {Content ? <Content /> : undefined}
+                  </Beat>
+                );
+              })}
+            </div>
+
+            <StoryChrome
+              progress={progress}
+              chapters={RULER_CHAPTERS}
+              segments={RULER_SEGMENTS}
+              onChapterSelect={onChapterSelect}
+              onApply={onApply}
+              tone={tone}
+              position="absolute"
+            />
           </div>
-
-          {live ? <SitePanel progress={progress} /> : null}
-
-          <TransitionLayer progress={progress} live={live} />
-
-          <div data-layer="hairlines" className={cn("pointer-events-none absolute inset-0 transition-colors duration-300", onMilk ? "text-ink" : "text-white")}>
-            <Hairlines progress={progress} cues={HAIRLINES} position="absolute" lines={stacked ? STACKED_GRID_LINES : DESKTOP_GRID_LINES} />
-            {PROGRESS_LINES.map((line) => (
-              <ProgressLine key={line.id} progress={progress} range={line.draw} erase={line.erase} className="absolute" style={ALONG_TOP} />
-            ))}
-            {/* The thread beside the cards has no column to sit beside on a phone. */}
-            <ServiceThread progress={progress} className="max-md:hidden" />
-          </div>
-
-          <div
-            data-layer="text"
-            className={cn(
-              "absolute inset-0 transition-colors duration-300",
-              onMilk ? "text-ink [--story-soft:color-mix(in_oklab,var(--ink)_74%,transparent)]" : "text-white [--story-soft:var(--milk)]",
-            )}
-          >
-            {BEATS.map((beat) => {
-              if (QUESTION_SET.has(beat.id)) {
-                // The question cards are one group: the pinned deck with its connector (decorative;
-                // the same questions are a list in the outline for screen readers).
-                return beat.id === QUESTION_BEATS[0] ? <React.Fragment key="questions">{live ? <QuestionDeck /> : null}</React.Fragment> : null;
-              }
-              const Content = BEAT_CONTENT[beat.id];
-              return (
-                <Beat key={beat.id} id={beat.id} keepMounted={beat.id === "apply-form"}>
-                  {Content ? <Content /> : undefined}
-                </Beat>
-              );
-            })}
-          </div>
-
-          <StoryChrome
-            progress={progress}
-            chapters={RULER_CHAPTERS}
-            segments={RULER_SEGMENTS}
-            onChapterSelect={onChapterSelect}
-            onApply={onApply}
-            tone={tone}
-            position="absolute"
-          />
-        </div>
-      </section>
-      {DevTimeline && live ? <DevTimeline /> : null}
-    </StoryContext>
+        </section>
+        {DevTimeline && live ? <DevTimeline /> : null}
+      </StoryContext>
     </>
   );
 }

@@ -9,6 +9,8 @@ import { sceneProgress } from "@/scroll/helpers";
 
 import { GlowRipple } from "./glow-ripple";
 import { finishHeroIntro, heroIntroElapsed, heroIntroFinished, INTRO, introAmount, startHeroIntro, type IntroSpan } from "./hero-intro";
+import { colors } from "@/styles/tokens";
+
 import { Plate } from "./plate";
 import { useStageProgress } from "./stage-context";
 import { Twinkle } from "./twinkle";
@@ -103,13 +105,13 @@ export function HeroArt({ scene }: SceneArtProps) {
     <>
       <Plate id="hero/sky" opacity={sky} />
       <GlowRipple sprite="hero/glow-droplet" source={ORANGE} opacity={glow} lift={lift} />
-      <Twinkle sprite="hero/glow-droplet" points={HALO} opacity={halo} tint="#ffffff" tintAmount={lift} additive layer={-1} name="hero-halo" />
+      <Twinkle sprite="hero/glow-droplet" points={HALO} opacity={halo} tint={colors.white} tintAmount={lift} additive layer={-1} name="hero-halo" />
       <Plate id="hero/crowd-far" opacity={crowdFar} y={farY} />
       <Plate id="hero/crowd-mid" opacity={crowdMid} y={midY} />
       <Plate id="hero/minaret" opacity={minaret} y={minaretY} blur={minaretBlur} />
       <Plate id="hero/crowd-near" opacity={crowdNear} y={nearY} />
       <Plate id="hero/statue" opacity={statue} y={statueY} blur={statueBlur} />
-      <Plate id="hero/statue-orange" opacity={orange} y={orangeY} blur={orangeBlur} tint="#ffffff" tintAmount={whitening} />
+      <Plate id="hero/statue-orange" opacity={orange} y={orangeY} blur={orangeBlur} tint={colors.white} tintAmount={whitening} />
       <IntroDriver clock={clock} />
     </>
   );

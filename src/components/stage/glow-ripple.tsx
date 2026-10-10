@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useFrame } from "@react-three/fiber";
-import { InstancedBufferAttribute, InstancedBufferGeometry, Mesh, Sphere, Vector2, Vector3 } from "three";
+import { InstancedBufferAttribute, InstancedBufferGeometry, Mesh, PlaneGeometry, Sphere, Vector2, Vector3 } from "three";
 
 import { plateEntry, type Pair, type PlateId } from "@/art/manifest";
 import { seeded } from "@/lib/progress";
@@ -11,7 +11,7 @@ import { useStacked } from "@/lib/use-stacked";
 import { useIdleClock } from "./idle";
 import { RippleMaterial } from "./materials";
 import { particleCount } from "./quality";
-import { read, UNIT_PLANE, useInvalidateOnChange, type Num } from "./plate";
+import { read, useInvalidateOnChange, type Num } from "./plate";
 import { plateRenderOrder, useSceneLayer, useStageProgress } from "./stage-context";
 import { usePlateTexture } from "./textures";
 
@@ -62,6 +62,24 @@ function rippleClock(name: string) {
   return clock;
 }
 
+/**
+ * The droplets' geometry: one quad of its own, repeated once per droplet, with each droplet's data.
+ * The quad must never be the plates' shared `UNIT_PLANE`: disposing a geometry deletes the GL buffers
+ * of every attribute it holds, and the ripple's geometry is disposed when its scene unmounts, which
+ * would leave every plate on the stage drawing from deleted buffers (a blank stage).
+ */
+export function rippleGeometry(seed: string, count: number, size: number, source: Pair, reach: number): InstancedBufferGeometry {
+  const quad = new PlaneGeometry(1, 1);
+  const instanced = new InstancedBufferGeometry();
+  instanced.setIndex(quad.getIndex());
+  for (const attribute of ["position", "normal", "uv"]) instanced.setAttribute(attribute, quad.getAttribute(attribute));
+  instanced.setAttribute("drop", new InstancedBufferAttribute(rippleDrops(seed, count, size), 4));
+  instanced.instanceCount = count;
+  // The droplets move in the shader: their bounds are the whole reach around the source.
+  instanced.boundingSphere = new Sphere(new Vector3(source[0], source[1], 0), reach);
+  return instanced;
+}
+
 export interface GlowRippleProps {
   /** The sprite of one droplet (a manifest entry). */
   sprite: PlateId;
@@ -91,17 +109,7 @@ export function GlowRipple({ sprite, source, opacity, lift, offsetY, reach = 7, 
   const clock = useIdleClock();
   const key = React.useMemo(() => ({}), []);
   const material = React.useMemo(() => new RippleMaterial(texture), [texture]);
-  const geometry = React.useMemo(() => {
-    // The shared unit quad's buffers, repeated once per droplet.
-    const instanced = new InstancedBufferGeometry();
-    instanced.setIndex(UNIT_PLANE.getIndex());
-    for (const attribute of ["position", "normal", "uv"]) instanced.setAttribute(attribute, UNIT_PLANE.getAttribute(attribute));
-    instanced.setAttribute("drop", new InstancedBufferAttribute(rippleDrops(`${name}-drops`, count, entry.height), 4));
-    instanced.instanceCount = count;
-    // The droplets move in the shader: their bounds are the whole reach around the source.
-    instanced.boundingSphere = new Sphere(new Vector3(source[0], source[1], 0), reach);
-    return instanced;
-  }, [name, count, entry.height, source, reach]);
+  const geometry = React.useMemo(() => rippleGeometry(`${name}-drops`, count, entry.height, source, reach), [name, count, entry.height, source, reach]);
 
   React.useEffect(
     () => () => {

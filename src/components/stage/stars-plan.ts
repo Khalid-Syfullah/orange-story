@@ -1,6 +1,8 @@
 import { clamp01, ease, remap, seeded } from "@/lib/progress";
 import { STARS } from "@/scroll/script";
 
+import { hazeAmount } from "./text-haze";
+
 import type { TwinklePoint } from "./twinkle";
 
 /**
@@ -116,4 +118,19 @@ export function starReveal(p: number): number {
 export function edgeDraw(edge: StarEdge, p: number): number {
   const g = growth(p);
   return ease(remap(g, edge.start * 0.9 + 0.02, edge.start * 0.9 + 0.02 + STARS.draw));
+}
+
+/** How far the constellation recedes while the application is up, at most (its opacity drops by this much). */
+export const STARS_RECEDE = 0.75;
+
+/** The beats the constellation recedes behind: the application's text and its form. */
+const OVER_STARS = ["apply-intro", "apply-form"] as const;
+
+/**
+ * Opacity of the constellation behind the application, 0 to 1: it recedes while the application
+ * text and the form are up (stars and lines run behind both), and comes back as they leave in the
+ * finale, where it drifts away.
+ */
+export function starsDim(p: number): number {
+  return 1 - STARS_RECEDE * hazeAmount(OVER_STARS, p);
 }

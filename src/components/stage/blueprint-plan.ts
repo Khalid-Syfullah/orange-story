@@ -16,8 +16,12 @@ export const PANELS = 4;
 export const PANEL_WIDTH = 0.5;
 /** Width of a folded panel, as a share of the open width. */
 export const FOLDED = 0.1;
-/** Where the packet is held, relative to the open plan's place. */
-export const HELD: readonly [number, number] = [1.45, -1.15];
+/**
+ * Where the packet is held, relative to the open plan's place: in the architect's hands (the
+ * `blueprint/architect` placeholder holds them in front of his chest; the packet's lower half sits in
+ * them). Measured on the scaffold shot (the blueprint's first camera key).
+ */
+export const HELD: readonly [number, number] = [1.25, -0.28];
 
 /** How open panel i (0 to 3) is at progress p: FOLDED when shut, 1 when flat. */
 export function panelOpen(i: number, p: number): number {
@@ -36,6 +40,8 @@ export function planOffset(p: number): { x: number; y: number } {
 export interface PanelPose {
   /** World x offset from the manifest place. */
   x: number;
+  /** World y offset from the manifest place (the packet is held low, in the architect's hands). */
+  y: number;
   /** Horizontal scale, the panel opening. */
   scaleX: number;
   /** How far toward shade, 0 (lit, flat) to 1: shut panels are darker, alternate panels slightly. */
@@ -44,15 +50,21 @@ export interface PanelPose {
 
 /** Pose of panel i at progress p: hinged to its neighbour, the sheet centered on its open place. */
 export function panelAt(i: number, p: number): PanelPose {
-  const widths = Array.from({ length: PANELS }, (_, k) => panelOpen(k, p));
-  const total = widths.reduce((a, b) => a + b, 0) * PANEL_WIDTH;
-  let left = -total / 2;
-  for (let k = 0; k < i; k++) left += widths[k] * PANEL_WIDTH;
-  const center = left + (widths[i] * PANEL_WIDTH) / 2;
+  // Sum the panels' open widths, and the ones before panel i (plain loops: this runs every frame).
+  let total = 0;
+  let before = 0;
+  for (let k = 0; k < PANELS; k++) {
+    const w = panelOpen(k, p);
+    total += w;
+    if (k < i) before += w;
+  }
+  const width = panelOpen(i, p);
+  const left = -(total * PANEL_WIDTH) / 2 + before * PANEL_WIDTH;
+  const center = left + (width * PANEL_WIDTH) / 2;
   const openCenter = (i - (PANELS - 1) / 2) * PANEL_WIDTH;
-  const { x } = planOffset(p);
-  const shade = clamp01((1 - widths[i]) * 0.5 + (i % 2 ? 0.07 : 0));
-  return { x: center - openCenter + x, scaleX: widths[i], shade };
+  const { x, y } = planOffset(p);
+  const shade = clamp01((1 - width) * 0.5 + (i % 2 ? 0.07 : 0));
+  return { x: center - openCenter + x, y, scaleX: width, shade };
 }
 
 /** The builder's small to-and-fro while he works, in radians. */

@@ -4,15 +4,15 @@ import * as React from "react";
 import { motion, type MotionStyle } from "motion/react";
 
 import { cn } from "@/lib/utils";
-import type { CardCorner } from "@/scroll/types";
+import type { BeatId, CardCorner } from "@/scroll/types";
 
 import { BeatLine } from "./beat";
 import { SOFT_TEXT } from "./beat-content";
 
 /**
- * A question card: the question as its title, the answer inside, on a clear glass panel (a hairline
- * border, a faint white fill and a blur of what lies behind; no shadow), with a pair of small
- * sparkles twinkling in one corner. Inside a beat the two rows arrive in order (title first, then
+ * A question card: the question as its title, the answer inside, on a glass panel (a hairline
+ * border, a sky-tinted fill and a blur of what lies behind; no shadow), with a pair of small
+ * sparkles twinkling in one corner. The tint keeps the answer at WCAG AA over the orchard's fruit. Inside a beat the two rows arrive in order (title first, then
  * the answer) and leave with the beat's stagger; outside one they are plain text.
  *
  * The question deck (`question-deck.tsx`) moves the panel through `style` (its pose along the arc:
@@ -54,6 +54,8 @@ function Sparkles({ corner }: { corner: CardCorner }) {
 export interface QuestionCardProps {
   question: string;
   answer: string;
+  /** The beat the card shows (`data-beat`), when it is one of the deck's. */
+  beat?: BeatId;
   /** The corner holding the pair of sparkles. */
   sparkles?: CardCorner;
   className?: string;
@@ -64,12 +66,13 @@ export interface QuestionCardProps {
   ref?: React.Ref<HTMLDivElement>;
 }
 
-export function QuestionCard({ question, answer, sparkles = "top-right", className, style, textStyle, ref }: QuestionCardProps) {
+export function QuestionCard({ question, answer, beat, sparkles = "top-right", className, style, textStyle, ref }: QuestionCardProps) {
   return (
     <motion.div
       ref={ref}
       data-question-card
-      className={cn("rounded-lg border border-white/20 bg-white/[0.07] p-7 backdrop-blur-md sm:p-9", className)}
+      data-beat={beat}
+      className={cn("rounded-lg border border-white/20 bg-sky/45 p-7 backdrop-blur-md sm:p-9", className)}
       style={style}
     >
       <Sparkles corner={sparkles} />

@@ -9,6 +9,8 @@ describe("blueprint plan", () => {
     const before = BLUEPRINT.bring[0];
     for (let i = 0; i < PANELS; i++) expect(panelAt(i, before).scaleX).toBeCloseTo(FOLDED);
     expect(planOffset(before).x).toBeGreaterThan(1);
+    // Held low, in his hands (not at the plan's open place, level with his head).
+    for (let i = 0; i < PANELS; i++) expect(panelAt(i, before).y).toBeLessThan(-0.1);
   });
 
   it("opens the panels one after another", () => {
@@ -24,6 +26,7 @@ describe("blueprint plan", () => {
       const pose = panelAt(i, end);
       expect(pose.scaleX).toBeCloseTo(1);
       expect(pose.x).toBeCloseTo(0);
+      expect(pose.y).toBeCloseTo(0);
       expect(pose.shade).toBeLessThan(0.1);
     }
     expect(PANEL_WIDTH).toBe(0.5);

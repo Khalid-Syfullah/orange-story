@@ -7,6 +7,10 @@ import { foliageAt, handAt, harvesterAt, heroOrangeAt } from "./pluck-harvest";
 import { Plate } from "./plate";
 import type { SceneArtProps } from "./scene-layers";
 import { useStageProgress } from "./stage-context";
+import { useTextHaze } from "./use-text-haze";
+
+/** The beats over the foliage (and, on a phone, over the harvester's robe): what runs behind their words recedes into the sky's haze. */
+const OVER_FOLIAGE = ["found", "harvest"] as const;
 
 /**
  * Scene 4, the pluck and the harvester. Everything is a function of the story progress
@@ -18,6 +22,8 @@ import { useStageProgress } from "./stage-context";
  *   camera while the near and middle foliage fall away behind.
  * - The harvester (white robe; body, right arm holding an orange, head) is revealed; the hand lets
  *   go and the fruit becomes the one in his hand (his arm arrives with it), his gaze on it.
+ * - While "We get you found." and "We split the harvest." are up, the foliage behind their words
+ *   recedes into the sky's haze (`useTextHaze`), so the text never sits on bright fruit.
  */
 export function PluckArt({ scene }: SceneArtProps) {
   void scene;
@@ -45,6 +51,10 @@ export function PluckArt({ scene }: SceneArtProps) {
   const handR = useTransform(hand, (h) => h.rotate);
   const handO = useTransform(hand, (h) => h.opacity);
 
+  const haze = useTextHaze(OVER_FOLIAGE, { strength: 0.8 });
+  // His robe is behind the text only on a phone (a wide screen keeps him to the right of it).
+  const robeHaze = useTextHaze(OVER_FOLIAGE, { strength: 0.8, stackedOnly: true });
+
   const harvester = useTransform(progress, harvesterAt);
   const harvesterO = useTransform(harvester, (h) => h.opacity);
   const harvesterY = useTransform(harvester, (h) => h.rise);
@@ -53,14 +63,14 @@ export function PluckArt({ scene }: SceneArtProps) {
   return (
     <>
       <Plate id="hero/sky" />
-      <Plate id="pluck/foliage-far" />
-      <Plate id="pluck/foliage-mid" opacity={midOpacity} />
-      <Plate id="pluck/harvester-body" y={harvesterY} opacity={harvesterO} />
+      <Plate id="pluck/foliage-far" clearing={haze} />
+      <Plate id="pluck/foliage-mid" opacity={midOpacity} clearing={haze} />
+      <Plate id="pluck/harvester-body" y={harvesterY} opacity={harvesterO} clearing={robeHaze} />
       <Plate id="pluck/harvester-head" y={harvesterY} opacity={harvesterO} />
       <Plate id="pluck/harvester-arm" y={harvesterY} opacity={armO} />
       <Plate id="pluck/hero-orange" x={orangeX} y={orangeY} rotate={orangeR} scale={orangeS} opacity={orangeO} />
       <Plate id="pluck/hand" x={handX} y={handY} scaleX={handSX} scaleY={handSY} rotate={handR} opacity={handO} />
-      <Plate id="pluck/foliage-near" opacity={nearOpacity} scale={nearScale} />
+      <Plate id="pluck/foliage-near" opacity={nearOpacity} scale={nearScale} clearing={haze} />
     </>
   );
 }

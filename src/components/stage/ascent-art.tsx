@@ -7,6 +7,8 @@ import { BRANCHES, branchAt, LEAVES, leafAt, MINARET, morphAt, riseAt, shaftAt, 
 import { GlowRipple } from "./glow-ripple";
 import { HALO, ORANGE, ORANGE_WHITENING } from "./hero-art";
 import { MorphPlate } from "./morph-plate";
+import { colors, mixColors } from "@/styles/tokens";
+
 import { Plate } from "./plate";
 import { scenePresence } from "./presence";
 import type { SceneArtProps } from "./scene-layers";
@@ -30,7 +32,7 @@ import { Twinkle } from "./twinkle";
 /** The glow stays at the hero's full brightness. */
 const GLOW_LIFT = 1;
 /** The soft light along the moving stone-to-bark front. */
-const FRONT_GLOW = "#ffe2b8";
+const FRONT_GLOW = mixColors("white", "orange", 0.25);
 
 function Leaf({ leaf, progress }: { leaf: LeafSpec; progress: MotionValue<number> }) {
   const scaleX = useTransform(progress, (p) => leafAt(leaf, p).scaleX);
@@ -73,7 +75,7 @@ export function AscentArt({ scene }: SceneArtProps) {
     <>
       <Plate id="hero/sky" />
       <GlowRipple sprite="hero/glow-droplet" source={ORANGE} offsetY={rise} opacity={glow} lift={GLOW_LIFT} />
-      <Twinkle sprite="hero/glow-droplet" points={HALO} y={rise} opacity={halo} tint="#ffffff" tintAmount={GLOW_LIFT} additive layer={-1} name="hero-halo" />
+      <Twinkle sprite="hero/glow-droplet" points={HALO} y={rise} opacity={halo} tint={colors.white} tintAmount={GLOW_LIFT} additive layer={-1} name="hero-halo" />
       <Plate id="hero/crowd-far" />
       <Plate id="hero/crowd-mid" />
       <Plate id="hero/crowd-near" />
@@ -97,7 +99,7 @@ export function AscentArt({ scene }: SceneArtProps) {
         <Leaf key={leaf.id} leaf={leaf} progress={progress} />
       ))}
       <Plate id="hero/statue" y={rise} opacity={statue} />
-      <Plate id="hero/statue-orange" y={rise} opacity={statue} tint="#ffffff" tintAmount={ORANGE_WHITENING} />
+      <Plate id="hero/statue-orange" y={rise} opacity={statue} tint={colors.white} tintAmount={ORANGE_WHITENING} />
     </>
   );
 }

@@ -6,7 +6,8 @@ How orange.io looks and moves. The storyboard (`docs/STORYBOARD.md`) says what h
 | --- | --- |
 | Raw tokens (CSS variables), Tailwind theme, shadcn theme, type and shape utilities | `src/app/globals.css` |
 | Fonts (the only place they are chosen) | `src/styles/fonts.ts` |
-| Tokens for canvas, three.js, GSAP and motion (hex colors, easing tuple, grid fractions) | `src/styles/tokens.ts` |
+| Tokens for canvas, three.js, GSAP and motion (hex colors, `mixColors`, easing tuple, grid fractions) | `src/styles/tokens.ts` |
+| These rules, checked (contrast, no raw colors) | `src/styles/design.test.ts`; fonts and layout shift in `e2e/story.spec.ts` |
 | Class merging that understands the custom type scale | `src/lib/utils.ts` (`cn`) |
 | Every on-screen string | `src/content/copy.ts` |
 | Live reference sheet (dev only, not linked, 404 in production) | `/design` |
@@ -29,6 +30,7 @@ A painted, sunlit classical world under a deep blue sky, laid out like a precise
 | `--marble` | `#ECE7DD` | `bg-marble` | Marble, stone, quiet surfaces |
 
 - Text on sky is white or `--milk`. Never ink on sky.
+- Every color in the code is a token, or a mix of two tokens (`mixColors(a, b, t)` in `tokens.ts`; `color-mix()` with `var(--token)` in CSS). The unit test fails on a raw hex or rgb color anywhere outside the token files.
 - Hairlines are 1px at 20% of the current text color: `var(--hairline)`, or the `hairline-x` / `hairline-y` utilities.
 - shadcn semantic colors (`background`, `foreground`, `primary`, `border`, `ring`, ...) map onto this palette. Three surface scopes:
   - default (`:root`): milk ground, ink text
@@ -36,9 +38,35 @@ A painted, sunlit classical world under a deep blue sky, laid out like a precise
   - `.theme-press`: near-black ground, milk text
   Each scope also sets `color`, so text inside it switches without extra classes. shadcn `dark:` variants apply inside sky and press scopes.
 
+### Contrast (WCAG AA)
+
+Body text needs 4.5:1, large text (24px and up) 3:1. Measured:
+
+| Text | Ground | Ratio |
+| --- | --- | --- |
+| White | `--sky` | 7.99 |
+| Milk (secondary lines on sky) | `--sky` | 7.21 |
+| White / milk | The lightest row of the painted sky (`#416EB4`, its bottom) | 5.10 / 4.61 |
+| Ink | `--milk` | 16.74 |
+| Softened ink (74%, secondary lines on milk) | `--milk` | 7.58 |
+| White on a `chrome-chip` | over a white robe or cloud | 5.51 |
+| White on the Apply pill on sky (80% sky fill) | over a white cloud | 4.87 |
+
+The painted sky is part of this: behind text it must never get lighter than `#416EB4` (a 42% mix of sky toward sky-soft). The first placeholder faded to sky-soft at the bottom, where milk text fell to 2.58:1; `design.test.ts` now reads the sky plate's lightest row and checks it, so final art is held to the same line.
+
+## Text over the painting
+
+Text sits on painted plates, not on flat color, so where the painting runs behind words it gives way while the words are up (`useTextHaze`, see `SCROLL.md`):
+
+- **Haze.** Inside a soft rectangle around the words, foliage, fruit and figures recede toward the sky's color (the pluck's foliage behind its two beats, the orchard's fruit behind "Questions worth asking first.", the tree behind the finale's wordmark). It reads as atmosphere, not as a panel.
+- **Parting.** Clouds thin out of the card column instead (the work scene) and re-form beyond it, so they pass on both sides of the cards.
+- **Composition first.** Where the art can simply stand aside it does: the gardener stands right of center so the fit text has clear sky; the astronomer sinks out of a phone's frame before the form arrives.
+- **Glass with a tint.** The question cards are glass with a 45% sky fill (not a white one), so their answers keep 4.5:1 over the orchard's fruit.
+- **Chrome chips.** The percent counter and the ruler's active entry sit on a `chrome-chip`: a 4px chip of the ground's own color (`--chrome-ground`, sky or milk) at 85%. On plain sky it all but disappears; over a robe or a cloud in that corner it keeps the readout legible. The ghost Apply pill takes an 80% sky fill for the same reason.
+
 ## Type
 
-Three families, all variable fonts loaded with `next/font/google` (`display: swap`, size-adjusted local fallbacks generated automatically):
+Three families, all variable fonts loaded with `next/font/google` (`display: swap`, size-adjusted local fallbacks generated automatically, so nothing shifts when they arrive: the scroll test measures a cumulative layout shift under 0.02 while the page and its fonts load):
 
 | Family | Role | CSS variable | Tailwind |
 | --- | --- | --- | --- |
@@ -64,6 +92,8 @@ Scale. Each step is a Tailwind size (`text-display-xl` sets size, leading, track
 
 - **Pill button** (`pill` + `pill-chip`): radius 999px, 1px border at 20% of the text color, an inset top highlight, a mono `label` caption, and an arrow in a small round chip at the end. Dark pill on light grounds (`bg-press text-milk`), transparent pill on sky. The chip nudges right on hover. Buttons are the only rounded-full controls.
 - **Tag** (`tag`): radius 4px, 10% tint of the text color, mono caps at 8 to 9px. Decorative: render a `span`, never focusable, `pointer-events: none`. It looks a little like a button and must never act like one.
+- **Chrome chip** (`chrome-chip`): radius 4px, the ground's own color at 85%, behind chrome readouts (the percent counter, the ruler's active entry). Not a tag: it carries no label style of its own.
+- **Glass**: question cards and form fields. A hairline border, a backdrop blur, no shadow; the cards are tinted with 45% sky, the fields stay almost clear (5% white) with a soft orb behind the form.
 - **Hairlines** (`hairline-x`, `hairline-y`, `--hairline`): 1px at 20% of the text color, with a slight hand-drawn wobble when drawn as SVG paths, and small four-point star marks where they cross.
 - **Radius**: `rounded-pill` (999px), `rounded-tag` (4px); shadcn's own scale derives from `--radius` (0.375rem).
 - **No shadows on cards or panels.** Depth comes from the painted plates, blur and layering, not drop shadows.
@@ -84,8 +114,9 @@ Column A holds titles and tags; column B, one tab-width to the right, holds para
 
 ## Motion language
 
-- **One easing curve everywhere:** `cubic-bezier(0.22, 1, 0.36, 1)`. CSS: `var(--ease)`, `ease-story`, and the default for every Tailwind `transition-*`. JS: `EASE` (tuple for motion) and `EASE_CSS` from `src/styles/tokens.ts`.
-- **Scroll drives the story.** One 0 to 1 `progress` value moves everything, so every scroll-driven move plays backwards exactly when scrolling up. Only idle effects (glow ripple, sway, twinkle) and the finale loop run on time.
+- **One easing curve everywhere:** `cubic-bezier(0.22, 1, 0.36, 1)`. CSS: `var(--ease)`, `ease-story`, and the default for every Tailwind `transition-*`. JS: `EASE` (tuple for motion), `EASE_CSS`, and the GSAP ease `story` (`EASE_GSAP_NAME`) from `src/styles/tokens.ts`.
+- **One exception: the camera.** Scrubbed by scroll, the story curve's fast start (seven times the average speed) reads as a jolt at every camera key, and its long tail as a camera that has stopped. The camera runs instead on one smooth path through its keys (a monotone cubic, `camera-path.ts`): it starts from rest after a hold, lands at rest before one, glides through a chain of moves and keeps moving through the middle of a long one. Art that travels with the camera reads that path (`cameraTravel`).
+- **Scroll drives the story.** One 0 to 1 `progress` value moves everything, so every scroll-driven move plays backwards exactly when scrolling up (the scroll test checks the way back in the browser). Only idle effects (glow ripple, sway, twinkle, the clouds' drift, the sparkles, the caret) and the finale loop run on time.
 - **Per-character reveals** for headlines: each letter is its own span rising and un-blurring in a short stagger; screen readers get the whole string.
 - **Blur fades** for text leaving: blur up, fade, drift a little (left for the hero copy, upward like smoke after the questions).
 - **Typewriter lines** that type letter by letter as you scroll, and un-type when you scroll back, with a thin caret.
@@ -96,8 +127,10 @@ Column A holds titles and tags; column B, one tab-width to the right, holds para
 
 ## Do not
 
-- No other fonts. Newsreader, Geist and Geist Mono only.
+- No other fonts. Newsreader, Geist and Geist Mono only (the scroll test checks every rendered text element and every loaded face).
 - No card shadows, glows on panels, or gradients on UI chrome.
+- No raw colors in code: tokens, or mixes of tokens.
+- No text on bright paint: let the art recede or stand aside (see "Text over the painting").
 - Orange is the one accent: use it for the fruit, the glow and a rare highlight. Never for large UI surfaces, body text or borders.
 - No ink text on sky; no colors outside the palette.
 - No copy typed into components: every string comes from `src/content/copy.ts`.

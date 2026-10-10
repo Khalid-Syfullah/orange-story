@@ -45,8 +45,8 @@ import type {
 /* Stage                                                               */
 /* ------------------------------------------------------------------ */
 
-/** Height of the pinned stage in vh: about 50 screens of scrolling, like the reference. Tunable. */
-export const STAGE_VH = 5000;
+/** Height of the pinned stage in vh: 53 screens of scrolling, the reference's length. Tunable. */
+export const STAGE_VH = 5400;
 
 /** Screens of scrolling from progress 0 to 1 (the pinned frame itself is one screen tall). */
 export const SCREENS = screensFor(STAGE_VH);
@@ -80,8 +80,8 @@ const SCENE_PLAN: readonly ScenePlan[] = [
   { id: "pluck", part: "model", share: 0.06 },
   { id: "share", part: "model", share: 0.042 }, // ends at 0.232
   // The Work
-  { id: "work", part: "work", share: 0.1 },
-  { id: "blueprint", part: "work", share: 0.068 }, // ends at 0.400
+  { id: "work", part: "work", share: 0.106 }, // room for the three cards once the sand has cleared
+  { id: "blueprint", part: "work", share: 0.062 }, // ends at 0.400
   // The Terms
   { id: "site", part: "terms", share: 0.08 },
   { id: "prune", part: "terms", share: 0.075 },
@@ -101,6 +101,9 @@ const at = (scene: SceneId, t: number) => pointInScene(SCENES, scene, t);
 
 /** A range centered on `p`, `half` screens to each side. */
 const around = (p: number, half: number): ProgressRange => [round6(p - half * SCREEN), round6(p + half * SCREEN)];
+
+/** Where the sand has blown away and The Work is uncovered (the end of the `sand` transition). */
+const SAND_CLEARED = at("work", 0.072);
 
 /* ------------------------------------------------------------------ */
 /* Beats: every text block, its slot, its range and its copy           */
@@ -165,6 +168,22 @@ const question = (n: 1 | 2 | 3 | 4 | 5): BeatDef =>
 
 const QUESTIONS = [question(1), question(2), question(3), question(4), question(5)] as const;
 
+/**
+ * The three service cards follow each other in the right column: the first arrives just after the
+ * sand has blown away, each of the others 0.3 screen after the one before has left (the reference
+ * gap), and the third (the longest body) holds 1.6 screens. Chained in screens, so they keep their
+ * pacing on any stage length; the work scene's share is sized so the last card has left before the
+ * blueprint starts to fade in over the clouds (the unit test checks it).
+ */
+const SERVICE_CARD_SCREENS = [1.3, 1.3, 1.6] as const;
+const SERVICE_CARD_GAP = 0.3;
+
+const SERVICE_CARDS: readonly BeatDef[] = SERVICE_CARD_SCREENS.reduce<BeatDef[]>((cards, length, i) => {
+  const from = i === 0 ? round6(SAND_CLEARED + 0.1 * SCREEN) : round6(cards[i - 1].out + SERVICE_CARD_GAP * SCREEN);
+  cards.push(beat({ id: `card-${i + 1}` as BeatId, scene: "work", slot: "right", enter: "reveal", leave: "fade", copy: `work.cards.${i}` as CopyPath, from, length }));
+  return cards;
+}, []);
+
 export const BEATS: readonly BeatDef[] = [
   /* The Model */
   beat({
@@ -211,19 +230,8 @@ export const BEATS: readonly BeatDef[] = [
     to: at("share", 0.37), // fades as the camera pushes into the orange
   }),
 
-  /* The Work: three service cards swap in place in the right column. */
-  beat({ id: "card-1", scene: "work", slot: "right", enter: "reveal", leave: "fade", copy: "work.cards.0", from: at("work", 0.1) }),
-  beat({ id: "card-2", scene: "work", slot: "right", enter: "reveal", leave: "fade", copy: "work.cards.1", from: at("work", 0.427) }),
-  beat({
-    id: "card-3",
-    scene: "work",
-    slot: "right",
-    enter: "reveal",
-    leave: "fade",
-    copy: "work.cards.2",
-    from: at("work", 0.754),
-    length: 1.6, // the longest card body
-  }),
+  /* The Work: three service cards swap in place in the right column (see SERVICE_CARDS). */
+  ...SERVICE_CARDS,
 
   /* The Terms */
   beat({
@@ -244,7 +252,7 @@ export const BEATS: readonly BeatDef[] = [
     leave: "sink",
     copy: "terms.chapterTitle",
     from: at("prune", 0.12),
-    to: at("fall", 0.33), // all text sinks as the camera follows the falling orange
+    to: at("fall", 0.12), // all text sinks as the branch is cut, before the camera turns to the gardener's face
     ramp: [1.4, 0.4],
   }),
   beat({
@@ -255,7 +263,7 @@ export const BEATS: readonly BeatDef[] = [
     leave: "sink",
     copy: "terms.fit",
     from: at("prune", 0.45),
-    to: at("fall", 0.33),
+    to: at("fall", 0.12),
     ramp: [0.3, 0.4],
   }),
 
@@ -342,7 +350,7 @@ export const TRANSITIONS: readonly TransitionDef[] = [
     from: "share",
     to: "work",
     start: at("share", 0.705),
-    end: at("work", 0.072),
+    end: SAND_CLEARED,
     peak: around(at("work", 0), 0.04),
     layer: "canvas",
   },
@@ -351,8 +359,8 @@ export const TRANSITIONS: readonly TransitionDef[] = [
     kind: "unfold",
     from: "blueprint",
     to: "site",
-    start: at("blueprint", 0.86),
-    end: at("site", 0.12),
+    start: at("blueprint", 0.82), // once the plan has opened (BLUEPRINT.panels)
+    end: at("site", 0.19), // the sheet opens over about three quarters of a screen, before the camera rises (SITE.rise)
     peak: around(at("site", 0), 0.08),
     layer: "canvas",
   },
@@ -451,7 +459,14 @@ const HARVESTER: Vec3 = [1.4, 4.2, 9];
 const HALVES: Vec3 = [1.5, 4.5, 4.8];
 const TOP_DOWN: Vec3 = [0, 13, 0.01];
 const TOP_DOWN_FAR: Vec3 = [0, 24, 0.01];
-const GARDENER: Vec3 = [0, 0, 12];
+/**
+ * The gardener on his column sits right of center on a wide screen, so the fit text at the bottom
+ * left reads on clear sky; on a tall phone screen (`pan`) the camera centers him again and lifts the
+ * picture a little, above the text at the bottom.
+ */
+const GARDENER: Vec3 = [-1.9, 0, 12];
+const GARDENER_TARGET: Vec3 = [-1.9, 0.5, 0];
+const GARDENER_PAN = [1.9, -0.6] as const;
 const STARGAZER: Vec3 = [0, 6, 7];
 
 /**
@@ -528,22 +543,22 @@ export const PLUCK = {
   /** The tug: the fruit comes free of its branch. */
   tug: [at("pluck", 0.33), at("pluck", 0.43)] as ProgressRange,
   /** The camera dollies down to the harvester; the hand and the fruit travel with it. */
-  dolly: [at("pluck", 0.35), at("pluck", 0.78)] as ProgressRange,
+  dolly: [at("pluck", 0.35), at("pluck", 0.74)] as ProgressRange,
   /** The near and middle foliage fall away as the camera passes below the branches. */
   foliage: {
     near: [at("pluck", 0.36), at("pluck", 0.5)] as ProgressRange,
     mid: [at("pluck", 0.44), at("pluck", 0.64)] as ProgressRange,
   },
   /**
-   * The harvester appears (body, arm with the orange, head) as the camera comes down to him. These
-   * ranges sit in the fast part of the dolly (its easing front-loads the move) and the camera then
-   * settles on him slowly until `dolly[1]`.
+   * The harvester appears (body, arm with the orange, head) as the camera comes down to him: he
+   * enters the frame from below while the dolly is under way, and the camera lands on him at
+   * `dolly[1]`.
    */
   reveal: [at("pluck", 0.44), at("pluck", 0.66)] as ProgressRange,
   /** The hand lets go and drops away, as the harvester's own hand takes the fruit (`handoff`). */
-  release: [at("pluck", 0.62), at("pluck", 0.74)] as ProgressRange,
-  /** The fruit becomes the one in the harvester's hand: his arm arrives as the hero orange gives way. */
-  handoff: [at("pluck", 0.62), at("pluck", 0.72)] as ProgressRange,
+  release: [at("pluck", 0.71), at("pluck", 0.8)] as ProgressRange,
+  /** The fruit becomes the one in the harvester's hand (once the carry has all but landed): his arm arrives as the hero orange gives way. */
+  handoff: [at("pluck", 0.71), at("pluck", 0.77)] as ProgressRange,
 } as const;
 
 /**
@@ -583,8 +598,8 @@ export const SHARE = {
 export const WORK = {
   /** The scroll shift of the clouds. */
   clouds: [at("work", 0), at("work", 1)] as ProgressRange,
-  /** The giant orange and the builder rise into view (card 3). */
-  rise: [at("work", 0.77), at("work", 0.99)] as ProgressRange,
+  /** The giant orange and the builder rise into view, as the third card arrives. */
+  rise: [beatOf("card-3").in, at("work", 0.99)] as ProgressRange,
 } as const;
 
 /**
@@ -616,18 +631,18 @@ export const SITE = {
   work: [at("site", 0.12), at("site", 0.36)] as ProgressRange,
   /** The camera rises from ground level to straight above. */
   rise: [at("site", 0.2), at("site", 0.42)] as ProgressRange,
-  /** The seaside figures and the platform fade out as the view tilts down. */
-  sideOut: [at("site", 0.32), at("site", 0.4)] as ProgressRange,
+  /** The seaside figures and the platform fade out as the view tilts down (the last third of the rise). */
+  sideOut: [at("site", 0.35), at("site", 0.41)] as ProgressRange,
   /** The sea and its sky leave last (no sky in the top-down view). */
-  seaOut: [at("site", 0.38), at("site", 0.42)] as ProgressRange,
-  /** The matching top-down set and the first tiles fade in. */
-  topDownIn: [at("site", 0.28), at("site", 0.38)] as ProgressRange,
+  seaOut: [at("site", 0.4), at("site", 0.42)] as ProgressRange,
+  /** The matching top-down set and the first tiles fade in, once the camera looks mostly down. */
+  topDownIn: [at("site", 0.33), at("site", 0.4)] as ProgressRange,
   /** The top-down view zooms out and shrinks into the left half of the screen. */
   shrink: [at("site", 0.42), at("site", 0.7)] as ProgressRange,
   /** The tiled ground grows into a large field around the scaffold. */
   tiles: [at("site", 0.38), at("site", 0.72)] as ProgressRange,
-  /** The right half becomes the milk-white panel. */
-  panel: [at("site", 0.4), at("site", 0.5)] as ProgressRange,
+  /** The right half becomes the milk-white panel, as the site moves out of it into the left half. */
+  panel: [at("site", 0.44), at("site", 0.52)] as ProgressRange,
   /** The dust has covered the screen: the panel and the site are gone. */
   end: DUST_COVERED,
 } as const;
@@ -787,9 +802,10 @@ export const CAMERA: readonly CameraKey[] = [
   key("share", at("share", 0.45), "hold", HALVES, [1.5, 4.5, 0], 30),
   key("share", at("share", 0.72), "push", HALVES, [1.5, 4.5, 0], 30),
   key("share", SAND_COVERED, "reframe", [1.5, 4.5, 2.2], [1.5, 4.5, 0], 28),
-  // Work: a slow dolly upward through the clouds.
+  // Work: a slow dolly upward through the clouds, ending close to the blueprint's scaffold shot so
+  // the crossfade into it barely moves the camera.
   key("work", SAND_CLEARING, "dolly-up", [0, 0, 14], [0, 0.5, 0], 40),
-  key("work", at("work", 0.97), "dolly-up", [0, 7.4, 14], [0, 7.9, 0], 40),
+  key("work", at("work", 0.97), "dolly-up", [0, 8.5, 13.5], [0, 9, 0], 39),
   // Blueprint: the scaffold, then a push into the plan as it unfolds.
   key("blueprint", at("blueprint", 0), "hold", [0, 9, 13], [0, 9.5, 0], 38),
   key("blueprint", at("blueprint", 0.35), "push", [0, 9, 13], [0, 9.5, 0], 38),
@@ -801,16 +817,17 @@ export const CAMERA: readonly CameraKey[] = [
   key("site", SITE.shrink[1], "hold", TOP_DOWN_FAR, [0, 0, 0], 38),
   key("site", DUST_COVERED, "reframe", TOP_DOWN_FAR, [0, 0, 0], 38),
   // Prune: the gardener at work.
-  key("prune", DUST_CLEARING, "hold", GARDENER, [0, 0.5, 0], 35),
+  key("prune", DUST_CLEARING, "hold", GARDENER, GARDENER_TARGET, 35, GARDENER_PAN),
   // Fall: toward the gardener's face, follow the orange down, push into it, then dolly up the rows.
-  key("fall", at("fall", 0), "push", GARDENER, [0, 0.5, 0], 35),
-  key("fall", at("fall", 0.22), "dolly-down", [0.4, 2.2, 6.5], [0.4, 2.2, 0], 32),
+  key("fall", at("fall", 0), "push", GARDENER, GARDENER_TARGET, 35),
+  key("fall", at("fall", 0.22), "dolly-down", [0.4, 2.2, 6.5], [0.4, 2.2, 0], 32, [0, 0]),
   key("fall", at("fall", 0.45), "push", [0, -3, 5], [0, -3, 0], 32),
   key("fall", FALL.push[1], "dolly-up", [0, -4, 2.6], [0, -4, 0], 30),
-  // Questions: climb between the rows one step per card (each step lands as its card arrives), then
-  // forward into the blue as the last card dissolves, under the fabric sky.
-  key("faq", at("faq", 0), "dolly-up", ...faqCamera(0), 40),
-  ...QUESTIONS.slice(1).map((q, i) => key("faq", q.in, "dolly-up", ...faqCamera(i + 1), 40)),
+  // Questions: climb between the rows one step per card, while the card arrives, and hold while it
+  // is read (so its orange holds still under the line); then forward into the blue as the last card
+  // dissolves, under the fabric sky.
+  key("faq", at("faq", 0), "hold", ...faqCamera(0), 40),
+  ...QUESTIONS.flatMap((q, i) => [key("faq", q.in, "dolly-up", ...faqCamera(i), 40), key("faq", q.hold[0], "hold", ...faqCamera(i + 1), 40)]),
   key("faq", LAST_QUESTION.hold[1], "push", ...faqCamera(QUESTIONS.length), 40),
   key("faq", FABRIC_COVERED, "reframe", [0, 5, 6], [0, 6, 0], 38),
   // Stars: the astronomer and the growing constellation.

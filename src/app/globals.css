@@ -82,11 +82,11 @@
 
 /* The pinned stage's height: set from the script (STAGE_VH, and MOBILE.stageScale on a phone) by the stage. */
 [data-stage] {
-  height: var(--stage-vh, 5000vh);
+  height: var(--stage-vh, 5400vh);
 }
 @media (max-width: 767px) {
   [data-stage] {
-    height: var(--stage-vh-stacked, 3500vh);
+    height: var(--stage-vh-stacked, 3780vh);
   }
 }
 
@@ -346,6 +346,18 @@
   border-radius: var(--radius-pill);
   background: color-mix(in oklab, currentColor 12%, transparent);
   transition: transform 300ms var(--ease);
+}
+
+/*
+ * Chrome readouts over the painting (the percent counter, the active ruler entry): a small chip of
+ * the ground's own color. On plain sky or milk it all but disappears; over a robe, a cloud or fruit
+ * passing through that part of the screen it keeps the text readable. The chrome sets
+ * `--chrome-ground` to the ground under it (sky, or milk on milk moments).
+ */
+@utility chrome-chip {
+  border-radius: var(--radius-tag);
+  background: color-mix(in oklab, var(--chrome-ground, var(--sky)) 85%, transparent);
+  transition: background-color 300ms var(--ease);
 }
 
 /* Tag: decorative chip. Not a control; render as a span and never make it focusable. */

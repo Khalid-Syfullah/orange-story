@@ -26,4 +26,14 @@ All plates live in `public/art/<scene>/<plate>.webp` (with alpha), listed in `pu
 - `npm run art:placeholders` draws a placeholder for every entry that still has a `placeholder` spec (flat palette colors and simple silhouettes). `npm run art:placeholders -- --check` verifies that every entry has a WebP file of the listed size. A `crowd` placeholder takes `lookAt` (the fraction of the plate width the figures turn toward, so every onlooker tips their head up toward the statue); final paintings do the same by hand.
 - To add final art: save the painting as WebP with alpha at the entry's path and size (or update `size`), then delete the entry's `placeholder` spec so the generator never overwrites it. No code changes; the unit test (`npm test`) checks every file against the manifest.
 - Textures are capped at 2048 px on the longest side (1024 on low-memory and small touch devices) and loaded only for the scene on stage and the next one.
+
+## What final art must keep
+
+Learned by walking the placeholder story end to end; the placeholders already follow these rules.
+
+- **The sky stays deep behind text.** `hero/sky` is every scene's backdrop, and white and milk text sit on it. Its lightest part (the bottom) must not be lighter than `#416EB4`, a 42% mix of sky toward sky-soft, so milk text keeps 4.5:1. `npm test` reads the plate and checks it.
+- **Nothing is cut by its own image edge.** A cloud, a leaf or a crown that reaches the edge of its image shows a flat, cut edge once it is on stage (the first cloud placeholders did). Leave a margin of transparency on every side.
+- **The orchard rows fade out at their foot.** A phone's taller picture sees below the rows (`fall/trees-*`), so their trunks fade to transparent over the bottom fifth of the image instead of ending in a cut line. Keep an orange at each named point (`points`), above that fade.
+- **Hands are where the code holds things.** The architect's packet is held at `HELD` (`src/components/stage/blueprint-plan.ts`, measured on the placeholder's hands) and the harvester's fruit at `HELD` in `pluck-harvest.ts`: paint the hands there, or move the constants to where the painting has them.
+- **Text areas stay calm.** Where words stand (`SLOT_AREAS` in `src/components/stage/text-haze.ts`), the scene's art recedes into the sky's haze while they are up; still, avoid bright whites and saturated fruit right behind the words, and keep the bottom-left and the right column of the work scene's clouds airy.
 - The transition canvas also reads three plates, a few screens before it needs them: `fall/ring-mask` (the rainbow ring's band: a radial image, black inside and outside, bright where the ring is; its radius is the mask's edge), `stars/fabric-sky` (the cloth the sky turns into) and `stars/cloud` (the cloud that billows over to fill the screen). Until they load, the shaders draw stand-ins.

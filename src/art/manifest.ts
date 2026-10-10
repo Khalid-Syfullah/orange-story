@@ -117,10 +117,15 @@ export function drawnPlates(scene: SceneId): readonly PlateEntry[] {
   return scenePlates(scene).filter((p) => (p.role === "plate" || p.role === "backdrop") && (p.frame ?? 0) === 0);
 }
 
-/** Size of the plate in world units, [width, height], for a plate `height` tall showing `repeat` tiles. */
-export function plateWorldSize(entry: PlateEntry, height = entry.height, repeat: Pair = entry.repeat ?? [1, 1]): [number, number] {
+/**
+ * Size of the plate in world units, [width, height], for a plate `height` tall showing `repeat`
+ * tiles. Pass `out` to write into an existing pair instead of a new one (the frame loop does).
+ */
+export function plateWorldSize(entry: PlateEntry, height = entry.height, repeat: Pair = entry.repeat ?? [1, 1], out: [number, number] = [0, 0]): [number, number] {
   const [w, h] = entry.size;
-  return [(height * (w * repeat[0])) / (h * repeat[1]), height];
+  out[0] = (height * (w * repeat[0])) / (h * repeat[1]);
+  out[1] = height;
+  return out;
 }
 
 /**

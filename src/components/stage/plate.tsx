@@ -8,6 +8,7 @@ import { PlaneGeometry, Vector2, Vector3, type Color, type Group, type Mesh, typ
 import { plateEntry, plateWorldSize, type Pair, type PlateEntry, type PlateId } from "@/art/manifest";
 import { revealCircle } from "@/components/transitions/choreography";
 import { transitionOf } from "@/scroll/helpers";
+import { colors } from "@/styles/tokens";
 import type { TransitionId } from "@/scroll/types";
 
 import { phaseOf, swayAngle, useIdleClock, type SwayOptions } from "./idle";
@@ -38,6 +39,25 @@ export interface PlateReveal {
   transition: TransitionId;
   /** `inside` (default): shown inside the circle only, the new scene. `outside`: the old scene. */
   side?: "inside" | "outside";
+}
+
+/**
+ * A soft rectangle of the stage, behind text, that the plate thins out of (the clouds parting around
+ * the service cards) or, with `haze`, recedes into the sky inside (foliage and fruit fading back
+ * behind a headline), so the text never sits on bright paint. Fractions of the stage, from its left
+ * and its top; any of them may move.
+ */
+export interface PlateClearing {
+  left: Num;
+  right: Num;
+  top: Num;
+  bottom: Num;
+  /** Width of the soft edge, as a fraction of the stage width. */
+  soft: number;
+  /** 0 (off) to 1 (the plate is gone, or fully hazed, inside the rectangle). */
+  amount: Num;
+  /** Recede toward this color instead of thinning out. */
+  haze?: string;
 }
 
 /** The value of a number or MotionValue right now. */
@@ -91,6 +111,8 @@ export interface PlateMotion {
   backdrop?: boolean;
   /** Show only inside (or outside) a transition's expanding circle. */
   reveal?: PlateReveal;
+  /** Thin out of a soft rectangle of the stage. */
+  clearing?: PlateClearing;
   name?: string;
 }
 
@@ -110,8 +132,10 @@ const DEG = Math.PI / 180;
 /** Backdrops sit this far in front of the camera, behind every plate. */
 const BACKDROP_DISTANCE = 150;
 const NO_REPEAT: Pair = [1, 1];
-/** Resolved repeat of the plate being updated (one object per module, overwritten every plate). */
+const NO_ROTATION: readonly [number, number, number] = [0, 0, 0];
+/** Resolved repeat and world size of the plate being updated (one pair each per module, overwritten every plate). */
 const tmpRepeat: [number, number] = [1, 1];
+const tmpSize: [number, number] = [1, 1];
 
 const tmpPosition = new Vector3();
 const tmpDirection = new Vector3();
@@ -141,6 +165,21 @@ function applyReveal(material: ShaderMaterial, reveal: PlateReveal | undefined, 
   return true;
 }
 
+/** Sets a material's clearing for this frame (drawing-buffer pixels, as `gl_FragCoord`). */
+function applyClearing(material: ShaderMaterial, clearing: PlateClearing | undefined, gl: { getDrawingBufferSize(target: Vector2): Vector2 }): void {
+  const u = material.uniforms;
+  if (!u.clearAmount) return; // a material without the clearing uniforms
+  const amount = clearing ? read(clearing.amount, 0) : 0;
+  u.clearAmount.value = amount;
+  if (!clearing || amount <= 0) return;
+  gl.getDrawingBufferSize(tmpBuffer);
+  const { x: w, y: h } = tmpBuffer;
+  (u.clearRect.value as Vector4).set(read(clearing.left, 0) * w, (1 - read(clearing.bottom, 1)) * h, read(clearing.right, 1) * w, (1 - read(clearing.top, 0)) * h);
+  u.clearSoft.value = Math.max(1, clearing.soft * w);
+  u.clearHaze.value = clearing.haze ? 1 : 0;
+  if (clearing.haze) setColorUniform(material, "hazeColor", clearing.haze);
+}
+
 /** Re-renders the on-demand canvas when a MotionValue prop changes outside of scroll. */
 export function useInvalidateOnChange(values: readonly (Num | undefined)[]) {
   const invalidate = useThree((s) => s.invalidate);
@@ -157,11 +196,20 @@ function resolveSway(sway: PlateMotion["sway"], entry: PlateEntry, name: string)
   return { amplitude: entry.sway ?? 1.5, phase: phaseOf(name), ...options };
 }
 
-/** Render order of a plate-like mesh: backdrops first, then the plate's layer, inside its scene. */
+/**
+ * Backdrops (the sky) draw before the plates of every scene, in scene order among themselves. Where
+ * one scene crossfades into the next, the arriving scene's sky then fades in behind the leaving
+ * scene's plates instead of over them: a figure that carries on across the boundary (the statue,
+ * the astronomer) never dims or flickers, and plates of a new picture simply fade in on top.
+ */
+const BACKDROP_ORDER = -1_000_000;
+
+/** Render order of a plate-like mesh: all backdrops first, then each scene's plates by layer, scene over scene. */
 export function usePlateRenderOrder(entry: PlateEntry, props: Pick<PlateMotion, "layer" | "backdrop">): number {
   const layer = useSceneLayer();
   const backdrop = props.backdrop ?? entry.role === "backdrop";
-  return plateRenderOrder(layer, (backdrop ? -500 : 0) + (props.layer ?? entry.layer ?? 0));
+  const order = plateRenderOrder(layer, props.layer ?? entry.layer ?? 0);
+  return backdrop ? BACKDROP_ORDER + order : order;
 }
 
 /**
@@ -183,7 +231,7 @@ export function usePlateFrame(
   const backdrop = props.backdrop ?? entry.role === "backdrop";
   const sway = resolveSway(props.sway, entry, props.name ?? entry.id);
 
-  useInvalidateOnChange([props.x, props.y, props.z, props.scale, props.scaleX, props.scaleY, props.rotate, props.opacity, props.blur, props.height, props.uvRepeat?.[0], props.uvRepeat?.[1], props.uvOffset?.[0], props.uvOffset?.[1]]);
+  useInvalidateOnChange([props.x, props.y, props.z, props.scale, props.scaleX, props.scaleY, props.rotate, props.opacity, props.blur, props.height, props.uvRepeat?.[0], props.uvRepeat?.[1], props.uvOffset?.[0], props.uvOffset?.[1], props.clearing?.amount, props.clearing?.left, props.clearing?.right, props.clearing?.top, props.clearing?.bottom]);
   React.useEffect(() => () => clock.drop(key), [clock, key]);
 
   useFrame((state) => {
@@ -199,6 +247,7 @@ export function usePlateFrame(
       clock.drop(key);
       return;
     }
+    applyClearing(material, props.clearing, state.gl);
 
     const camera = state.camera as PerspectiveCamera;
     const u = material.uniforms;
@@ -206,7 +255,7 @@ export function usePlateFrame(
     tmpRepeat[0] = read(props.uvRepeat?.[0], baseRepeat[0]);
     tmpRepeat[1] = read(props.uvRepeat?.[1], baseRepeat[1]);
     const repeat = tmpRepeat;
-    const [w, h] = plateWorldSize(entry, read(props.height, entry.height), repeat);
+    const [w, h] = plateWorldSize(entry, read(props.height, entry.height), repeat, tmpSize);
 
     if (backdrop) {
       camera.getWorldDirection(tmpDirection);
@@ -219,7 +268,7 @@ export function usePlateFrame(
     } else {
       const [px, py] = props.position ?? entry.position;
       const [ax, ay] = props.anchor ?? entry.anchor;
-      const [rx, ry, rz] = props.rotation ?? entry.rotation ?? [0, 0, 0];
+      const [rx, ry, rz] = props.rotation ?? entry.rotation ?? NO_ROTATION;
       let angle = 0;
       if (sway && clock.inView(m)) clock.hold(key);
       else clock.drop(key);
@@ -258,7 +307,7 @@ export function usePlateFrame(
 }
 
 /** Sets a color uniform only when the color string changes (no parsing every frame). */
-export function setColorUniform(material: ShaderMaterial, name: string, value: string | undefined, fallback = "#ffffff"): void {
+export function setColorUniform(material: ShaderMaterial, name: string, value: string | undefined, fallback: string = colors.white): void {
   const next = value ?? fallback;
   const seen = (material.userData.colors ??= {}) as Record<string, string>;
   if (seen[name] === next) return;

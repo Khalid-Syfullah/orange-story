@@ -324,7 +324,9 @@ function branch({ x1, y1, x2, y2, width, leaves, oranges = 0, seed, size, color:
 /* ------------------------------------------------------------------ */
 
 const KINDS = {
-  sky: (W, H) => `<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${C.sky}"/><stop offset="0.7" stop-color="${mix(C.sky, C.skySoft, 0.55)}"/><stop offset="1" stop-color="${C.skySoft}"/></linearGradient></defs>${rect(0, 0, W, H, "url(#g)")}`,
+  // Deep at the top, a little softer toward the horizon, but never lighter than a 42% mix toward
+  // sky-soft: text on the sky is white or milk, and milk keeps 4.5:1 (WCAG AA) down to the bottom.
+  sky: (W, H) => `<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${C.sky}"/><stop offset="0.7" stop-color="${mix(C.sky, C.skySoft, 0.3)}"/><stop offset="1" stop-color="${mix(C.sky, C.skySoft, 0.42)}"/></linearGradient></defs>${rect(0, 0, W, H, "url(#g)")}`,
 
   glow: (W, H, s) =>
     `<defs><radialGradient id="g"><stop offset="0" stop-color="${C.white}" stop-opacity="1"/><stop offset="0.35" stop-color="${color(s.color, C.white)}" stop-opacity="0.75"/><stop offset="1" stop-color="${mix(C.white, C.orange, 0.4)}" stop-opacity="0"/></radialGradient></defs>${ellipse(W / 2, H / 2, W / 2, H / 2, "url(#g)")}`,
@@ -484,9 +486,10 @@ const KINDS = {
   cloud: (W, H, s) => {
     const rand = seeded(s.seed ?? "cloud");
     const puffs = [];
+    // Puffs rise toward the middle; the tallest still clears the top of the image (no flat crown).
     for (let i = 0; i < 7; i++) {
       const t = i / 6;
-      puffs.push([W * (0.14 + t * 0.72), H * (0.55 - Math.sin(t * Math.PI) * (0.18 + rand() * 0.08)), H * (0.2 + Math.sin(t * Math.PI) * 0.16 + rand() * 0.06)]);
+      puffs.push([W * (0.14 + t * 0.72), H * (0.6 - Math.sin(t * Math.PI) * (0.12 + rand() * 0.06)), H * (0.17 + Math.sin(t * Math.PI) * 0.13 + rand() * 0.05)]);
     }
     const shape = puffs.map(([x, y, r]) => circle(x, y, r)).join("") + rect(W * 0.12, H * 0.5, W * 0.76, H * 0.22, "#000", { rx: H * 0.11 });
     let out = `<defs><clipPath id="c">${shape}</clipPath>`;
@@ -660,7 +663,10 @@ const KINDS = {
       }
       out += orangeBall(x, y, r, { leafy: true, tone: haze });
     }
-    return out;
+    // The trunks fade into the haze at the foot of the plate: a tall (phone) screen sees below the
+    // rows, and must never see them end in a cut edge.
+    const fade = `<defs><linearGradient id="rowfade" x1="0" y1="0" x2="0" y2="1"><stop offset="0.8" stop-color="#fff"/><stop offset="1" stop-color="#000"/></linearGradient><mask id="rowmask">${rect(0, 0, W, H, "url(#rowfade)")}</mask></defs>`;
+    return fade + group("", out, { mask: "url(#rowmask)" });
   },
 
   ring: (W, H) =>

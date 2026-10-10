@@ -1,6 +1,8 @@
 import { plateEntry } from "@/art/manifest";
 import { clamp01, ease, lerp, remap } from "@/lib/progress";
-import { PLUCK } from "@/scroll/script";
+import { CAMERA, PLUCK } from "@/scroll/script";
+
+import { cameraTravel } from "./camera-path";
 
 /**
  * The pluck and the harvester as pure functions of story progress (no React, no three), so the whole
@@ -45,10 +47,12 @@ function ballRest(): Offset {
   return { x: e.position[0], y: e.position[1] - BALL_BELOW_CENTER * e.height };
 }
 
-/** How far the whole carry has gone, 0 on the branch to 1 in the harvester's hand (the camera's own curve). */
-export function carryAt(p: number): number {
-  return eased(p, PLUCK.dolly);
-}
+/**
+ * How far the whole carry has gone, 0 on the branch to 1 in the harvester's hand: the camera's own
+ * travel down the dolly (the same path as the camera rig; the dolly starts and ends on camera keys),
+ * so the fruit moves exactly with the camera and stays framed.
+ */
+export const carryAt = cameraTravel(CAMERA, PLUCK.dolly[0], PLUCK.dolly[1]);
 
 /** The hand is fully below the frame at the start by this much (world units from its manifest place). */
 export const HAND_BELOW = -4.3;

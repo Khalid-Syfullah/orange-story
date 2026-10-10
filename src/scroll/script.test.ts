@@ -29,9 +29,9 @@ describe("the story script", () => {
     expect(() => validateScript()).not.toThrow();
   });
 
-  it("pins a 5000vh stage, about 50 screens of scrolling", () => {
-    expect(STAGE_VH).toBe(5000);
-    expect(SCREEN).toBeCloseTo(1 / 49, 12);
+  it("pins a 5400vh stage, 53 screens of scrolling like the reference", () => {
+    expect(STAGE_VH).toBe(5400);
+    expect(SCREEN).toBeCloseTo(1 / 53, 12);
   });
 
   it("lays the scenes out in storyboard order with the planned shares", () => {
@@ -41,8 +41,8 @@ describe("the story script", () => {
       ["graft", 0.05],
       ["pluck", 0.06],
       ["share", 0.042],
-      ["work", 0.1],
-      ["blueprint", 0.068],
+      ["work", 0.106],
+      ["blueprint", 0.062],
       ["site", 0.08],
       ["prune", 0.075],
       ["fall", 0.073],
@@ -92,6 +92,26 @@ describe("the story script", () => {
         expect(from.position).toEqual(before.position);
       }
     }
+  });
+
+  it("keeps every beat on screen for at least a screen, and plain beats at the reference pacing", () => {
+    for (const beat of BEATS) expect((beat.out - beat.in) / SCREEN, beat.id).toBeGreaterThanOrEqual(1 - 1e-6);
+    for (const id of ["found", "card-1", "card-2"] as const) {
+      const beat = beatOf(id);
+      expect((beat.out - beat.in) / SCREEN).toBeCloseTo(1.3, 3);
+      expect((beat.hold[1] - beat.hold[0]) / SCREEN).toBeCloseTo(0.7, 3);
+    }
+  });
+
+  it("lets the service cards follow each other once the sand has cleared, gone before the blueprint fades in", () => {
+    const sand = TRANSITIONS.find((t) => t.id === "sand")!;
+    const cards = ["card-1", "card-2", "card-3"].map((id) => beatOf(id as "card-1"));
+    expect(cards[0].in).toBeGreaterThan(sand.end);
+    expect((cards[1].in - cards[0].out) / SCREEN).toBeCloseTo(0.3, 3);
+    expect((cards[2].in - cards[1].out) / SCREEN).toBeCloseTo(0.3, 3);
+    const blueprint = SCENES.find((s) => s.id === "blueprint")!;
+    // The blueprint starts to fade in a fifth of a screen before its start (presence.ts).
+    expect(cards[2].out).toBeLessThanOrEqual(blueprint.start - 0.2 * SCREEN);
   });
 
   it("names every transition from the storyboard", () => {

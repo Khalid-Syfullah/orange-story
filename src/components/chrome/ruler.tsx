@@ -137,7 +137,7 @@ export function Ruler({ progress, chapters, segments, onSelect, className }: Rul
                   <span className="type-meta ml-0 max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-[max-width,opacity,margin] duration-300 group-hover/ruler:ml-2.5 group-hover/ruler:max-w-16 group-hover/ruler:opacity-60 group-focus-within/ruler:ml-2.5 group-focus-within/ruler:max-w-16 group-focus-within/ruler:opacity-60">
                     {chapter.short}
                   </span>
-                  <span className="type-label ml-2.5 whitespace-nowrap opacity-0 blur-[3px] transition-[opacity,filter] duration-300 group-hover/ruler:opacity-70 group-hover/ruler:blur-[0px] group-focus-within/ruler:opacity-70 group-focus-within/ruler:blur-[0px] group-data-active/entry:opacity-100 group-data-active/entry:blur-[0px]">
+                  <span className="type-label chrome-chip ml-1.5 px-1 py-0.5 whitespace-nowrap opacity-0 blur-[3px] transition-[opacity,filter,background-color] duration-300 group-hover/ruler:opacity-70 group-hover/ruler:blur-[0px] group-focus-within/ruler:opacity-70 group-focus-within/ruler:blur-[0px] group-data-active/entry:opacity-100 group-data-active/entry:blur-[0px]">
                     {chapter.name}
                   </span>
                 </button>

@@ -54,7 +54,7 @@ const AUTOCOMPLETE: Record<FieldName, string> = { name: "name", email: "email", 
 /** Clear glass: almost transparent, backdrop blur, a fine edge highlight, no shadow. */
 const GLASS =
   "w-full rounded-pill border border-white/25 bg-white/[0.05] px-5 text-base text-white backdrop-blur-md placeholder:text-white/40 " +
-  "shadow-[inset_0_1px_0_rgba(255,255,255,0.35),inset_0_0_0_1px_rgba(255,255,255,0.04)] " +
+  "shadow-[inset_0_1px_0_color-mix(in_oklab,var(--white)_35%,transparent),inset_0_0_0_1px_color-mix(in_oklab,var(--white)_4%,transparent)] " +
   "focus-visible:border-white/60 focus-visible:ring-0 md:text-base dark:bg-white/[0.05]";
 
 const FIELD_TRANSITION = { opacity: { duration: 0.3, ease: EASE }, filter: { duration: 0.35, ease: EASE }, default: { duration: 0.45, ease: EASE } };
@@ -90,7 +90,7 @@ function StackItem({ name, active, setActive, className, children }: { name: Fie
 function Orb() {
   return (
     <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 -z-10 aspect-square w-[130%] -translate-x-1/2 -translate-y-1/2">
-      <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.34)_0%,rgba(190,215,255,0.16)_38%,transparent_68%)] blur-2xl" />
+      <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle,color-mix(in_oklab,var(--white)_16%,transparent)_0%,color-mix(in_oklab,var(--sky-soft)_14%,transparent)_38%,transparent_68%)] blur-2xl" />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import type * as React from "react";
 import type { MotionValue } from "motion/react";
 
 import { chrome } from "@/content/copy";
@@ -57,6 +58,7 @@ export function StoryChrome({
         tone === "sky" ? "text-white" : "text-ink",
         className,
       )}
+      style={{ "--chrome-ground": tone === "sky" ? "var(--sky)" : "var(--milk)" } as React.CSSProperties}
     >
       {/* Top left: the mark, and the grid button under it (beside it on small screens, in the top row above the top hairline). */}
       <div
@@ -72,7 +74,9 @@ export function StoryChrome({
         className="pointer-events-auto absolute right-[calc((100%-var(--grid-right))+0.75rem)] -translate-y-1/2 md:right-[calc((100%-var(--grid-right))/2)] md:translate-x-1/2"
         style={{ top: corner }}
       >
-        <Button variant={tone === "sky" ? "ghost-pill" : "pill"} onClick={onApply}>
+        {/* On sky the ghost pill takes a fill of the sky itself: invisible on clear sky, and its label
+            still reads when fruit, foliage or a cloud passes behind the corner. */}
+        <Button variant={tone === "sky" ? "ghost-pill" : "pill"} className={tone === "sky" ? "bg-sky/80" : undefined} onClick={onApply}>
           {chrome.apply.label}
         </Button>
       </div>
@@ -86,12 +90,13 @@ export function StoryChrome({
         className="absolute top-[30%] bottom-[30%] left-grid-left hidden md:block"
       />
 
-      {/* Bottom right: overall progress. */}
+      {/* Bottom right: overall progress, on a chip of the ground's own color (`chrome-chip`), so it
+          reads over whatever the painting puts in that corner (robes, clouds). */}
       <div
         className="absolute right-[calc((100%-var(--grid-right))+0.75rem)] translate-y-1/2 md:right-[calc((100%-var(--grid-right))/2)] md:translate-x-1/2"
         style={{ bottom: corner }}
       >
-        <PercentCounter progress={progress} />
+        <PercentCounter progress={progress} className="chrome-chip px-1.5 py-0.5" />
       </div>
     </div>
   );

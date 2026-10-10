@@ -7,6 +7,10 @@ import { halvesAt, knifeAt, secondHandAt, wholeOrangeAt } from "./share-cut";
 import { Plate } from "./plate";
 import type { SceneArtProps } from "./scene-layers";
 import { useStageProgress } from "./stage-context";
+import { useTextHaze } from "./use-text-haze";
+
+/** The harvest beat carries on into the share: the foliage stays receded behind it. */
+const OVER_FOLIAGE = ["harvest"] as const;
 
 /**
  * Scene 5, the cut and the share. Everything is a function of the story progress (`share-cut.ts`,
@@ -26,6 +30,9 @@ export function ShareArt({ scene }: SceneArtProps) {
   const stage = useStageProgress();
   const none = useMotionValue(0);
   const progress = stage ?? none;
+
+  const haze = useTextHaze(OVER_FOLIAGE, { strength: 0.8 });
+  const robeHaze = useTextHaze(OVER_FOLIAGE, { strength: 0.8, stackedOnly: true });
 
   const whole = useTransform(progress, wholeOrangeAt);
   const wholeX = useTransform(whole, (o) => o.x);
@@ -58,8 +65,8 @@ export function ShareArt({ scene }: SceneArtProps) {
   return (
     <>
       <Plate id="hero/sky" />
-      <Plate id="pluck/foliage-far" />
-      <Plate id="pluck/harvester-body" />
+      <Plate id="pluck/foliage-far" clearing={haze} />
+      <Plate id="pluck/harvester-body" clearing={robeHaze} />
       <Plate id="pluck/harvester-head" />
       <Plate id="share/arm-open" />
       <Plate id="pluck/hero-orange" depth={0.6} x={wholeX} y={wholeY} scale={wholeS} opacity={wholeO} sway={false} />

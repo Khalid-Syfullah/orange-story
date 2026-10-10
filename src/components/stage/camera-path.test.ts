@@ -2,14 +2,30 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { CAMERA } from "@/scroll/script";
 
-import { createCameraPath, fitFov, FIT_BELOW, fovScale, getStageAspect, panAmount, poseOf, projectPoint, REFERENCE_ASPECT, setStageAspect, unprojectToPlane, type CameraPose } from "./camera-path";
+import {
+  cameraSlopes,
+  cameraTravel,
+  createCameraPath,
+  fitFov,
+  FIT_BELOW,
+  fovScale,
+  getStageAspect,
+  hermiteEase,
+  panAmount,
+  poseOf,
+  projectPoint,
+  REFERENCE_ASPECT,
+  setStageAspect,
+  unprojectToPlane,
+  type CameraPose,
+} from "./camera-path";
 
 const FIELDS: readonly (keyof CameraPose)[] = ["px", "py", "pz", "tx", "ty", "tz", "fov"];
 /** The pose's values only (GSAP keeps its own bookkeeping on the target object). */
 const copy = (pose: CameraPose): CameraPose => Object.fromEntries(FIELDS.map((f) => [f, pose[f]])) as unknown as CameraPose;
 
-/** The story curve's steepest slope (at its start): 1 / 0.22. */
-const STEEPEST = 1 / 0.22;
+/** The steepest a move may get, relative to the straight line between its keys (the monotone cubic stays within 3). */
+const STEEPEST = 3;
 
 describe("the camera path", () => {
   it("passes through every key of the script", () => {
@@ -168,5 +184,125 @@ describe("fitting the camera to the screen", () => {
       previous = x;
     }
     path.kill();
+  });
+});
+
+describe("the smooth path through the keys", () => {
+  const FIELDS_PLAIN: readonly (keyof CameraPose)[] = ["px", "py", "pz", "tx", "ty", "tz", "fov"];
+  /** Speed of every field around p (units per progress), from the path itself (GSAP keeps time to 1e-7). */
+  const speed = (path: ReturnType<typeof createCameraPath>, p: number, h = 1e-5) => {
+    const a = copy(path.seek(p - h));
+    const b = copy(path.seek(p + h));
+    return FIELDS_PLAIN.map((f) => (b[f] - a[f]) / (2 * h));
+  };
+  /** The straight-line speed of each field over the segment from key i to key i + 1. */
+  const secant = (i: number) => {
+    const a = poseOf(CAMERA[i]);
+    const b = poseOf(CAMERA[i + 1]);
+    const span = CAMERA[i + 1].at - CAMERA[i].at;
+    return FIELDS_PLAIN.map((f) => (b[f] - a[f]) / span);
+  };
+  /** Keys next to a reframe (it happens unseen under a cover and is allowed to be abrupt around itself). */
+  const nearReframe = (i: number) => CAMERA[i].move === "reframe" || CAMERA[i - 1]?.move === "reframe";
+
+  /** One-sided speeds of every field exactly at p, from the left (-1) or the right (1), second-order accurate. */
+  const sideSpeed = (path: ReturnType<typeof createCameraPath>, p: number, side: -1 | 1, h = 2e-5) => {
+    const f0 = copy(path.seek(p));
+    const f1 = copy(path.seek(p + side * h));
+    const f2 = copy(path.seek(p + side * 2 * h));
+    return FIELDS_PLAIN.map((f) => (side * (-3 * f0[f] + 4 * f1[f] - f2[f])) / (2 * h));
+  };
+
+  it("never jumps in speed at a key", () => {
+    const path = createCameraPath(CAMERA);
+    for (let i = 1; i + 1 < CAMERA.length; i++) {
+      if (nearReframe(i)) continue;
+      const at = CAMERA[i].at;
+      const before = sideSpeed(path, at, -1);
+      const after = sideSpeed(path, at, 1);
+      const scale = secant(i - 1).map((v, f) => Math.max(1, Math.abs(v), Math.abs(secant(i)[f])));
+      FIELDS_PLAIN.forEach((field, f) => {
+        expect(Math.abs(after[f] - before[f]) / scale[f], `${CAMERA[i].scene} at ${at} ${field}`).toBeLessThan(0.05);
+      });
+    }
+    path.kill();
+  });
+
+  it("starts from rest after a hold and lands at rest before one", () => {
+    const path = createCameraPath(CAMERA);
+    let checked = 0;
+    for (let i = 1; i + 1 < CAMERA.length; i++) {
+      if (nearReframe(i) || CAMERA[i + 1].move === "reframe") continue;
+      const prev = poseOf(CAMERA[i - 1]);
+      const here = poseOf(CAMERA[i]);
+      const next = poseOf(CAMERA[i + 1]);
+      const heldBefore = FIELDS_PLAIN.every((f) => prev[f] === here[f]);
+      const heldAfter = FIELDS_PLAIN.every((f) => here[f] === next[f]);
+      if (!heldBefore && !heldAfter) continue;
+      const moving = heldBefore ? secant(i) : secant(i - 1);
+      const v = speed(path, CAMERA[i].at);
+      FIELDS_PLAIN.forEach((field, f) => {
+        if (moving[f] === 0) return;
+        expect(Math.abs(v[f] / moving[f]), `${CAMERA[i].scene} at ${CAMERA[i].at} ${field}`).toBeLessThan(0.02);
+      });
+      checked++;
+    }
+    expect(checked).toBeGreaterThan(10);
+    path.kill();
+  });
+
+  it("keeps a long move moving through its middle (no early stop)", () => {
+    const path = createCameraPath(CAMERA);
+    const work = CAMERA.filter((k) => k.scene === "work");
+    const [a, b] = [work[0], work[1]];
+    // The story curve had covered 96% of the dolly half way through it, and crept for the rest.
+    for (const [t, lo, hi] of [
+      [0.25, 0.05, 0.4],
+      [0.5, 0.25, 0.7],
+      [0.75, 0.55, 0.9],
+    ] as const) {
+      const covered = (copy(path.seek(a.at + (b.at - a.at) * t)).py - a.position[1]) / (b.position[1] - a.position[1]);
+      expect(covered, `at ${t}`).toBeGreaterThan(lo);
+      expect(covered, `at ${t}`).toBeLessThan(hi);
+    }
+    path.kill();
+  });
+
+  it("builds monotone slopes: zero at extremes and holds, never past three times the steeper side", () => {
+    expect(cameraSlopes([0, 1, 2], [0, 1, 0])).toEqual([0, 0, 0]);
+    expect(cameraSlopes([0, 1, 2, 3], [0, 0, 1, 1])).toEqual([0, 0, 0, 0]);
+    const s = cameraSlopes([0, 1, 2], [0, 1, 3]);
+    expect(s[1]).toBeGreaterThan(1);
+    expect(s[1]).toBeLessThan(2);
+    // A reframe segment rests both its ends.
+    expect(cameraSlopes([0, 1, 2, 3], [0, 1, 5, 6], [false, true, false])).toEqual([0, 0, 0, 0]);
+  });
+
+  it("eases each value with a Hermite that stays between its keys", () => {
+    for (const [u0, u1] of [
+      [0, 0],
+      [3, 0],
+      [0, 3],
+      [1.5, 2],
+    ]) {
+      const ease = hermiteEase(u0, u1);
+      expect(ease(0)).toBe(0);
+      expect(ease(1)).toBeCloseTo(1, 12);
+      for (let t = 0; t <= 1; t += 0.01) {
+        expect(ease(t)).toBeGreaterThanOrEqual(-1e-9);
+        expect(ease(t)).toBeLessThanOrEqual(1 + 1e-9);
+      }
+    }
+  });
+
+  it("measures how far a camera move has gone, for art that moves with it", () => {
+    const pluck = CAMERA.filter((k) => k.scene === "pluck");
+    const travel = cameraTravel(CAMERA, pluck[1].at, pluck[2].at);
+    expect(travel(pluck[1].at - 0.01)).toBe(0);
+    expect(travel(pluck[2].at + 0.01)).toBe(1);
+    const mid = travel((pluck[1].at + pluck[2].at) / 2);
+    expect(mid).toBeGreaterThan(0.3);
+    expect(mid).toBeLessThan(0.7);
+    expect(travel((pluck[1].at + pluck[2].at) / 2)).toBe(mid);
   });
 });

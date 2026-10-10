@@ -17,6 +17,15 @@ export const colors = {
 
 export type ColorToken = keyof typeof colors;
 
+/** A mix of two palette colors as hex: `t` = 0 is `a`, 1 is `b` (for tints derived from the palette, never new colors). */
+export function mixColors(a: ColorToken, b: ColorToken, t: number): string {
+  const channel = (hex: string, i: number) => parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16);
+  return `#${[0, 1, 2]
+    .map((i) => Math.round(channel(colors[a], i) + (channel(colors[b], i) - channel(colors[a], i)) * t))
+    .map((v) => v.toString(16).padStart(2, "0"))
+    .join("")}`;
+}
+
 /** The one easing curve, as a cubic-bezier tuple (motion) and as CSS / GSAP strings. */
 export const EASE = [0.22, 1, 0.36, 1] as const;
 export const EASE_CSS = "cubic-bezier(0.22, 1, 0.36, 1)";

@@ -13,6 +13,7 @@ import {
 } from "three";
 
 import { seeded } from "@/lib/progress";
+import { colors } from "@/styles/tokens";
 
 /**
  * The plate shaders. Every texture is sampled premultiplied (see `textures.ts`), every material
@@ -29,7 +30,9 @@ import { seeded } from "@/lib/progress";
  *   slow ring wave (the hero's glow). Their whole motion is computed in the vertex shader.
  *
  * Plates and morphs can also be cut to a screen-space circle (`revealMask`): the rainbow ring shows
- * the new scene inside it and the old one outside.
+ * the new scene inside it and the old one outside. Plates can also thin out of, or recede into the
+ * sky's haze inside, a soft screen-space rectangle behind text (`clearInside`): the clouds parting
+ * around the service cards, the foliage and fruit fading back behind a headline.
  */
 
 const VERTEX = /* glsl */ `
@@ -65,6 +68,28 @@ float revealMask() {
 }
 `;
 
+/**
+ * A screen-space clearing behind text: a rectangle (`clearRect`, drawing-buffer pixels, left,
+ * bottom, right, top) with a soft edge `clearSoft` pixels wide, at strength `clearAmount` (0 off).
+ * Inside it the plate either thins out (`clearHaze` 0: the clouds part around the service cards) or
+ * recedes into the haze, its color drawn toward `hazeColor` (`clearHaze` 1: foliage and fruit
+ * behind a headline), so text never sits on a bright cloud or fruit.
+ */
+const CLEARING = /* glsl */ `
+uniform vec4 clearRect;
+uniform float clearSoft;
+uniform float clearAmount;
+uniform float clearHaze;
+uniform vec3 hazeColor;
+float clearInside() {
+  if (clearAmount <= 0.0) return 0.0;
+  vec2 center = (clearRect.xy + clearRect.zw) * 0.5;
+  vec2 q = abs(gl_FragCoord.xy - center) - (clearRect.zw - clearRect.xy) * 0.5;
+  float outside = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0);
+  return (1.0 - smoothstep(0.0, clearSoft, outside)) * clearAmount;
+}
+`;
+
 const PLATE_FRAGMENT = /* glsl */ `
 uniform sampler2D map;
 uniform vec4 uvTransform;
@@ -76,6 +101,7 @@ uniform float blurBias;
 varying vec2 vUv;
 ${OUTPUT}
 ${REVEAL}
+${CLEARING}
 vec4 sampleMap(vec2 uv) {
   if (blurRadius.x <= 0.0 && blurRadius.y <= 0.0) return texture2D(map, uv);
   vec4 sum = texture2D(map, uv, blurBias) * 2.0;
@@ -90,7 +116,14 @@ vec4 sampleMap(vec2 uv) {
 void main() {
   vec4 color = sampleMap(vUv * uvTransform.xy + uvTransform.zw);
   color.rgb = mix(color.rgb, tint * color.a, tintAmount);
-  gl_FragColor = toOutput(color, opacity * revealMask());
+  float cleared = clearInside();
+  gl_FragColor = toOutput(color, opacity * revealMask() * (1.0 - cleared * (1.0 - clearHaze)));
+  if (cleared * clearHaze > 0.0) {
+    // The haze mixes in the display's color space, as paint (and the browser's own compositing)
+    // would: fruit receding into the blue goes dusky, not violet as a mix in linear light does.
+    vec3 haze = linearToOutputTexel(vec4(hazeColor, 1.0)).rgb;
+    gl_FragColor.rgb = mix(gl_FragColor.rgb, haze * gl_FragColor.a, cleared * clearHaze);
+  }
   if (gl_FragColor.a < 0.002) discard;
 }
 `;
@@ -226,11 +259,12 @@ export class PlateMaterial extends ShaderMaterial {
         map: { value: map },
         uvTransform: { value: new Vector4(1, 1, 0, 0) },
         opacity: { value: 1 },
-        tint: { value: new Color("#ffffff") },
+        tint: { value: new Color(colors.white) },
         tintAmount: { value: 0 },
         blurRadius: { value: new Vector2(0, 0) },
         blurBias: { value: 0 },
         ...revealUniforms(),
+        ...clearingUniforms(),
       },
     });
   }
@@ -239,6 +273,17 @@ export class PlateMaterial extends ShaderMaterial {
 /** Uniforms of the reveal circle (off by default). */
 function revealUniforms() {
   return { revealCircle: { value: new Vector4(0, 0, 0, 1) }, revealSide: { value: 0 } };
+}
+
+/** Uniforms of the clearing (off by default). */
+function clearingUniforms() {
+  return {
+    clearRect: { value: new Vector4(0, 0, 0, 0) },
+    clearSoft: { value: 1 },
+    clearAmount: { value: 0 },
+    clearHaze: { value: 0 },
+    hazeColor: { value: new Color(colors.white) },
+  };
 }
 
 export class MorphMaterial extends ShaderMaterial {
@@ -255,7 +300,7 @@ export class MorphMaterial extends ShaderMaterial {
         maskTransform: { value: new Vector4(1, 1, 0, 0) },
         progress: { value: 0 },
         softness: { value: 0.08 },
-        edgeColor: { value: new Color("#ffffff") },
+        edgeColor: { value: new Color(colors.white) },
         edgeAmount: { value: 0 },
         opacity: { value: 1 },
         // Shared with the plate frame (unused by the morph, kept so one updater fits both).
@@ -279,7 +324,7 @@ export class TwinkleMaterial extends ShaderMaterial {
         time: { value: 0 },
         reveal: { value: 1 },
         opacity: { value: 1 },
-        tint: { value: new Color("#ffffff") },
+        tint: { value: new Color(colors.white) },
         tintAmount: { value: 0 },
       },
     });

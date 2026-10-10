@@ -2,6 +2,8 @@
 
 import { useMotionValue, useTransform } from "motion/react";
 
+import { mixColors } from "@/styles/tokens";
+
 import { Plate } from "./plate";
 import type { SceneArtProps } from "./scene-layers";
 import { useStageProgress } from "./stage-context";
@@ -14,7 +16,7 @@ import { architectLean, builderSwing, panelAt } from "./blueprint-plan";
  * architect holds the folded drawing on another. The drawing is four fold panels that open one by
  * one as the camera pushes into them, shaded while shut. All scrubbed by progress.
  */
-const PLAN_SHADE = "#6b7a99";
+const PLAN_SHADE = mixColors("skySoft", "ink", 0.25);
 const PANEL_IDS = ["blueprint/plan-1", "blueprint/plan-2", "blueprint/plan-3", "blueprint/plan-4"] as const;
 
 function PlanPanel({ index }: { index: number }) {
@@ -23,9 +25,10 @@ function PlanPanel({ index }: { index: number }) {
   const progress = stage ?? none;
   const pose = useTransform(progress, (p) => panelAt(index, p));
   const x = useTransform(pose, (v) => v.x);
+  const y = useTransform(pose, (v) => v.y);
   const scaleX = useTransform(pose, (v) => v.scaleX);
   const shade = useTransform(pose, (v) => v.shade);
-  return <Plate id={PANEL_IDS[index]} x={x} scaleX={scaleX} tint={PLAN_SHADE} tintAmount={shade} sway={false} />;
+  return <Plate id={PANEL_IDS[index]} x={x} y={y} scaleX={scaleX} tint={PLAN_SHADE} tintAmount={shade} sway={false} />;
 }
 
 export function BlueprintArt({ scene }: SceneArtProps) {

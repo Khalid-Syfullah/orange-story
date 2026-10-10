@@ -125,12 +125,13 @@ export function shownInTree(object: Object3D): boolean {
   return true;
 }
 
+/** True when a visible mesh under `root` is in the camera view (a plain walk: no callback allocated per frame). */
 function anyMeshInView(root: Object3D, clock: IdleClock): boolean {
-  let found = false;
-  root.traverseVisible((o) => {
-    if (!found && "geometry" in o && clock.inView(o)) found = true;
-  });
-  return found;
+  if (!root.visible) return false;
+  if ("geometry" in root && clock.inView(root)) return true;
+  const children = root.children;
+  for (let i = 0; i < children.length; i++) if (anyMeshInView(children[i], clock)) return true;
+  return false;
 }
 
 /**

@@ -1,7 +1,8 @@
 import { clamp01, ease, remap } from "@/lib/progress";
+import { beatOf } from "@/scroll/helpers";
 import { FINALE } from "@/scroll/script";
 
-import { figureOffset } from "./apply-plan";
+import { figureOffset, SINK_DEPTH } from "./apply-plan";
 import { CLOUD_SCROLL, cloudWeight } from "./work-sky";
 
 /**
@@ -25,9 +26,9 @@ import { CLOUD_SCROLL, cloudWeight } from "./work-sky";
 /** How much further (world units) the astronomer and his platform sink on top of the apply sink. */
 export const FINALE_SINK = 4.2;
 
-/** Vertical offset of the astronomer and his platform: the apply sink, then on out of the bottom. */
-export function astronomerOffset(p: number): number {
-  return figureOffset(p) - FINALE_SINK * ease(remap(p, FINALE.sink[0], FINALE.sink[1]));
+/** Vertical offset of the astronomer and his platform: the apply sink (`depth`, see `sinkDepth`), then on out of the bottom. */
+export function astronomerOffset(p: number, depth: number = SINK_DEPTH): number {
+  return figureOffset(p, depth) - FINALE_SINK * ease(remap(p, FINALE.sink[0], FINALE.sink[1]));
 }
 
 /** How far (world units) the constellation drifts up. */
@@ -76,6 +77,20 @@ export interface TreePose {
 export function treeAt(p: number): TreePose {
   const t = ease(remap(p, FINALE.tree[0], FINALE.tree[1]));
   return { y: -TREE_RISE * (1 - t), scale: 0.88 + 0.12 * t };
+}
+
+/** How far the tree recedes into the sky's haze behind the wordmark (inside the frame), at most. */
+export const TREE_HAZE = 0.75;
+/** And blurred this much at most (a fraction of the view height), as the focus moves to the wordmark. */
+export const TREE_SOFT_BLUR = 0.004;
+
+/**
+ * How much the tree has receded behind the wordmark, 0 to 1: it follows the wordmark's arrival (the
+ * `finale` beat), so the wordmark, the subtitle and the footer always read on a calm ground.
+ */
+export function treeHazeAt(p: number): number {
+  const beat = beatOf("finale");
+  return ease(remap(p, beat.in, beat.hold[0]));
 }
 
 /** How far (world units) the figures start to the side of their place: wholly out of the frame. */
@@ -132,11 +147,14 @@ export interface Watering {
   frame: number;
 }
 
-/** Her watering at idle time t: she tips the can, water runs from its spout, she lifts it again. */
-export function wateringAt(t: number): Watering {
+/** Her watering at idle time t: she tips the can, water runs from its spout, she lifts it again. Writes into `out` when given (the frame loop reuses one). */
+export function wateringAt(t: number, out: Watering = { tilt: 0, stream: 0, frame: 0 }): Watering {
   const u = wrap(t, WATER_CYCLE) / WATER_CYCLE;
   const tilt = clamp01((0.5 - 0.5 * Math.cos(TAU * u)) * 1.7);
-  return { tilt, stream: smooth(remap(tilt, 0.6, 0.9)), frame: Math.floor(t * STREAM_FPS) % 3 };
+  out.tilt = tilt;
+  out.stream = smooth(remap(tilt, 0.6, 0.9));
+  out.frame = Math.floor(t * STREAM_FPS) % 3;
+  return out;
 }
 
 /** Seconds of one round of the man's trimming: a few snips, then the cut that frees an orange. */
@@ -181,26 +199,39 @@ const GRAVITY = 6;
 /** The bottom of the frame: fruit that has fallen this far is gone. */
 const FLOOR = 3.8;
 
-const HIDDEN: FruitFrame = { x: 0, y: 0, rotate: 0, opacity: 0, scale: 1 };
+/** Writes a fruit frame into `out` (a new one when not given), so the frame loop can reuse one object per fruit. */
+function fruit(out: FruitFrame | undefined, x: number, y: number, rotate: number, opacity: number, scale: number): FruitFrame {
+  const frame = out ?? { x: 0, y: 0, rotate: 0, opacity: 0, scale: 1 };
+  frame.x = x;
+  frame.y = y;
+  frame.rotate = rotate;
+  frame.opacity = opacity;
+  frame.scale = scale;
+  return frame;
+}
+
+/** A fruit that is not there. */
+const hidden = (out?: FruitFrame): FruitFrame => fruit(out, 0, 0, 0, 0, 1);
 
 /** Where he cuts: the tips of the open shears. */
 export const CUT_POINT = [1.42, 6.42] as const;
 
-/** The orange he cuts free: it hangs from its stem while he snips, then drops when the last snip shuts. */
-export function cutFruitAt(t: number): FruitFrame {
+/** The orange he cuts free: it hangs from its stem while he snips, then drops when the last snip shuts. Writes into `out` when given. */
+export function cutFruitAt(t: number, out?: FruitFrame): FruitFrame {
   const s = wrap(t, TRIM_CYCLE);
   const hangFrom = 0.4;
-  if (s < hangFrom || s >= TRIM_CYCLE) return HIDDEN;
-  const home = { x: CUT_POINT[0], y: CUT_POINT[1] - 0.12 };
+  if (s < hangFrom || s >= TRIM_CYCLE) return hidden(out);
+  const homeX = CUT_POINT[0];
+  const homeY = CUT_POINT[1] - 0.12;
   if (s < CUT_AT) {
     const grow = smooth(remap(s, hangFrom, hangFrom + 0.35));
-    return { x: home.x, y: home.y, rotate: 0.12 * Math.sin(s * 5) * (s / CUT_AT), opacity: grow, scale: 0.6 + 0.4 * grow };
+    return fruit(out, homeX, homeY, 0.12 * Math.sin(s * 5) * (s / CUT_AT), grow, 0.6 + 0.4 * grow);
   }
   const tau = s - CUT_AT;
   const drop = 0.5 * GRAVITY * tau * tau;
-  const y = home.y - drop;
-  if (y < FLOOR) return HIDDEN;
-  return { x: home.x - 0.18 * tau, y, rotate: -2.2 * tau, opacity: 1, scale: 1 };
+  const y = homeY - drop;
+  if (y < FLOOR) return hidden(out);
+  return fruit(out, homeX - 0.18 * tau, y, -2.2 * tau, 1, 1);
 }
 
 interface Drop {
@@ -224,13 +255,13 @@ const DROPS: readonly Drop[] = [
 
 export const DROP_COUNT = DROPS.length;
 
-/** Where the nth drop is at idle time t (hidden between drops). */
-export function dropAt(n: number, t: number): FruitFrame {
+/** Where the nth drop is at idle time t (hidden between drops). Writes into `out` when given. */
+export function dropAt(n: number, t: number, out?: FruitFrame): FruitFrame {
   const drop = DROPS[n];
   const tau = wrap(t + drop.offset, drop.period);
   const fallen = 0.5 * GRAVITY * tau * tau;
   const lifetime = Math.sqrt((2 * (drop.y - FLOOR)) / GRAVITY);
-  if (tau >= lifetime) return HIDDEN;
+  if (tau >= lifetime) return hidden(out);
   const fade = smooth(remap(tau, 0, 0.12));
-  return { x: drop.x + drop.drift * tau, y: drop.y - fallen, rotate: drop.spin * tau, opacity: fade, scale: 1 };
+  return fruit(out, drop.x + drop.drift * tau, drop.y - fallen, drop.spin * tau, fade, 1);
 }

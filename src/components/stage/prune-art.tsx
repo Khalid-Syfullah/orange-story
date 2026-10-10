@@ -6,6 +6,13 @@ import { Plate } from "./plate";
 import { armLean, shearsClosed, trimmedScale } from "./prune-plan";
 import type { SceneArtProps } from "./scene-layers";
 import { useStageProgress } from "./stage-context";
+import { useTextHaze } from "./use-text-haze";
+
+/**
+ * On a phone the gardener's column stands in the middle, behind the fit text at the bottom: there it
+ * recedes into the sky's haze while the text is up (a wide screen keeps him beside the text instead).
+ */
+const OVER_COLUMN = ["fit"] as const;
 
 /**
  * Scene 9, the gardener (`prune-plan.ts`, timings in `PRUNE`): blue sky, a minaret-like column with
@@ -23,18 +30,19 @@ export function PruneArt({ scene }: SceneArtProps) {
   const closed = useTransform(progress, shearsClosed);
   const lean = useTransform(progress, armLean);
   const branch = useTransform(progress, trimmedScale);
+  const haze = useTextHaze(OVER_COLUMN, { strength: 0.85, stackedOnly: true });
 
   return (
     <>
       <Plate id="hero/sky" />
-      <Plate id="prune/column" />
-      <Plate id="prune/urn" />
-      <Plate id="prune/tree" />
-      <Plate id="prune/branch-left" scale={branch} />
-      <Plate id="prune/branch-right" />
-      <Plate id="prune/gardener" />
-      <Plate id="prune/gardener-arms-1" rotate={lean} layer={1} />
-      <Plate id="prune/gardener-arms-2" rotate={lean} opacity={closed} layer={2} />
+      <Plate id="prune/column" clearing={haze} />
+      <Plate id="prune/urn" clearing={haze} />
+      <Plate id="prune/tree" clearing={haze} />
+      <Plate id="prune/branch-left" scale={branch} clearing={haze} />
+      <Plate id="prune/branch-right" clearing={haze} />
+      <Plate id="prune/gardener" clearing={haze} />
+      <Plate id="prune/gardener-arms-1" rotate={lean} layer={1} clearing={haze} />
+      <Plate id="prune/gardener-arms-2" rotate={lean} opacity={closed} layer={2} clearing={haze} />
     </>
   );
 }

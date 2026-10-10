@@ -4,6 +4,8 @@ import * as React from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { BufferGeometry, DynamicDrawUsage, Float32BufferAttribute, LineBasicMaterial, LineSegments } from "three";
 
+import { colors } from "@/styles/tokens";
+
 import { read, type Num } from "./plate";
 import { plateRenderOrder, useSceneLayer, useStageProgress } from "./stage-context";
 import { constellation, edgeDraw, STAR_Z } from "./stars-plan";
@@ -25,7 +27,7 @@ export function StarEdges({ layer = 1, y, opacity }: { layer?: number; y?: Num; 
     const attr = new Float32BufferAttribute(new Float32Array(edges.length * 6), 3);
     attr.setUsage(DynamicDrawUsage);
     geometry.setAttribute("position", attr);
-    const material = new LineBasicMaterial({ color: "#ffffff", transparent: true, depthTest: false, depthWrite: false, toneMapped: false });
+    const material = new LineBasicMaterial({ color: colors.white, transparent: true, depthTest: false, depthWrite: false, toneMapped: false });
     const lines = new LineSegments(geometry, material);
     lines.frustumCulled = false;
     lines.name = "star-edges";
@@ -49,14 +51,15 @@ export function StarEdges({ layer = 1, y, opacity }: { layer?: number; y?: Num; 
     const presence = scene ? scene.presence(p) : 1;
     const attr = lines.geometry.getAttribute("position") as Float32BufferAttribute;
     let any = false;
-    edges.forEach((edge, i) => {
+    for (let i = 0; i < edges.length; i++) {
+      const edge = edges[i];
       const a = nodes[edge.from].position;
       const b = nodes[edge.to].position;
       const t = edgeDraw(edge, p);
       if (t > 0) any = true;
       attr.setXYZ(i * 2, a[0], a[1], STAR_Z);
       attr.setXYZ(i * 2 + 1, a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, STAR_Z);
-    });
+    }
     attr.needsUpdate = true;
     const material = lines.material as LineBasicMaterial;
     const alpha = presence * read(opacity, 1);

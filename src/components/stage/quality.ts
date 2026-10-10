@@ -70,3 +70,73 @@ export const TEXTURE_RELEASE_MS = 4000;
 
 /** Longest step of idle time per frame, in seconds, so a pause never makes sway or twinkle jump. */
 export const IDLE_MAX_STEP = 1 / 30;
+
+/* ------------------------------------------------------------------ */
+/* Adaptive quality                                                    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The stage canvas watches its own frame times while it renders continuously (scrolling, or idle
+ * effects on screen) and trades resolution for smoothness on a slow device: after `slowFor` seconds
+ * of frames slower than `slow` it lowers the pixel ratio a step (down to `floor`), and after
+ * `quickFor` seconds of frames quicker than `quick` it raises it again (up to the layout's cap).
+ * Gaps longer than `gap` are pauses (the canvas only renders on demand), not slow frames.
+ */
+export const ADAPTIVE = {
+  slow: 1 / 45,
+  quick: 1 / 57,
+  slowFor: 1.2,
+  quickFor: 4,
+  stepDown: 0.8,
+  stepUp: 1.15,
+  floor: 0.75,
+  gap: 0.25,
+} as const;
+
+/** Running state of the adaptive pixel ratio (one per canvas). */
+export interface FrameBudget {
+  /** Smoothed seconds per frame. */
+  average: number;
+  /** Seconds the average has been slow, or quick, without a break. */
+  slow: number;
+  quick: number;
+  /** A pixel ratio that has proved too slow: it never climbs back to it (no see-sawing). */
+  ceiling: number;
+}
+
+export const newFrameBudget = (): FrameBudget => ({ average: 1 / 60, slow: 0, quick: 0, ceiling: Infinity });
+
+/**
+ * Feeds one frame (seconds since the previous one) to the budget and returns the pixel ratio to use
+ * next: `dpr` unchanged, one step lower, or one step higher (never above `max`, below the floor, or
+ * back up to a ratio that was already too slow). Pure apart from updating `budget`; no allocation.
+ */
+export function adaptDpr(budget: FrameBudget, delta: number, dpr: number, max: number): number {
+  if (!(delta > 0) || delta > ADAPTIVE.gap) return dpr;
+  budget.average += (delta - budget.average) * 0.1;
+  if (budget.average > ADAPTIVE.slow) {
+    budget.slow += delta;
+    budget.quick = 0;
+  } else if (budget.average < ADAPTIVE.quick) {
+    budget.quick += delta;
+    budget.slow = 0;
+  } else {
+    budget.slow = 0;
+    budget.quick = 0;
+  }
+  let next = dpr;
+  if (budget.slow >= ADAPTIVE.slowFor && dpr > ADAPTIVE.floor) {
+    next = Math.max(ADAPTIVE.floor, dpr * ADAPTIVE.stepDown);
+    budget.ceiling = Math.min(budget.ceiling, dpr);
+  } else if (budget.quick >= ADAPTIVE.quickFor && dpr < max) {
+    const up = Math.min(max, dpr * ADAPTIVE.stepUp);
+    if (up < budget.ceiling - 1e-6) next = up;
+  }
+  if (next !== dpr) {
+    // Start over at the new resolution.
+    budget.slow = 0;
+    budget.quick = 0;
+    budget.average = 1 / 60;
+  }
+  return next;
+}

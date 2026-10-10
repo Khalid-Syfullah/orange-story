@@ -102,6 +102,7 @@ function DeckCardView({ card, progress, stage, measure, textStyle }: DeckCardVie
     <BeatBody beat={card.rows} progress={progress}>
       <QuestionCard
         ref={measure}
+        beat={card.beat}
         question={question}
         answer={answer}
         sparkles={card.sparkles}

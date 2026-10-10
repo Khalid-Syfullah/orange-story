@@ -2,14 +2,20 @@ import { gsap } from "gsap";
 
 import { registerGsap } from "@/scroll/stage-scroll";
 import type { CameraKey, Vec3 } from "@/scroll/types";
-import { EASE_GSAP_NAME } from "@/styles/tokens";
 
 /**
  * The camera path as one paused GSAP timeline, seeked by story progress (pure: no React, no three).
  * Each key starts a move (push, pull, pan, dolly up or down, reframe, hold) that tweens position,
- * target and field of view to the next key with the story's one easing curve. The camera never
- * cuts: every value is interpolated, and seeking backwards plays the same path in reverse.
- * Timeline time is progress, so a key at 0.0575 sits at 0.0575 seconds.
+ * target and field of view to the next key. The camera never cuts: every value is interpolated, and
+ * seeking backwards plays the same path in reverse. Timeline time is progress, so a key at 0.0575
+ * sits at 0.0575 seconds.
+ *
+ * The moves are joined into one smooth path (`cameraSlopes`, a monotone cubic through the keys):
+ * the camera starts from rest after a hold and lands at rest before one, glides through the keys
+ * of a chain of moves (the ascent's push, pan and dolly) without stopping, keeps moving through
+ * the whole of a long move, and never overshoots a key. The story's easing curve is not used here:
+ * scrubbed by scroll, its very fast start (7 times the average speed) reads as a jolt at every key,
+ * and its long tail as a camera that has stopped.
  */
 
 export interface CameraPose {
@@ -155,23 +161,132 @@ export function poseOf(key: CameraKey): CameraPose {
   return { px, py, pz, tx, ty, tz, fov: key.fov };
 }
 
+/* ------------------------------------------------------------------ */
+/* The smooth path through the keys                                    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The slope (units per progress) the path passes each key with, for one value sampled at the keys
+ * (`times`, strictly increasing). A monotone cubic (Fritsch and Butland's harmonic mean): zero at the
+ * first and last key, at a key where the value turns back or holds still, and on both sides of a
+ * segment marked `rest` (a reframe, which happens unseen under a covering transition and must not
+ * bend the moves around it); elsewhere the weighted harmonic mean of the two neighbouring slopes, so
+ * the value never overshoots a key and its speed never jumps.
+ */
+export function cameraSlopes(times: readonly number[], values: readonly number[], rest: readonly boolean[] = []): number[] {
+  const n = times.length;
+  const slopes = new Array<number>(n).fill(0);
+  for (let i = 1; i + 1 < n; i++) {
+    if (rest[i - 1] || rest[i]) continue;
+    const h0 = times[i] - times[i - 1];
+    const h1 = times[i + 1] - times[i];
+    const d0 = (values[i] - values[i - 1]) / h0;
+    const d1 = (values[i + 1] - values[i]) / h1;
+    if (d0 === 0 || d1 === 0 || Math.sign(d0) !== Math.sign(d1)) continue;
+    const w0 = 2 * h1 + h0;
+    const w1 = h1 + 2 * h0;
+    slopes[i] = (w0 + w1) / (w0 / d0 + w1 / d1);
+  }
+  return slopes;
+}
+
+/**
+ * A GSAP ease for one value over one segment: the cubic Hermite from 0 to 1 that leaves with slope
+ * `u0` and arrives with slope `u1`, both relative to the straight line between the two keys (1 is
+ * the straight line's own slope, 0 is from or to rest). `cameraSlopes` keeps both within 0 to 3, so
+ * the curve stays between 0 and 1.
+ */
+export function hermiteEase(u0: number, u1: number): (t: number) => number {
+  return (t) => {
+    const t2 = t * t;
+    const t3 = t2 * t;
+    return -2 * t3 + 3 * t2 + (t3 - 2 * t2 + t) * u0 + (t3 - t2) * u1;
+  };
+}
+
+type Field = keyof CameraPose;
+const POSE_FIELDS: readonly Field[] = ["px", "py", "pz", "tx", "ty", "tz", "fov"];
+
+/**
+ * Adds one value's moves to the timeline: one tween per segment where it changes, each eased along
+ * the smooth path (`cameraSlopes`, `hermiteEase`).
+ */
+function addValueTweens(
+  timeline: gsap.core.Timeline,
+  target: Record<string, number>,
+  field: string,
+  times: readonly number[],
+  values: readonly number[],
+  rest: readonly boolean[],
+): void {
+  const slopes = cameraSlopes(times, values, rest);
+  for (let i = 0; i + 1 < times.length; i++) {
+    const a = values[i];
+    const b = values[i + 1];
+    if (a === b) continue;
+    const span = times[i + 1] - times[i];
+    const ease = hermiteEase((slopes[i] * span) / (b - a), (slopes[i + 1] * span) / (b - a));
+    timeline.fromTo(target, { [field]: a }, { [field]: b, duration: span, ease, immediateRender: false }, times[i]);
+  }
+}
+
+/**
+ * How far the camera has travelled through the move between its keys at progress `from` and `to`:
+ * 0 up to `from`, 1 from `to` on, and in between the share of the way covered by the value that
+ * changes most over the move, on the path's own curve. For art that moves in step with a camera
+ * move (the fruit carried down the pluck's dolly, the site sliding aside as the camera pulls out).
+ * The path is built on first use; the last answer is kept, so several readers in one frame seek once.
+ */
+export function cameraTravel(keys: readonly CameraKey[], from: number, to: number): (p: number) => number {
+  let path: CameraPath | null = null;
+  let field: Field = "px";
+  let start = 0;
+  let end = 1;
+  const last = { p: Number.NaN, travel: 0 };
+  const setup = () => {
+    const a = keys.find((k) => k.at === from);
+    const b = keys.find((k) => k.at === to);
+    if (!a || !b) throw new Error(`cameraTravel: no camera keys at ${from} and ${to}`);
+    const pa = poseOf(a);
+    const pb = poseOf(b);
+    field = POSE_FIELDS.reduce((best, f) => (Math.abs(pb[f] - pa[f]) > Math.abs(pb[best] - pa[best]) ? f : best), POSE_FIELDS[0]);
+    start = pa[field];
+    end = pb[field];
+    return createCameraPath(keys);
+  };
+  return (p) => {
+    if (last.p === p) return last.travel;
+    let travel: number;
+    if (p <= from) travel = 0;
+    else if (p >= to) travel = 1;
+    else {
+      path ??= setup();
+      path.seek(p);
+      travel = end === start ? 1 : Math.min(1, Math.max(0, (path.pose[field] - start) / (end - start)));
+    }
+    last.p = p;
+    last.travel = travel;
+    return travel;
+  };
+}
+
 export function createCameraPath(keys: readonly CameraKey[]): CameraPath {
   if (keys.length === 0) throw new Error("The camera path needs at least one key");
   registerGsap();
   const pose = poseOf(keys[0]);
-  // The pan offsets ease along with the pose (a key without one keeps the one before it).
+  // The pan offsets move along with the pose (a key without one keeps the one before it).
   const pans: (readonly [number, number])[] = [];
   keys.forEach((key, i) => pans.push(key.pan ?? pans[i - 1] ?? [0, 0]));
   const pan = { x: pans[0][0], y: pans[0][1] };
   const view: CameraPose = { ...pose };
   const timeline = gsap.timeline({ paused: true });
-  for (let i = 0; i + 1 < keys.length; i++) {
-    const from = keys[i];
-    const to = keys[i + 1];
-    const vars = { duration: to.at - from.at, ease: EASE_GSAP_NAME, immediateRender: false };
-    timeline.fromTo(pose, { ...poseOf(from) }, { ...poseOf(to), ...vars }, from.at);
-    timeline.fromTo(pan, { x: pans[i][0], y: pans[i][1] }, { x: pans[i + 1][0], y: pans[i + 1][1], ...vars }, from.at);
-  }
+  const times = keys.map((key) => key.at);
+  const rest = keys.map((key) => key.move === "reframe");
+  const poses = keys.map(poseOf);
+  for (const field of POSE_FIELDS)
+    addValueTweens(timeline, pose as unknown as Record<string, number>, field, times, poses.map((p) => p[field]), rest);
+  addValueTweens(timeline, pan, "x", times, pans.map((p) => p[0]), rest);
+  addValueTweens(timeline, pan, "y", times, pans.map((p) => p[1]), rest);
   const first = keys[0].at;
   const last = keys[keys.length - 1].at;
 

@@ -11,7 +11,7 @@ import {
 import { ANCHORS } from "@/scroll/script";
 import type { Story } from "@/scroll/story-scroll";
 
-import { goToApply } from "./go-to-apply";
+import { focusApplyField, goToApply } from "./go-to-apply";
 
 /**
  * Where the page is, for the browser: the same place after a reload, deep links, the hash, the
@@ -84,6 +84,8 @@ export function useStoryLocation(story: Story, live: boolean) {
     history.scrollRestoration = "manual";
     const target = restoreTarget(navigationType(), readSaved(), window.location.hash);
     if (target !== null) storyRef.current.scrollTo(target, { immediate: true });
+    // A link straight to the application lands on the form, ready to type in (as a later #apply does).
+    if (target !== null && target === ANCHORS.apply && anchorFromHash(window.location.hash) === "apply") void focusApplyField();
     // Two frames: the move has been drawn under the cover before the cover lifts.
     let frame = requestAnimationFrame(() => {
       frame = requestAnimationFrame(liftCover);

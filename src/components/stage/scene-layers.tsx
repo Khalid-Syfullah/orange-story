@@ -14,6 +14,7 @@ import { ApplyArt } from "./apply-art";
 import { AscentArt } from "./ascent-art";
 import { BlueprintArt } from "./blueprint-art";
 import { FallArt } from "./fall-art";
+import { FaqArt } from "./faq-art";
 import { FinaleArt } from "./finale-art";
 import { GraftArt } from "./graft-art";
 import { HeroArt } from "./hero-art";
@@ -54,6 +55,7 @@ export const SCENE_ART: Partial<Record<SceneId, React.ComponentType<SceneArtProp
   site: SiteArt,
   prune: PruneArt,
   fall: FallArt,
+  faq: FaqArt,
   stars: StarsArt,
   apply: ApplyArt,
   finale: FinaleArt,
