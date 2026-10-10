@@ -578,6 +578,21 @@ export const WORK = {
   rise: [at("work", 0.77), at("work", 0.99)] as ProgressRange,
 } as const;
 
+/**
+ * The blueprint's own timings (progress). The art in `src/components/stage/blueprint-plan.ts`
+ * choreographs on these: the architect brings the folded drawing forward (`bring`), unfolds it panel
+ * by panel (`panels`, four equal slices of the stretch) while the camera pushes in, and the workers
+ * move while the plan is still closed.
+ */
+export const BLUEPRINT = {
+  /** The folded drawing comes out and settles in front of the scaffold. */
+  bring: [at("blueprint", 0.2), at("blueprint", 0.36)] as ProgressRange,
+  /** The four fold panels open one after another. */
+  panels: [at("blueprint", 0.36), at("blueprint", 0.8)] as ProgressRange,
+  /** The builder's to-and-fro on his platform. */
+  work: [at("blueprint", 0), at("blueprint", 0.5)] as ProgressRange,
+} as const;
+
 export const CAMERA: readonly CameraKey[] = [
   // Hero: wide and still.
   key("hero", at("hero", 0), "hold", HERO_WIDE, [0, 0, 0], 35),
@@ -605,7 +620,7 @@ export const CAMERA: readonly CameraKey[] = [
   // Blueprint: the scaffold, then a push into the plan as it unfolds.
   key("blueprint", at("blueprint", 0), "hold", [0, 9, 13], [0, 9.5, 0], 38),
   key("blueprint", at("blueprint", 0.35), "push", [0, 9, 13], [0, 9.5, 0], 38),
-  key("blueprint", UNFOLD_COVERED, "reframe", [0, 9.6, 5], [0, 9.6, 0], 34),
+  key("blueprint", UNFOLD_COVERED, "reframe", [0, 9.6, 2.6], [0, 9.6, 0], 34),
   // Site: rise from ground level to top-down, then pull out as the view shrinks into the left half.
   key("site", UNFOLD_CLEARING, "dolly-up", [0, 1.2, 12], [0, 1, 0], 38),
   key("site", at("site", 0.42), "pull", TOP_DOWN, [0, 0, 0], 38),

@@ -11,6 +11,7 @@ import { useSceneIndex } from "@/scroll/story-scroll";
 import type { SceneDef, SceneId } from "@/scroll/types";
 
 import { AscentArt } from "./ascent-art";
+import { BlueprintArt } from "./blueprint-art";
 import { GraftArt } from "./graft-art";
 import { HeroArt } from "./hero-art";
 import { Plate } from "./plate";
@@ -43,6 +44,7 @@ export const SCENE_ART: Partial<Record<SceneId, React.ComponentType<SceneArtProp
   pluck: PluckArt,
   share: ShareArt,
   work: WorkArt,
+  blueprint: BlueprintArt,
 };
 
 const SCENE_IDS: readonly SceneId[] = SCENES.map((s) => s.id);
