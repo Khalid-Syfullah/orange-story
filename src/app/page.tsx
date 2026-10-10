@@ -1,15 +1,17 @@
-import { model } from "@/content/copy";
+import { ReducedStory } from "@/components/story/reduced-story";
+import { StoryStage } from "@/components/story/story-stage";
+import { storyYear } from "@/lib/story-year";
 
 /**
- * Holding page until the scroll story lands (phases 3 onward replace this with the pinned stage).
+ * The whole site: one pinned scroll stage. Visitors who prefer reduced motion get the same story as
+ * a calm stacked page instead (CSS picks one; only one is ever displayed).
  */
-export default function Home() {
+export default async function Home() {
+  const year = await storyYear();
   return (
-    <main className="theme-sky relative flex min-h-dvh flex-col justify-center bg-background text-foreground">
-      <div className="pl-col-a pr-6">
-        <h1 className="type-display-xl max-w-[12ch]">{model.hero.title}</h1>
-        <p className="type-lead mt-6 max-w-[34ch] text-milk">{model.hero.subtitle}</p>
-      </div>
+    <main>
+      <StoryStage year={year} />
+      <ReducedStory year={year} />
     </main>
   );
 }

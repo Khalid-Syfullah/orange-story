@@ -1,10 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { motion, useReducedMotion, useTransform, type MotionValue, type Variants } from "motion/react";
+import { motion, useTransform, type MotionValue, type Variants } from "motion/react";
 
 import { cn } from "@/lib/utils";
 import { ease, remap, type ProgressRange } from "@/lib/progress";
+import { usePrefersReducedMotion } from "@/lib/use-prefers-reduced-motion";
 import { EASE } from "@/styles/tokens";
 
 /**
@@ -121,7 +122,11 @@ function ScrubChar({
   const state = useTransform(progress, (p) => letterState(p, index, count, range, share, hide));
   const opacity = useTransform(state, (s) => (s <= 1 ? s : 2 - s));
   const y = useTransform(state, (s) => (reduced ? "0em" : `${(1 - s) * rise}em`));
-  const filter = useTransform(state, (s) => (reduced ? "none" : `blur(${Math.abs(1 - s) * blur}px)`));
+  // At rest the letter has no filter at all (not `blur(0px)`), so settled text is not a filter surface.
+  const filter = useTransform(state, (s) => {
+    const amount = reduced ? 0 : Math.abs(1 - s) * blur;
+    return amount > 0.01 ? `blur(${amount}px)` : "none";
+  });
   return (
     <motion.span className={cn("inline-block will-change-transform", className)} style={{ opacity, y, filter }}>
       {char}
@@ -131,7 +136,8 @@ function ScrubChar({
 
 export function SplitReveal(props: SplitRevealProps) {
   const { text, as = "span", className, charClassName, rise = 0.45, blur = 8 } = props;
-  const reduced = useReducedMotion() ?? false;
+  // Hydration-safe: false on the server and during hydration, so server markup always matches.
+  const reduced = usePrefersReducedMotion() === true;
   const { words, count } = React.useMemo(() => splitWords(text), [text]);
   const MotionTag = MOTION_TAGS[as] as typeof motion.span;
   const isHeading = as === "h1" || as === "h2" || as === "h3";
@@ -179,10 +185,21 @@ export function SplitReveal(props: SplitRevealProps) {
     shown: { transition: { staggerChildren: stagger, delayChildren: delay } },
   };
   const child: Variants = reduced
-    ? { hidden: { opacity: 0 }, shown: { opacity: 1, transition: { duration: 0.6, ease: EASE } } }
+    ? {
+        hidden: { opacity: 0 },
+        // Rise and blur snap to rest: markup rendered before hydration carries the full hidden state.
+        shown: {
+          opacity: 1,
+          y: "0em",
+          filter: "blur(0px)",
+          transition: { duration: 0.6, ease: EASE, y: { duration: 0 }, filter: { duration: 0 } },
+          transitionEnd: { filter: "none" },
+        },
+      }
     : {
         hidden: { opacity: 0, y: `${rise}em`, filter: `blur(${blur}px)` },
-        shown: { opacity: 1, y: "0em", filter: "blur(0px)", transition: { duration: 0.9, ease: EASE } },
+        // Settled letters drop the filter entirely (see ScrubChar).
+        shown: { opacity: 1, y: "0em", filter: "blur(0px)", transition: { duration: 0.9, ease: EASE }, transitionEnd: { filter: "none" } },
       };
   const driver =
     trigger === "mount"

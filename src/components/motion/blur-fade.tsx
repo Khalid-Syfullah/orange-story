@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { motion, useReducedMotion, useTransform, type MotionValue } from "motion/react";
+import { motion, useTransform, type MotionValue } from "motion/react";
 
 import { ease, remap, type ProgressRange } from "@/lib/progress";
+import { usePrefersReducedMotion } from "@/lib/use-prefers-reduced-motion";
 
 /**
  * Blur, fade and drift for content leaving the stage (the hero copy drifting left, the smoke-out
@@ -53,7 +54,8 @@ export function BlurFade({
   style,
   children,
 }: BlurFadeProps) {
-  const reduced = useReducedMotion() ?? false;
+  // Hydration-safe: false on the server and during hydration, so server markup always matches.
+  const reduced = usePrefersReducedMotion() === true;
   /** 0 = present, 1 = gone. Arrivals come from the opposite side of the leave. */
   const gone = useTransform(progress, (p) => {
     const leaving = ease(remap(p, out[0], out[1]));

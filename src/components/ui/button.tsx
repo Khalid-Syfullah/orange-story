@@ -95,14 +95,12 @@ function Button({
       className={cn(buttonVariants({ variant, size: resolvedSize, className }))}
       {...props}
     >
-      {showArrow ? (
-        <>
-          <Slot.Slottable>{children}</Slot.Slottable>
-          <PillChip />
-        </>
-      ) : (
-        children
-      )}
+      {/* A keyed array, not a fragment: with `asChild`, Slot must see the Slottable as a direct
+          child to move the label and the chip into the child element (a fragment would get the
+          button props instead). */}
+      {showArrow
+        ? [<Slot.Slottable key="label">{children}</Slot.Slottable>, <PillChip key="chip" />]
+        : children}
     </Comp>
   )
 }

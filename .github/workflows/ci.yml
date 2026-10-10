@@ -34,6 +34,9 @@ jobs:
       - name: Typecheck
         run: npm run typecheck --if-present
 
+      - name: Unit tests
+        run: npm run test --if-present
+
       - name: Build
         run: npm run build
         env:

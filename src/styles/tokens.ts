@@ -20,7 +20,7 @@ export type ColorToken = keyof typeof colors;
 /** The one easing curve, as a cubic-bezier tuple (motion) and as CSS / GSAP strings. */
 export const EASE = [0.22, 1, 0.36, 1] as const;
 export const EASE_CSS = "cubic-bezier(0.22, 1, 0.36, 1)";
-/** Name registered with GSAP CustomEase by the scroll engine (phase 3). */
+/** Name of the same curve as a GSAP ease (`ease: "story"`), registered by `registerGsap()` in `src/scroll/stage-scroll.ts`. */
 export const EASE_GSAP_NAME = "story";
 
 /** Standard durations in seconds for time-driven (non-scroll) UI transitions. */

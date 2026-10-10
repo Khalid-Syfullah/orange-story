@@ -4,6 +4,8 @@
  * Edit wording here and nowhere else.
  */
 
+import type { SceneId } from "@/scroll/types";
+
 export type ChapterId = "model" | "work" | "terms" | "questions";
 
 export interface Chapter {
@@ -182,6 +184,97 @@ export const finale = {
 export const meta = {
   title: `${finale.wordmark}. ${model.hero.title}`,
   description: model.hero.subtitle,
+} as const;
+
+/**
+ * The fourteen scenes by name, with a short description of each scene's still. They label the
+ * placeholder art, describe the stills on the reduced-motion page, and name scenes in dev tools.
+ */
+export const storyScenes = {
+  hero: {
+    name: "The raised orange",
+    still: "A marble statue on a slender minaret raises a glowing orange to a deep blue sky while robed onlookers look up.",
+  },
+  ascent: {
+    name: "The minaret becomes a tree",
+    still: "The minaret keeps rising and its stone turns to bark, splitting into branches and new leaves.",
+  },
+  graft: {
+    name: "The graft",
+    still: "Two hands in robe sleeves graft a cutting onto a branch and tie it off with twine.",
+  },
+  pluck: {
+    name: "The pluck and the harvester",
+    still: "A hand reaches up through laden branches to pick one orange; a man in a white robe holds it and looks at it.",
+  },
+  share: {
+    name: "The cut and the share",
+    still: "A knife cuts the orange in two and a second hand takes one half.",
+  },
+  work: {
+    name: "Services in the clouds",
+    still: "Soft clouds drift across a blue sky as a very large orange rises on top of a minaret.",
+  },
+  blueprint: {
+    name: "The blueprint",
+    still: "A minaret wrapped in timber scaffolding, where an architect unfolds a drawing of it.",
+  },
+  site: {
+    name: "The building site by the sea",
+    still: "Seen from above, builders on a timber stage shape a large orange on a marble platform ringed by tiles.",
+  },
+  prune: {
+    name: "The gardener",
+    still: "A gardener on a tall column trims a young orange tree growing in a marble urn.",
+  },
+  fall: {
+    name: "The falling orange",
+    still: "An orange falls from a cut branch toward rows of orange trees.",
+  },
+  faq: {
+    name: "The questions",
+    still: "Rows of orange trees heavy with fruit line both sides of an open sky.",
+  },
+  stars: {
+    name: "The stargazer",
+    still: "An astronomer on a marble platform points at a sky filling with stars.",
+  },
+  apply: {
+    name: "The application",
+    still: "Clear blue sky with a soft glow where the application form sits.",
+  },
+  finale: {
+    name: "The orchard keepers",
+    still: "A woman waters an orange tree while a man trims it with shears.",
+  },
+} as const satisfies Record<SceneId, { name: string; still: string }>;
+
+/** Labels for the story outside the copy deck: the finale's part name and placeholder art. */
+export const story = {
+  /** The finale's part of the story (the ruler has four chapters; the storyboard calls this "End"). */
+  endPart: "End",
+  placeholder: "Placeholder art",
+  sceneNumber: (n: number, total: number) => `Scene ${n} of ${total}`,
+} as const;
+
+/** Labels for the dev-only story timeline (toggled with the backtick key). */
+export const devTimeline = {
+  title: "Story timeline",
+  hint: "` toggles · 1 to 9 and 0 jump to scenes 1 to 10, Shift with 1 to 4 to scenes 11 to 14 · click a bar to seek",
+  views: { story: "Whole story", chapter: "This chapter" },
+  rows: { scenes: "Scenes", transitions: "Transitions", camera: "Camera" },
+  readout: {
+    progress: "Progress",
+    screen: "Screen",
+    scene: "Scene",
+    chapter: "Chapter",
+    beats: "Beats",
+    velocity: "Velocity",
+  },
+  none: "none",
+  close: "Close the timeline",
+  screens: (screen: number, total: number) => `${screen.toFixed(2)} of ${total}`,
+  velocity: (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(2)} screens/s`,
 } as const;
 
 /** Labels used only on the dev-only /design route. */
