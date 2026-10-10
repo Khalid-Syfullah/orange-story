@@ -15,7 +15,7 @@ All plates live in `public/art/<scene>/<plate>.webp` (with alpha), listed in `pu
 | blueprint | scaffold and minaret; builder; architect; plan in 4 fold panels |
 | site | seaside ground and sea; marble platform; timber stage and steps; orange under construction; three builders; matching top-down plate of the same set; plain ground (sand, far larger than the view); tiled ground pattern; blurred leaf-shadow texture |
 | prune | marble column and urn; young orange tree (branches as separate layers so one can fall); gardener |
-| fall | falling orange; two rows of orange trees left and right (2 depths each); rainbow ring mask |
+| fall | falling orange; the cut branch without its fruit; two rows of orange trees left and right (2 depths each); rainbow ring mask |
 | faq | orchard plates reused; sparkle sprite |
 | stars | fabric sky texture; billowing cloud; marble platform and stairs; astronomer with raised arm; star sprite |
 | finale | tree; woman with watering can (body, arm, water stream frames); man with shears (body, arms frames); falling orange sprite; cloud sprites |

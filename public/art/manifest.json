@@ -981,6 +981,19 @@
       "placeholder": { "kind": "orange" }
     },
     {
+      "id": "fall/branch-cut",
+      "scenes": ["fall"],
+      "role": "plate",
+      "src": "/art/fall/branch-cut.webp",
+      "size": [512, 384],
+      "depth": 0.06,
+      "anchor": [0, 0.72],
+      "position": [0.05, 1.9],
+      "height": 0.6,
+      "note": "The cut branch of the prune scene without its orange (same drawing as prune/branch-right, fruit gone): it drops from the tree while the orange falls on its own.",
+      "placeholder": { "kind": "branch", "direction": "right", "leaves": 6, "oranges": 0, "seed": "pr" }
+    },
+    {
       "id": "fall/trees-left-far",
       "scenes": ["fall", "faq"],
       "role": "plate",

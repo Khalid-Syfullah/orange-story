@@ -635,6 +635,33 @@ export const PRUNE = {
   snips: 7,
 } as const;
 
+/**
+ * The falling orange's timings (progress). `src/components/stage/fall-plan.ts` choreographs on
+ * these: the cut branch drops (`cut`, `branch`), the gardener drifts right and out of frame
+ * (`gardener`), the orange falls from the branch with the camera following it (`release`), the
+ * camera pushes into it until it fills the center (`push`), the rainbow ring sweeps out from it
+ * (the `ring` transition) and the orange goes soft (`soften`) while it keeps falling out of the
+ * bottom of the frame (`exit`, `fade`) as the camera dollies up between the orchard rows.
+ */
+export const FALL = {
+  /** The still branch (with its fruit) hands over to the dropping cut branch and the orange. */
+  cut: [at("fall", 0.07), at("fall", 0.085)] as ProgressRange,
+  /** The cut branch drops, turning, and is gone. */
+  branch: [at("fall", 0.085), at("fall", 0.4)] as ProgressRange,
+  /** The gardener drifts right and out of frame. */
+  gardener: [at("fall", 0.1), at("fall", 0.32)] as ProgressRange,
+  /** The orange falls from the branch to the middle of the frame (the ring's origin). */
+  release: [at("fall", 0.085), at("fall", 0.45)] as ProgressRange,
+  /** The camera pushes into the orange until it fills the center. */
+  push: [at("fall", 0.45), at("fall", 0.55)] as ProgressRange,
+  /** The orange goes soft and out of focus. */
+  soften: [at("fall", 0.45), at("fall", 0.72)] as ProgressRange,
+  /** The orange keeps falling, out of the bottom of the frame. */
+  exit: [at("fall", 0.55), at("fall", 1)] as ProgressRange,
+  /** The orange fades out for good before the scene ends. */
+  fade: [at("fall", 0.84), at("fall", 1)] as ProgressRange,
+} as const;
+
 export const CAMERA: readonly CameraKey[] = [
   // Hero: wide and still.
   key("hero", at("hero", 0), "hold", HERO_WIDE, [0, 0, 0], 35),
@@ -675,7 +702,7 @@ export const CAMERA: readonly CameraKey[] = [
   key("fall", at("fall", 0), "push", GARDENER, [0, 0.5, 0], 35),
   key("fall", at("fall", 0.22), "dolly-down", [0.4, 2.2, 6.5], [0.4, 2.2, 0], 32),
   key("fall", at("fall", 0.45), "push", [0, -3, 5], [0, -3, 0], 32),
-  key("fall", at("fall", 0.62), "dolly-up", [0, -3, 2.6], [0, -3, 0], 30),
+  key("fall", FALL.push[1], "dolly-up", [0, -4, 2.6], [0, -4, 0], 30),
   // Questions: drift up between the rows, then forward into the blue under the fabric sky.
   key("faq", at("faq", 0), "dolly-up", [0, 1, 12], [0, 2, 0], 40),
   key("faq", at("faq", 0.9), "push", [0, 4.5, 12], [0, 5.5, 0], 40),

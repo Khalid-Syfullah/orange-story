@@ -12,6 +12,7 @@ import type { SceneDef, SceneId } from "@/scroll/types";
 
 import { AscentArt } from "./ascent-art";
 import { BlueprintArt } from "./blueprint-art";
+import { FallArt } from "./fall-art";
 import { GraftArt } from "./graft-art";
 import { HeroArt } from "./hero-art";
 import { Plate } from "./plate";
@@ -49,6 +50,7 @@ export const SCENE_ART: Partial<Record<SceneId, React.ComponentType<SceneArtProp
   blueprint: BlueprintArt,
   site: SiteArt,
   prune: PruneArt,
+  fall: FallArt,
 };
 
 const SCENE_IDS: readonly SceneId[] = SCENES.map((s) => s.id);
