@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { ArrowRight } from "lucide-react";
 
 import { chrome, designPage, finale, model, questions, terms, work } from "@/content/copy";
+import { StarMark } from "@/components/chrome/star-mark";
+import { Button } from "@/components/ui/button";
+import { Tag } from "@/components/ui/tag";
 import { colors, EASE_CSS } from "@/styles/tokens";
 import { cn } from "@/lib/utils";
+
+import { Playground } from "./playground";
 
 export const metadata: Metadata = {
   title: designPage.title,
@@ -42,40 +46,6 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
       <span className="type-label">{children}</span>
       <span className="hairline-x flex-1" aria-hidden />
     </div>
-  );
-}
-
-/** Four-point star mark used where hairlines cross. */
-function StarMark({ className, style }: { className?: string; style?: React.CSSProperties }) {
-  return (
-    <svg
-      viewBox="0 0 12 12"
-      aria-hidden
-      className={cn("absolute size-3 -translate-x-1/2 -translate-y-1/2", className)}
-      style={style}
-    >
-      <path
-        d="M6 0 C6.4 3.6 8.4 5.6 12 6 C8.4 6.4 6.4 8.4 6 12 C5.6 8.4 3.6 6.4 0 6 C3.6 5.6 5.6 3.6 6 0 Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
-
-function PillDemo({ label, surface }: { label: string; surface: "press" | "sky" }) {
-  return (
-    <button
-      type="button"
-      className={cn(
-        "pill group cursor-pointer outline-offset-4 focus-visible:outline-2 focus-visible:outline-ring",
-        surface === "press" ? "bg-press text-milk hover:bg-ink" : "bg-transparent text-white hover:bg-white/10",
-      )}
-    >
-      {label}
-      <span className="pill-chip group-hover:translate-x-0.5">
-        <ArrowRight className="size-3.5" strokeWidth={1.5} aria-hidden />
-      </span>
-    </button>
   );
 }
 
@@ -124,12 +94,12 @@ export default function DesignPage() {
         <SectionLabel>{designPage.sections.buttons}</SectionLabel>
         <div className="grid gap-px md:grid-cols-2">
           <div className="flex flex-wrap items-center gap-4 bg-marble p-10">
-            <PillDemo label={chrome.apply.label} surface="press" />
-            <PillDemo label={questions.application.submit.label} surface="press" />
+            <Button variant="pill">{chrome.apply.label}</Button>
+            <Button variant="pill">{questions.application.submit.label}</Button>
           </div>
           <div className="theme-sky flex flex-wrap items-center gap-4 bg-background p-10">
-            <PillDemo label={model.hero.button.label} surface="sky" />
-            <PillDemo label={chrome.apply.label} surface="sky" />
+            <Button variant="ghost-pill">{model.hero.button.label}</Button>
+            <Button variant="ghost-pill">{chrome.apply.label}</Button>
           </div>
         </div>
       </section>
@@ -139,14 +109,14 @@ export default function DesignPage() {
         <SectionLabel>{designPage.sections.tags}</SectionLabel>
         <div className="grid gap-px md:grid-cols-2">
           <div className="flex flex-wrap items-center gap-3 bg-marble p-10">
-            <span className="tag">{model.hero.tag}</span>
-            <span className="tag">{model.harvest.tag}</span>
-            <span className="tag">{terms.block.aside.tag}</span>
+            <Tag>{model.hero.tag}</Tag>
+            <Tag>{model.harvest.tag}</Tag>
+            <Tag>{terms.block.aside.tag}</Tag>
           </div>
           <div className="theme-sky flex flex-wrap items-center gap-3 bg-background p-10">
-            <span className="tag">{work.cards[0].tag}</span>
-            <span className="tag">{work.cards[1].tag}</span>
-            <span className="tag">{questions.application.tag}</span>
+            <Tag>{work.cards[0].tag}</Tag>
+            <Tag>{work.cards[1].tag}</Tag>
+            <Tag>{questions.application.tag}</Tag>
           </div>
         </div>
       </section>
@@ -170,7 +140,7 @@ export default function DesignPage() {
             <p className="type-display-l">{model.hero.title}</p>
           </div>
           <div className="absolute bottom-[10%] left-[8%] flex items-start gap-0">
-            <span className="tag">{model.hero.tag}</span>
+            <Tag>{model.hero.tag}</Tag>
           </div>
           <p className="type-body absolute bottom-[10%] left-[24%] max-w-[44%] text-milk">{model.hero.paragraph}</p>
           <p className="type-meta absolute right-[3%] bottom-[4%]">{chrome.percent(88)}</p>
@@ -178,6 +148,12 @@ export default function DesignPage() {
         <p className="type-meta mt-4 normal-case text-muted-foreground">
           {designPage.gridCaption}
         </p>
+      </section>
+
+      {/* Every UI-kit and chrome piece on a fake progress slider. */}
+      <section className="px-col-a py-12">
+        <SectionLabel>{designPage.sections.playground}</SectionLabel>
+        <Playground />
       </section>
 
       {/* Easing */}

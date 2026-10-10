@@ -1,5 +1,6 @@
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
+import { ArrowRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Slot } from "radix-ui"
 
@@ -18,6 +19,10 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
         link: "text-primary underline-offset-4 hover:underline",
+        /* Orange pills (DESIGN.md, Shapes): hairline border, inset top highlight, mono label, arrow chip. */
+        pill: "border-hairline bg-press text-milk shadow-[inset_0_1px_0_color-mix(in_oklab,currentColor_22%,transparent)] hover:bg-ink focus-visible:border-hairline focus-visible:ring-sky/60",
+        "ghost-pill":
+          "border-hairline bg-transparent text-white shadow-[inset_0_1px_0_color-mix(in_oklab,currentColor_22%,transparent)] hover:bg-white/10 focus-visible:border-hairline focus-visible:ring-milk/60",
       },
       size: {
         default:
@@ -31,6 +36,8 @@ const buttonVariants = cva(
         "icon-sm":
           "size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
         "icon-lg": "size-9",
+        /* Pill geometry; picked automatically for the pill variants. */
+        pill: "h-10 gap-3.5 rounded-pill pr-1.25 pl-4.5 font-mono text-label tracking-[0.18em] uppercase focus-visible:ring-offset-0 active:not-aria-[haspopup]:translate-y-0",
       },
     },
     defaultVariants: {
@@ -40,27 +47,64 @@ const buttonVariants = cva(
   }
 )
 
+type ButtonVariant = NonNullable<VariantProps<typeof buttonVariants>["variant"]>
+
+const isPill = (variant: ButtonVariant | null | undefined) =>
+  variant === "pill" || variant === "ghost-pill"
+
+/** The round arrow chip at the end of a pill. Nudges 2px right on hover and keyboard focus. */
+function PillChip({ className }: { className?: string }) {
+  return (
+    <span
+      data-slot="pill-chip"
+      aria-hidden
+      className={cn(
+        "pill-chip group-hover/button:translate-x-0.5 group-focus-visible/button:translate-x-0.5",
+        className
+      )}
+    >
+      <ArrowRight className="size-3.5" strokeWidth={1.5} />
+    </span>
+  )
+}
+
 function Button({
   className,
   variant = "default",
-  size = "default",
+  size,
   asChild = false,
+  arrow,
+  children,
   ...props
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean
+    /** Pill variants only: show the arrow chip (default true). */
+    arrow?: boolean
   }) {
   const Comp = asChild ? Slot.Root : "button"
+  const pill = isPill(variant)
+  const resolvedSize = size ?? (pill ? "pill" : "default")
+  const showArrow = pill && arrow !== false
 
   return (
     <Comp
       data-slot="button"
       data-variant={variant}
-      data-size={size}
-      className={cn(buttonVariants({ variant, size, className }))}
+      data-size={resolvedSize}
+      className={cn(buttonVariants({ variant, size: resolvedSize, className }))}
       {...props}
-    />
+    >
+      {showArrow ? (
+        <>
+          <Slot.Slottable>{children}</Slot.Slottable>
+          <PillChip />
+        </>
+      ) : (
+        children
+      )}
+    </Comp>
   )
 }
 
-export { Button, buttonVariants }
+export { Button, buttonVariants, PillChip }

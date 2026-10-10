@@ -53,6 +53,8 @@ export const chrome = {
   /** Accessible names only (not shown on screen). */
   mark: { label: "Orange" },
   gridButton: { label: "Open the chapter menu" },
+  /** Title of the chapter menu sheet and accessible name of the ruler. */
+  menu: { title: "Chapters" },
   apply: { label: "Apply", target: "apply" } satisfies ArrowButton,
   chapters: [
     { id: "model", name: "The Model", short: "Ch. 1" },
@@ -196,6 +198,25 @@ export const designPage = {
     tags: "Tags",
     hairlines: "Hairlines and grid",
     motion: "Easing",
+    playground: "Components on a fake progress",
+  },
+  playground: {
+    slider: "Fake progress",
+    hint: "Drag the slider or use the arrow keys. The demo ranges below stand in for the scroll script.",
+    stage: "Stage with chrome and hairlines",
+    splitReveal: "SplitReveal",
+    splitRevealInView: "SplitReveal, in view",
+    typewriter: "Typewriter",
+    blurFade: "BlurFade",
+    progressLine: "ProgressLine",
+    hairlineCaption: "Exits at each chapter change, viewfinder around the dashed target",
+    selected: "Selected",
+    readout: (p: number, chapter: string) => `${p.toFixed(3)} · ${chapter}`,
+    range: (a: number, b: number) => `${a.toFixed(3)} to ${b.toFixed(3)}`,
+    inOut: (enter: readonly [number, number], leave: readonly [number, number]) =>
+      `in ${enter[0].toFixed(3)} to ${enter[1].toFixed(3)} · out ${leave[0].toFixed(3)} to ${leave[1].toFixed(3)}`,
+    drawErase: (draw: readonly [number, number], erase: readonly [number, number]) =>
+      `draw ${draw[0].toFixed(3)} to ${draw[1].toFixed(3)} · erase ${erase[0].toFixed(3)} to ${erase[1].toFixed(3)}`,
   },
 } as const;
 

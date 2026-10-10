@@ -353,6 +353,24 @@
   background: var(--hairline);
 }
 
+/* Typewriter caret: a thin bar that blinks while idle (a small time-based effect). */
+@keyframes caret-blink {
+  0%,
+  55% {
+    opacity: 1;
+  }
+  56%,
+  100% {
+    opacity: 0;
+  }
+}
+@utility caret-blink {
+  animation: caret-blink 1.1s steps(1, end) infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
 /* ------------------------------------------------------------------ */
 /* Base                                                                */
 /* ------------------------------------------------------------------ */
