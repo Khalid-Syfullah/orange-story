@@ -23,6 +23,14 @@ import { scrollMapFor } from "./mobile";
  *   the same script plays over fewer screens: this file is the only place that knows.
  */
 
+/**
+ * How much of the way to a wheel's target Lenis goes each 60th of a second (frame-rate independent):
+ * a wheel notch arrives as a short glide of about a fifth of a second instead of a jump, so the
+ * stage's scrubbed motion (smooth in progress, `motion-kit.ts`) stays smooth on screen, without the
+ * page feeling as if it lagged behind the hand (see SCROLL.md, "Natural motion").
+ */
+export const WHEEL_LERP = 0.085;
+
 export interface ScrollToProgressOptions {
   /** Jump without animating. */
   immediate?: boolean;
@@ -79,7 +87,7 @@ export function createStageScroll({ section, frame, progress, velocity }: StageS
     autoRaf: false,
     smoothWheel: true,
     syncTouch: false,
-    lerp: 0.1,
+    lerp: WHEEL_LERP,
     anchors: false,
     autoResize: true,
   });

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { WORK, SCENES } from "@/scroll/script";
 
+import { BUILDERS } from "./acting";
 import { builderAt, cloudShiftAt, driftX, giantOrangeAt, RISE_FROM, WRAP_SPAN } from "./work-sky";
 
 describe("the work", () => {
@@ -14,10 +15,16 @@ describe("the work", () => {
     expect(giantOrangeAt((WORK.rise[0] + WORK.rise[1]) / 2).y).toBeGreaterThan(-RISE_FROM);
   });
 
-  it("brings the builder up with the orange and works only once there", () => {
-    expect(builderAt(WORK.rise[0]).rotate).toBe(0);
+  it("brings the builder up with the orange and works his mallet only once there", () => {
     expect(builderAt(WORK.rise[1]).y).toBeCloseTo(0);
     expect(builderAt(WORK.rise[0]).opacity).toBe(0);
+    const arm = BUILDERS.work.forearm;
+    expect(arm(WORK.strikes[0])).toBe(0);
+    expect(WORK.strikes[0]).toBeGreaterThan((WORK.rise[0] + WORK.rise[1]) / 2);
+    // His mallet is on the left: a blow turns his forearm counter-clockwise.
+    const values = Array.from({ length: 801 }, (_, i) => arm(WORK.strikes[0] + ((WORK.strikes[1] - WORK.strikes[0]) * i) / 800));
+    expect(Math.max(...values)).toBeGreaterThan(0.15);
+    expect(Math.min(...values)).toBeLessThan(-0.08);
   });
 
   it("shifts clouds right as the story advances, near clouds more", () => {

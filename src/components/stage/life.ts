@@ -120,8 +120,9 @@ const tmpA: [number, number] = [0, 0];
 const tmpP: [number, number] = [0, 0];
 
 /**
- * Bends one point of a plate the way the plate shader bends its mesh: the arm turns on the shoulder,
- * the head on the neck, the chest (and all above) rises, the hem swings, and the whole figure turns
+ * Bends one point of a plate the way the plate shader bends its mesh: the arm turns on the shoulder
+ * (a part's fingers turn on their knuckles, and curl in toward them), the head on the neck (a part's
+ * hand on its wrist), the chest (and all above) rises, the hem swings, and the whole figure turns
  * about its feet. `q` and the pivots are in q space (plate heights, y up); `w` the rig's weights at
  * the point (breath, hem, head, arm); `zone` the share of the point that belongs to this person;
  * `u` its fraction from the left (the hem's ripple runs across the plate).
@@ -134,7 +135,7 @@ export function deformQ(
   life: LifeSample,
   foot: readonly [number, number],
   neck: readonly [number, number],
-  arm: { shoulder: readonly [number, number]; angle: number } | null,
+  arm: { shoulder: readonly [number, number]; angle: number; curl?: number } | null,
   out: [number, number] = [0, 0],
 ): [number, number] {
   let x = q[0];
@@ -145,6 +146,12 @@ export function deformQ(
     turnAbout(tmpP, arm.shoulder, arm.angle, tmpA);
     x += (tmpA[0] - x) * w[3];
     y += (tmpA[1] - y) * w[3];
+    // A part's fingers curling closed shorten in toward the knuckles (the shader's own step).
+    const curl = arm.curl ?? 0;
+    if (curl !== 0) {
+      x += (arm.shoulder[0] + (x - arm.shoulder[0]) * (1 - curl) - x) * w[3];
+      y += (arm.shoulder[1] + (y - arm.shoulder[1]) * (1 - curl) - y) * w[3];
+    }
   }
   if (w[2] > 0) {
     tmpP[0] = x;

@@ -47,17 +47,22 @@ export interface RigFigure {
 
 const boxCentre = (b: RigBox): Pair => [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2];
 
-/** A person with its defaults: the neck under the head, the pivot under the hem (or the plate's foot). */
+/**
+ * A person with its defaults: the neck under the head, the pivot under the hem (or the plate's foot).
+ * A part's hand and fingers (`hand` on `wrist`, or a whole arm's `forearm` on its `elbow`; `fingers`
+ * on `knuckles`) take the head's and the arm's places: the same joints, the same weight channels and
+ * the same turns in the shader.
+ */
 function resolve(f: PlateRigFigure): RigFigure {
   const hem = f.hem ?? null;
   const chest = f.chest ?? null;
-  const head = f.head ?? null;
-  const arm = f.arm ?? null;
+  const head = f.head ?? f.hand ?? f.forearm ?? null;
+  const arm = f.arm ?? f.fingers ?? null;
   const any = chest ?? head ?? hem ?? arm;
   const centre = any ? boxCentre(any)[0] : (f.pivot?.[0] ?? 0.5);
   const pivot: Pair = f.pivot ?? (hem ? [boxCentre(hem)[0], hem[3]] : [centre, 1]);
-  const neck: Pair = f.neck ?? (head ? [boxCentre(head)[0], head[3]] : chest ? [boxCentre(chest)[0], chest[1]] : pivot);
-  const shoulder: Pair = f.shoulder ?? (arm ? [arm[0], arm[3]] : neck);
+  const neck: Pair = f.neck ?? f.wrist ?? f.elbow ?? (head ? [boxCentre(head)[0], head[3]] : chest ? [boxCentre(chest)[0], chest[1]] : pivot);
+  const shoulder: Pair = f.shoulder ?? f.knuckles ?? (arm ? [arm[0], arm[3]] : neck);
   return { hem, chest, head, arm, pivot, neck, shoulder, centre };
 }
 
@@ -202,16 +207,19 @@ export function rigProblems(rig: PlateRig | undefined): string[] {
   const problems: string[] = [];
   const unit = (n: number) => Number.isFinite(n) && n >= 0 && n <= 1;
   const check = (f: PlateRigFigure, where: string) => {
-    for (const name of ["hem", "chest", "head", "arm"] as const) {
+    for (const name of ["hem", "chest", "head", "arm", "hand", "forearm", "fingers"] as const) {
       const box = f[name];
       if (!box) continue;
       if (box.length !== 4 || !box.every(unit)) problems.push(`${where}${name} is not four fractions`);
       else if (box[0] >= box[2] || box[1] >= box[3]) problems.push(`${where}${name} is empty or upside down`);
     }
-    for (const name of ["pivot", "neck", "shoulder"] as const) {
+    for (const name of ["pivot", "neck", "shoulder", "wrist", "elbow", "knuckles"] as const) {
       const p = f[name];
       if (p && (p.length !== 2 || !p.every(unit))) problems.push(`${where}${name} is not a point on the image`);
     }
+    // A hand takes the head's place, fingers the arm's: one or the other.
+    if ([f.head, f.hand, f.forearm].filter(Boolean).length > 1) problems.push(`${where}has more than one of a head, a hand and a forearm`);
+    if (f.arm && f.fingers) problems.push(`${where}has both an arm and fingers`);
   };
   check(rig, "");
   rig.figures?.forEach((f, i) => check(f, `figures[${i}].`));

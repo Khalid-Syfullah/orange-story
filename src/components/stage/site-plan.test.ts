@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { SITE } from "@/scroll/script";
 
-import { FIELD_FROM, FIELD_TO, builderSwing, leavesOpacity, panelMounted, panelOpacity, seaOpacity, shrinkAt, siteShift, sideOpacity, tileField, topDownOpacity } from "./site-plan";
+import { BUILDERS } from "./acting";
+import { FIELD_FROM, FIELD_TO, leavesOpacity, panelMounted, panelOpacity, seaOpacity, shrinkAt, siteShift, sideOpacity, tileField, topDownOpacity } from "./site-plan";
 
 describe("site plan", () => {
   it("starts at ground level: the side view shows, the top-down set does not", () => {
@@ -46,9 +47,15 @@ describe("site plan", () => {
     expect(panelMounted(SITE.end + 0.1)).toBe(false);
   });
 
-  it("lets the builders settle before the view tilts away", () => {
-    expect(builderSwing(0, SITE.rise[1])).toBe(0);
-    expect(builderSwing(0, (SITE.work[0] + SITE.work[1]) / 2)).not.toBe(0);
+  it("works the two builders' mallets half a blow apart, and has them at rest before the view tilts away", () => {
+    const left = BUILDERS.siteLeft.forearm;
+    const right = BUILDERS.siteRight.forearm;
+    // One winds up as the other strikes: the left one's mallet turns clockwise to strike, the right one's counter-clockwise.
+    const mid = (SITE.strikes.left[0] + SITE.strikes.left[1]) / 2;
+    expect(Math.abs(left(mid)) + Math.abs(right(mid))).toBeGreaterThan(0);
+    expect(SITE.strikes.right[0] - SITE.strikes.left[0]).toBeCloseTo((0.5 * (SITE.strikes.left[1] - SITE.strikes.left[0])) / SITE.blows, 9);
+    expect(left(SITE.sideOut[1])).toBe(0);
+    expect(right(SITE.sideOut[1])).toBe(0);
   });
 
   it("is a pure function of progress", () => {

@@ -3,5 +3,14 @@
   "matte": {
     "defringe": 0
   },
-  "points": {}
+  "points": {
+    "stem": [
+      0.52,
+      0.17
+    ],
+    "centre": [
+      0.47,
+      0.57
+    ]
+  }
 }

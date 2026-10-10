@@ -33,6 +33,8 @@ import {
   treeHazeAt,
   TREE_HAZE,
   TREE_SOFT_BLUR,
+  treeShakeAt,
+  trimTurnAt,
   wateringAt,
   womanAt,
   type FruitFrame,
@@ -46,6 +48,7 @@ import { useSceneLayer, useStageProgress } from "./stage-context";
 import { constellation, starReveal, starsDim } from "./stars-plan";
 import { Twinkle } from "./twinkle";
 import { useTextHaze } from "./use-text-haze";
+import { WaterStream } from "./water-stream";
 import { driftX } from "./work-sky";
 
 /**
@@ -57,9 +60,11 @@ import { driftX } from "./work-sky";
  * woman with the watering can (from the left) and the man with the shears (from the right) walk in
  * and settle either side of it.
  *
- * Then the loop, which runs on idle time and no longer follows the scroll: she waters (three stream
- * frames), he snips and cuts an orange free, oranges drop now and then, and three cloud plates drift
- * to the right. It pauses with the idle clock (offscreen, hidden tab, reduced motion) and fades out
+ * Then the loop, which runs on idle time and no longer follows the scroll: she tips her jug and the
+ * water runs from its spout in a parabola that follows the tilt and breaks into drops
+ * (`WaterStream`); he squeezes his shears (his arms turning on the shoulder, the closed frame taking
+ * over inside the quick part of the squeeze) and cuts an orange free, which falls as the tree
+ * shakes; oranges drop now and then; three cloud plates drift to the right. It pauses with the idle clock (offscreen, hidden tab, reduced motion) and fades out
  * when the story is scrolled back before the keepers have settled. The wordmark, the subtitle and the
  * footer are DOM (`Wordmark` in `beat-content.tsx`) inside the closing viewfinder.
  */
@@ -78,6 +83,9 @@ const WOMAN_PARTS: readonly FigurePart[] = [{ id: "finale/woman-arm" }];
 const WOMAN_HOLDS: readonly FigureHold[] = [{ at: SPOUT, on: "finale/woman-arm", turn: (p, t) => canTip(wateringAt(t, WATER), loopWeight(p)) }];
 const MAN_PARTS: readonly FigurePart[] = [{ id: "finale/man-arms-1" }, { id: "finale/man-arms-2" }];
 const MAN_HOLDS: readonly FigureHold[] = [{ at: CUT_POINT, on: "finale/man-arms-1" }];
+
+/** The water stands where the painted stream frames did, just in front of her arm. */
+const WATER_DEPTH = plateEntry("finale/water-1").depth;
 
 /** The keepers are livelier than the rest of the cast: they breathe and shift their weight through their loop. */
 const KEEPER_LIFE = 1.3;
@@ -147,8 +155,9 @@ function Keepers({ clearing, fruitClearing }: { clearing: PlateClearing; fruitCl
 
   // Loop values, written on idle time every frame (and at rest while the loop is faded out).
   const tip = useMotionValue(0);
-  const streams = React.useMemo(() => [motionValue(0), motionValue(0), motionValue(0)], []);
   const closed = useMotionValue(0);
+  const open = useTransform(closed, (c) => 1 - c);
+  const squeeze = useMotionValue(0);
   const bob = useMotionValue(0);
   const cut = React.useMemo(() => newFruit(), []);
   const drops = React.useMemo(() => Array.from({ length: DROP_COUNT }, newFruit), []);
@@ -190,8 +199,8 @@ function Keepers({ clearing, fruitClearing }: { clearing: PlateClearing; fruitCl
     const t = clock.time();
     const water = wateringAt(t, scratch.water);
     tip.set(-CAN_TIP * water.tilt * weight);
-    for (let i = 0; i < streams.length; i++) streams[i].set(i === water.frame ? water.stream * weight : 0);
     closed.set(shearsAt(t) * weight);
+    squeeze.set(trimTurnAt(t) * weight);
     bob.set(armBobAt(t) * weight);
     setFruit(cut, cutFruitAt(t, scratch.fruit), weight);
     for (let i = 0; i < drops.length; i++) setFruit(drops[i], dropAt(i, t, scratch.fruit), weight);
@@ -201,13 +210,11 @@ function Keepers({ clearing, fruitClearing }: { clearing: PlateClearing; fruitCl
     <>
       <Plate id="finale/woman-body" x={womanX} y={womanY} layer={LAYER.body} clearing={clearing} life={woman} />
       <Plate id="finale/woman-arm" x={womanX} y={womanY} rotate={tip} layer={LAYER.arm} clearing={clearing} ride={woman.ride("finale/woman-arm")} />
-      <Plate id="finale/water-1" position={SPOUT} x={womanX} y={womanY} opacity={streams[0]} layer={LAYER.stream} clearing={fruitClearing} ride={stream} />
-      <Plate id="finale/water-2" position={SPOUT} x={womanX} y={womanY} opacity={streams[1]} layer={LAYER.stream} clearing={fruitClearing} ride={stream} />
-      <Plate id="finale/water-3" position={SPOUT} x={womanX} y={womanY} opacity={streams[2]} layer={LAYER.stream} clearing={fruitClearing} ride={stream} />
+      <WaterStream spout={SPOUT} x={womanX} y={womanY} ride={stream} weight={loopWeight} clearing={fruitClearing} layer={LAYER.stream} depth={WATER_DEPTH} />
 
       <Plate id="finale/man-body" x={manX} y={manY} layer={LAYER.body} clearing={clearing} life={man} />
-      <Plate id="finale/man-arms-1" x={manX} y={armY} layer={LAYER.arm} clearing={clearing} ride={man.ride("finale/man-arms-1")} />
-      <Plate id="finale/man-arms-2" x={manX} y={armY} opacity={closed} layer={LAYER.arm + 0.5} clearing={clearing} ride={man.ride("finale/man-arms-2")} />
+      <Plate id="finale/man-arms-1" x={manX} y={armY} rotate={squeeze} opacity={open} layer={LAYER.arm} clearing={clearing} ride={man.ride("finale/man-arms-1")} />
+      <Plate id="finale/man-arms-2" x={manX} y={armY} rotate={squeeze} opacity={closed} layer={LAYER.arm + 0.5} clearing={clearing} ride={man.ride("finale/man-arms-2")} />
 
       <Fruit motion={cut} clearing={fruitClearing} ride={man.held(0)} />
       {drops.map((drop, i) => (
@@ -215,6 +222,14 @@ function Keepers({ clearing, fruitClearing }: { clearing: PlateClearing; fruitCl
       ))}
     </>
   );
+}
+
+/** The tree shakes as the man cuts an orange free (idle time, faded in with the loop). */
+function useTreeShake(progress: MotionValue<number>): MotionValue<number> {
+  const clock = useIdleClock();
+  const shake = useMotionValue(0);
+  useFrame(() => shake.set(treeShakeAt(clock.time()) * loopWeight(progress.get())), -0.5);
+  return shake;
 }
 
 export function FinaleArt({ scene }: SceneArtProps) {
@@ -230,9 +245,8 @@ export function FinaleArt({ scene }: SceneArtProps) {
   const sink = useTransform(progress, (p) => astronomerOffset(p, depth));
   const cloudX = useTransform(progress, oldCloudShift);
   const cloudAlpha = useTransform(progress, oldCloudOpacity);
-  const tree = useTransform(progress, treeAt);
-  const treeY = useTransform(tree, (t) => t.y);
-  const treeScale = useTransform(tree, (t) => t.scale);
+  const treeY = useTransform(progress, (p) => treeAt(p).y);
+  const treeShake = useTreeShake(progress);
   // Behind the wordmark (inside the closing frame) the tree, the keepers and the clouds recede into
   // the sky's haze, and the focus moves off the tree as the wordmark arrives.
   const haze = useTextHaze(OVER_TREE, { strength: TREE_HAZE });
@@ -256,7 +270,7 @@ export function FinaleArt({ scene }: SceneArtProps) {
       <Plate id="stars/platform" y={sink} layer={LAYER.platform} />
       <Plate id="stars/astronomer" y={sink} layer={LAYER.astronomer} life={astronomer} />
 
-      <Plate id="finale/tree" y={treeY} scale={treeScale} blur={treeBlur} clearing={haze} layer={LAYER.tree} />
+      <Plate id="finale/tree" y={treeY} rotate={treeShake} blur={treeBlur} clearing={haze} layer={LAYER.tree} />
       <Keepers clearing={keepersHaze} fruitClearing={haze} />
     </>
   );

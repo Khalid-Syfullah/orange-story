@@ -106,14 +106,21 @@ export interface PartRide {
   rotate: number;
 }
 
-/** Scrubbed acting for one person, written by an `acting` callback: extra turns in radians. */
+/**
+ * Scrubbed acting for one person, written by an `acting` callback: extra turns in radians. On a part
+ * of a figure (an arm, a forearm), `head` turns its hand on the wrist and `arm` its fingers on the
+ * knuckles; `curl` closes the fingers in toward the knuckles (0 open, about 0.3 a closed hand seen
+ * from the palm).
+ */
 export interface FigureActing {
   /** The whole figure about its feet. */
   sway: number;
-  /** The head on the neck. */
+  /** The head on the neck (a part's hand on its wrist). */
   head: number;
-  /** A raised arm on the shoulder. */
+  /** A raised arm on the shoulder (a part's fingers on their knuckles). */
   arm: number;
+  /** A part's fingers closing in toward their knuckles, 0 to about 0.3. */
+  curl: number;
 }
 
 export interface FigurePart {
@@ -154,8 +161,8 @@ interface BodyPoint {
   w: [number, number, number, number];
   index: number;
   zone: number;
-  /** The raised arm of the person it belongs to (its turn is updated every frame). */
-  arm: { shoulder: [number, number]; angle: number };
+  /** The raised arm of the person it belongs to (its turn and curl are updated every frame). */
+  arm: { shoulder: [number, number]; angle: number; curl: number };
 }
 
 interface PartState extends BodyPoint {
@@ -199,8 +206,9 @@ export class FigureLife {
   readonly figures: readonly RigFigure[];
   /** Each person's life this frame. */
   readonly samples: LifeSample[];
-  /** The raised arm's turn this frame (the first person's). */
+  /** The raised arm's turn this frame (the first person's), and a part's fingers' curl. */
   arm = 0;
+  curl = 0;
   /** The body's mesh (the figure lives while it is drawn and in view). */
   mesh: Mesh | null = null;
   private readonly aspect: number;
@@ -210,7 +218,7 @@ export class FigureLife {
   private readonly parts: PartState[];
   private readonly holds: HoldState[];
   private readonly rides: Map<string, PartRide>;
-  private readonly act: FigureActing = { sway: 0, head: 0, arm: 0 };
+  private readonly act: FigureActing = { sway: 0, head: 0, arm: 0, curl: 0 };
   private readonly placed = new WeakSet<ShaderMaterial>();
 
   constructor(entry: PlateEntry, parts: readonly FigurePart[] = [], holds: readonly FigureHold[] = []) {
@@ -237,7 +245,7 @@ export class FigureLife {
     const w: [number, number, number, number] = [0, 0, 0, 0];
     if (f) figureWeights(f, u, v, this.aspect, w);
     const shoulder = f ? figurePivots(f, this.aspect).shoulder : ([0, 0] as [number, number]);
-    return { q: [u * this.aspect, 1 - v], u, w, index, zone, arm: { shoulder, angle: 0 } };
+    return { q: [u * this.aspect, 1 - v], u, w, index, zone, arm: { shoulder, angle: 0, curl: 0 } };
   }
 
   /** Where a part rides this frame, by plate id. */
@@ -260,6 +268,7 @@ export class FigureLife {
     const s = this.samples[point.index];
     const pv = this.pivots[point.index];
     point.arm.angle = point.index === 0 ? this.arm : 0;
+    point.arm.curl = point.index === 0 ? this.curl : 0;
     deformQ(point.q, point.w, point.zone, point.u, s, pv.foot, pv.neck, point.arm, tmpQ);
     out.x = (tmpQ[0] - point.q[0]) * this.height;
     out.y = (tmpQ[1] - point.q[1]) * this.height;
@@ -273,10 +282,14 @@ export class FigureLife {
       act.sway = 0;
       act.head = 0;
       act.arm = 0;
+      act.curl = 0;
       acting(p, t, i, act);
       s.head += act.head;
       s.sway += act.sway;
-      if (i === 0) this.arm = act.arm;
+      if (i === 0) {
+        this.arm = act.arm;
+        this.curl = act.curl;
+      }
     }
     for (const part of this.parts) {
       this.bend(part, part.ride);
@@ -318,7 +331,7 @@ export class FigureLife {
     }
     this.placed.add(material);
     const shoulder = this.pivots[0]?.shoulder ?? [0, 0];
-    (u.armTurn.value as Vector4).set(shoulder[0], shoulder[1], this.arm, 0);
+    (u.armTurn.value as Vector4).set(shoulder[0], shoulder[1], this.arm, this.curl);
   }
 }
 
@@ -341,7 +354,8 @@ export function useFigureLife(entry: PlateEntry, { enabled = true, strength = 1,
     const p = progress?.get() ?? 0;
     const mesh = life.mesh;
     const present = (scene ? scene.presence(p) : 1) > 0.001;
-    if (present && mesh && shownInTree(mesh) && clock.inView(mesh)) clock.hold(key);
+    // Only a figure with idle life keeps the clock (and the canvas) running: one driven by its acting alone (strength 0) moves only with the scroll.
+    if (strength > 0 && present && mesh && shownInTree(mesh) && clock.inView(mesh)) clock.hold(key);
     else clock.drop(key);
     life.step(p, clock.time(), strength, acting ?? NO_ACTING);
   }, -0.5);

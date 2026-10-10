@@ -305,7 +305,7 @@ export const FRAMING = {
     fov: 38,
     desktop: { share: 0.8, range: [0.7, 0.9], at: [0.72, 0.5] },
     phone: { share: 0.55, range: [0.5, 0.65], at: [0.62, 0.5] },
-    note: "the plan, brought forward, opens to her left before the camera pushes into it",
+    note: "the plan opens in her hands, to her left, before the camera pushes into it",
   },
   siteBuilder: {
     scene: "site",

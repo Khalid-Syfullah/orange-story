@@ -17,6 +17,7 @@
 
 import { plateEntry, platePoint } from "@/art/manifest";
 import type { HairlineCue } from "@/components/chrome/hairlines";
+import { dragAxis } from "@/lib/flight";
 import type { ProgressEnvelope, ProgressRange } from "@/lib/progress";
 
 import type { CopyPath } from "./copy-path";
@@ -468,9 +469,14 @@ const [FABRIC_COVERED, FABRIC_CLEARING] = peakOf("fabric");
 export const ASCENT = {
   /** The statue and the minaret rise. */
   rise: [at("ascent", 0), at("ascent", 1)] as ProgressRange,
-  /** How far (world units) the statue has risen by the end, and the power of the rise's curve (slowly at first, then faster: the trunk "keeps growing"). */
+  /**
+   * How far (world units) the statue has risen by the end, and the rise's curve (`ascentRiseShare`):
+   * from rest, faster and faster as a power of the time (the trunk "keeps growing"), then over the
+   * last `riseSettle` of the scene slowing to a stop as the camera reaches the branch.
+   */
   riseTotal: 10,
   risePower: 2,
+  riseSettle: 0.3,
   /** The stone-to-bark front: [progress, world height] pairs, then it rides the top of the trunk. */
   front: [
     [at("ascent", 0), -5.2],
@@ -492,25 +498,41 @@ export const ASCENT = {
 
 /**
  * The graft's own timings (progress). The art in `src/components/stage/graft-hands.ts` choreographs
- * on these: the hands come in carrying the cutting, fit it to the cleft, wrap the twine, tie the
- * knot in three steps (each step swaps in the next knot frame), then withdraw. The camera is steady
+ * on these: the hands rise in from below, the left carrying the cutting, which it fits to the cleft
+ * (lining it up over the cleft, then pressing it in), lets go of and steadies the branch with; the
+ * right winds the twine round the joint and ties the knot in three pulls (each one closes the
+ * fingers on the twine, pulls, gives a little and lets the stem spring back; the next knot frame
+ * swaps in at the quickest part of the pull); then both let go and drop away. The camera is steady
  * on the branch until `pullOut` (see CAMERA), when it dollies up and pulls out; the fruiting tree
  * fills in with oranges among the leaves while it does.
  */
 export const GRAFT = {
-  /** The hands enter from the lower corners. */
+  /** The hands rise in from below the frame; the left (with the cutting) first. */
   enter: [at("graft", 0.02), at("graft", 0.16)] as ProgressRange,
-  /** The cutting is fitted to the cleft. */
+  /** The right hand comes in this share of `enter` after the left, and arrives as much later. */
+  enterLag: 0.22,
+  /** The cutting is fitted to the cleft: lined up over it, then pressed in. */
   fit: [at("graft", 0.16), at("graft", 0.28)] as ProgressRange,
-  /** The twine winds around the joint. */
+  /** Within `fit`: the share spent lining the cutting up over the cleft (the rest presses it in and settles). */
+  fitAlign: 0.42,
+  /** The left hand lets go of the seated cutting and moves to steady the branch beside the joint. */
+  steady: [at("graft", 0.275), at("graft", 0.335)] as ProgressRange,
+  /** The twine winds round the joint: the right hand circles it `wraps` times. */
   wrap: [at("graft", 0.28), at("graft", 0.38)] as ProgressRange,
+  wraps: 2,
   /** The knot: three steps, [start, end] each. */
   knot: [
     [at("graft", 0.38), at("graft", 0.44)],
     [at("graft", 0.44), at("graft", 0.5)],
     [at("graft", 0.5), at("graft", 0.56)],
   ] as readonly ProgressRange[],
-  /** The hands let go and leave. */
+  /**
+   * Within each knot step (shares of it): the hand goes back to the knot (`reach`), its fingers close
+   * on the twine there (`grasp`), it pulls (`pull`; the next knot frame swaps in over `swap`, at the
+   * quickest part of the pull), and the twine gives a little and the fingers ease (`give`).
+   */
+  knotBeats: { reach: [0, 0.14], grasp: [0.12, 0.24], pull: [0.24, 0.6], swap: [0.36, 0.46], give: [0.6, 0.86] } as const,
+  /** The hands let go and leave: the right first, then the left from the branch. */
   exit: [at("graft", 0.56), at("graft", 0.64)] as ProgressRange,
   /** The camera dollies up and pulls out from here (the second graft camera key). */
   pullOut: [at("graft", 0.62), at("pluck", 0)] as ProgressRange,
@@ -520,19 +542,22 @@ export const GRAFT = {
 
 /**
  * The pluck's own timings (progress). The art in `src/components/stage/pluck-harvest.ts` choreographs
- * on these: the hand rises from the bottom center to the hero orange, closes on it (where the
- * "We get you found." beat arrives), then the camera dollies down through the branches (`dolly`, the
- * pluck camera keys) while the hand pulls the fruit free and carries it down with the camera. The
- * foliage layers fall away behind the camera, the hand lets go, and the harvester is revealed
- * holding the orange in his right hand (his arm arrives once the fruit has reached it).
+ * on these: a hand reaches up from below the frame to the one special orange (an arm with an elbow,
+ * its hand on an arc), its fingers close round it (where the "We get you found." beat arrives), it
+ * tugs until the stem snaps and follows through, the branches shaking as they spring back; then the
+ * camera dollies down through the branches (`dolly`, the pluck camera keys) while the hand carries
+ * the fruit down with it, the foliage falling away behind. The harvester comes into view, his open
+ * arm swings up about his shoulder to take the fruit, it changes hands (`handoff`), the hand that
+ * carried it opens and drops away, and his head turns to the orange a beat after his arm arrives.
  */
 export const PLUCK = {
-  /** The hand rises from below the frame to the orange. */
-  rise: [at("pluck", 0.02), at("pluck", 0.24)] as ProgressRange,
-  /** The fingers close on the orange. */
-  grasp: [at("pluck", 0.22), at("pluck", 0.3)] as ProgressRange,
-  /** The tug: the fruit comes free of its branch. */
-  tug: [at("pluck", 0.33), at("pluck", 0.43)] as ProgressRange,
+  /** The hand reaches up from below the frame to the orange. */
+  rise: [at("pluck", 0.02), at("pluck", 0.22)] as ProgressRange,
+  /** The fingers close round the orange. */
+  grasp: [at("pluck", 0.21), at("pluck", 0.29)] as ProgressRange,
+  /** The tug: the hand pulls, the stem stretches and snaps `snap` of the way through, and the hand follows through. */
+  tug: [at("pluck", 0.31), at("pluck", 0.43)] as ProgressRange,
+  snap: 0.55,
   /** The camera dollies down to the harvester; the hand and the fruit travel with it. */
   dolly: [at("pluck", 0.35), at("pluck", 0.74)] as ProgressRange,
   /** The near and middle foliage fall away as the camera passes below the branches. */
@@ -541,40 +566,50 @@ export const PLUCK = {
     mid: [at("pluck", 0.44), at("pluck", 0.64)] as ProgressRange,
   },
   /**
-   * The harvester appears (body, arm with the orange, head) as the camera comes down to him: he
-   * enters the frame from below while the dolly is under way, and the camera lands on him at
-   * `dolly[1]`.
+   * The harvester settles into view as the camera comes down to him: he enters the frame from below
+   * while the dolly is under way, and the camera lands on him at `dolly[1]`.
    */
   reveal: [at("pluck", 0.44), at("pluck", 0.66)] as ProgressRange,
-  /** The hand lets go and drops away, as the harvester's own hand takes the fruit (`handoff`). */
-  release: [at("pluck", 0.71), at("pluck", 0.8)] as ProgressRange,
-  /** The fruit becomes the one in the harvester's hand (once the carry has all but landed): his arm arrives as the hero orange gives way. */
-  handoff: [at("pluck", 0.71), at("pluck", 0.77)] as ProgressRange,
+  /** His open arm swings up about his shoulder to meet the fruit coming down. */
+  armUp: [at("pluck", 0.56), at("pluck", 0.725)] as ProgressRange,
+  /** The fruit changes hands: from the hand that carried it into his palm (both still). */
+  handoff: [at("pluck", 0.742), at("pluck", 0.752)] as ProgressRange,
+  /** The hand that carried it opens and drops away out of the frame. */
+  release: [at("pluck", 0.752), at("pluck", 0.84)] as ProgressRange,
 } as const;
 
 /**
  * The share's own timings (progress). The art in `src/components/stage/share-cut.ts` choreographs
- * on these: his left hand comes in with the knife and plunges it down through the orange he holds
- * (the whole orange gives way to its two peels as the blade passes), the knife withdraws, the halves
- * open and their cut faces are revealed, a second hand reaches in from center left and takes the
- * left half, and both hands bring the halves together and hold them (the harvest, shared). The
- * camera pushes into the orange from `cut[0]`, holds on the halves, and pushes in again under the
- * viewfinder and the sand.
+ * on these: his left hand brings the knife up over the orange he holds and cuts down through it (a
+ * small lift first, slow through the rind, quicker through the flesh, slow again to his palm), the
+ * whole orange giving way to its two peels under the blade; the knife withdraws; the halves tip
+ * apart about their cut edges, rock and settle in his palm, turning their cut faces up; a second
+ * hand rises from center left to the left half, takes it and draws it a little away, and both hands
+ * bring the halves together and hold them (the harvest, shared). The camera pushes into the orange
+ * from `cut[0]`, holds on the halves, and pushes in again under the viewfinder and the sand.
  */
 export const SHARE = {
-  /** The knife hand comes in above the orange. */
+  /** The knife hand comes up from his side to above the orange. */
   knifeIn: [at("share", 0.02), at("share", 0.11)] as ProgressRange,
-  /** The blade plunges down through the orange. */
+  /** The blade cuts down through the orange. */
   cut: [at("share", 0.11), at("share", 0.2)] as ProgressRange,
-  /** Under the blade: the whole orange gives way to its two peels. */
-  split: [at("share", 0.117), at("share", 0.127)] as ProgressRange,
-  /** The knife hand withdraws. */
+  /**
+   * The cut's pace, as shares of `cut`: where the blade has lifted a little before it goes in
+   * (`lift`), come through the top of the rind (`rind`), through the flesh (`flesh`); then it slows
+   * to his palm.
+   */
+  cutPace: { lift: 0.12, rind: 0.38, flesh: 0.76 } as const,
+  /** Under the blade, as it comes into the rind: the whole orange gives way to its two peels. */
+  split: [at("share", 0.138), at("share", 0.148)] as ProgressRange,
+  /** The knife hand draws the blade back out and drops to his side. */
   knifeOut: [at("share", 0.2), at("share", 0.29)] as ProgressRange,
-  /** The halves part and their cut faces are revealed. */
+  /** The halves tip apart about their cut edges, rock and settle in his palm. */
   open: [at("share", 0.19), at("share", 0.31)] as ProgressRange,
-  /** The second hand reaches in from center left to the left half. */
+  /** The halves turn their cut faces up: the frames swap in the quick part of the opening. */
+  faces: [at("share", 0.215), at("share", 0.235)] as ProgressRange,
+  /** The second hand rises from center left to the left half. */
   reach: [at("share", 0.27), at("share", 0.38)] as ProgressRange,
-  /** It takes the half and draws it a little away. */
+  /** It takes the half (the half passes into it) and draws it a little away. */
   take: [at("share", 0.38), at("share", 0.46)] as ProgressRange,
   /** Both hands bring the halves together; then they hold. */
   together: [at("share", 0.46), at("share", 0.58)] as ProgressRange,
@@ -591,26 +626,49 @@ export const WORK = {
   clouds: [at("work", 0), at("work", 1)] as ProgressRange,
   /** The giant orange and the builder rise into view, as the third card arrives. */
   rise: [beatOf("card-3").in, at("work", 0.99)] as ProgressRange,
+  /** The builder works with his mallet once he is up (wind-up, strike, recoil, lift back). */
+  strikes: [at("work", 0.83), at("work", 0.995)] as ProgressRange,
+  /** How many blows over `strikes`. */
+  blows: 2,
 } as const;
 
 /**
  * The blueprint's own timings (progress). The art in `src/components/stage/blueprint-plan.ts`
- * choreographs on these: the architect brings the folded drawing forward (`bring`), unfolds it panel
- * by panel (`panels`, four equal slices of the stretch) while the camera pushes in, and the workers
- * move while the plan is still closed.
+ * choreographs on these: the builder works on his platform with his mallet (`strikes`, `blows` of
+ * them) while the camera is on him, the camera pans down to the architect holding the folded drawing
+ * (`toArchitect`), and the drawing unfolds in her hands, panel by panel on its hinges (`folds`, the
+ * panel next to her hands first), while the camera pushes in.
  */
 export const BLUEPRINT = {
-  /** The folded drawing comes out and settles in front of the scaffold. */
-  bring: [at("blueprint", 0.2), at("blueprint", 0.36)] as ProgressRange,
-  /** The four fold panels open one after another. */
+  /** The builder's mallet: wind-up, strike, recoil, lift back. */
+  strikes: [at("blueprint", 0.01), at("blueprint", 0.37)] as ProgressRange,
+  /** How many blows over `strikes`. */
+  blows: 3,
+  /** The camera pans down the scaffold to the architect. */
+  toArchitect: [at("blueprint", 0.2), at("blueprint", 0.36)] as ProgressRange,
+  /** The drawing unfolds. */
   panels: [at("blueprint", 0.36), at("blueprint", 0.8)] as ProgressRange,
-  /** The builder's to-and-fro on his platform. */
-  work: [at("blueprint", 0), at("blueprint", 0.5)] as ProgressRange,
+  /** Each fold swings open on its hinge (the third panel's off the one in her hands, then the second's, then the first's), each before the one before has settled. */
+  folds: [
+    [at("blueprint", 0.36), at("blueprint", 0.58)],
+    [at("blueprint", 0.47), at("blueprint", 0.69)],
+    [at("blueprint", 0.58), at("blueprint", 0.8)],
+  ] as readonly ProgressRange[],
 } as const;
 
 /**
+ * Where the architect holds the drawing: the grip points of its last panel (the one that stays in her
+ * hands) on her own grip points, both from the art; the drawing stands at her depth, just in front of
+ * her, so the camera's push never slides it off her hands.
+ */
+const PLAN_GRIP = platePoint("blueprint/plan-4", "grip-left");
+const ARCHITECT_GRIP = platePoint("blueprint/architect", "grip-left");
+export const PLAN_HELD: readonly [number, number] = [round6(ARCHITECT_GRIP[0] - PLAN_GRIP[0]), round6(ARCHITECT_GRIP[1] - PLAN_GRIP[1])];
+export const PLAN_DEPTH = round6(plateEntry("blueprint/architect").depth - 0.01);
+
+/**
  * The site's own timings (progress). The art in `src/components/stage/site-plan.ts` choreographs on
- * these: the builders work at ground level, the camera pulls back from a builder to the whole site
+ * these: the builders work at ground level with their mallets (`strikes`), the camera pulls back from a builder to the whole site
  * and rises to a straight top-down view (`rise`, between the site's second and fourth camera keys),
  * the side-view plates give way to the matching top-down set (`sideOut`, `topDownIn`), the top-down view zooms out and shrinks into the left half (`shrink`,
  * the pull camera move) while the tiled ground grows into a large field around it (`tiles`), and
@@ -618,8 +676,12 @@ export const BLUEPRINT = {
  * it (`end`).
  */
 export const SITE = {
-  /** The builders' to-and-fro while the camera is still near the ground. */
-  work: [at("site", 0.12), at("site", 0.36)] as ProgressRange,
+  /** The two standing builders' mallets while the camera is still near the ground: `blows` each, half a blow apart, so one strikes as the other winds up. */
+  strikes: {
+    left: [at("site", 0.1), at("site", 0.34)] as ProgressRange,
+    right: [at("site", 0.14), at("site", 0.38)] as ProgressRange,
+  },
+  blows: 3,
   /** The camera rises from ground level to straight above. */
   rise: [at("site", 0.2), at("site", 0.42)] as ProgressRange,
   /** The seaside figures and the platform fade out as the view tilts down (the last third of the rise). */
@@ -703,30 +765,101 @@ export const FINALE = {
 
 /**
  * The falling orange's timings (progress). `src/components/stage/fall-plan.ts` choreographs on
- * these: the cut branch drops (`cut`, `branch`), the gardener drifts right and out of frame
- * (`gardener`), the orange falls from the branch with the camera following it (`release`), the
- * camera pushes into it until it fills the center (`push`), the rainbow ring sweeps out from it
- * (the `ring` transition) and the orange goes soft (`soften`) while it keeps falling out of the
- * bottom of the frame (`exit`, `fade`) as the camera dollies up between the orchard rows.
+ * these: as the camera comes to his face the gardener raises his shears to the foot of the branch
+ * (`reach`) and squeezes them shut (`snip`); the branch comes free (`cut`) and falls, tumbling
+ * (`branch`), and the tree springs back; he lowers the shears (`lower`) and drifts right and out of
+ * frame (`gardener`). The orange falls from its stem in a true flight (`release`, `FALL_FLIGHT`) with
+ * the camera following and pushing in until it fills the center; at the end of `release` it strikes
+ * the sky as if it were water, the rainbow ring sweeping out from it (the `ring` transition), and
+ * sinks, going soft (`soften`) and fading (`fade`) as the camera pulls back and dollies up between
+ * the orchard rows (`push`).
  */
 export const FALL = {
-  /** The still branch (with its fruit) hands over to the dropping cut branch and the orange. */
-  cut: [at("fall", 0.07), at("fall", 0.085)] as ProgressRange,
-  /** The cut branch drops, turning, and is gone. */
-  branch: [at("fall", 0.085), at("fall", 0.4)] as ProgressRange,
+  /** He raises the shears to the foot of the branch. */
+  reach: [at("fall", 0.1), at("fall", 0.18)] as ProgressRange,
+  /** He opens them a little wider and squeezes them shut on it (it is cut at the end). */
+  snip: [at("fall", 0.18), at("fall", 0.205)] as ProgressRange,
+  /** The still branch (with its fruit) hands over to the cut branch and the orange, at rest, as it comes free. */
+  cut: [at("fall", 0.205), at("fall", 0.21)] as ProgressRange,
+  /** He lowers the shears. */
+  lower: [at("fall", 0.25), at("fall", 0.34)] as ProgressRange,
   /** The gardener drifts right and out of frame. */
-  gardener: [at("fall", 0.1), at("fall", 0.32)] as ProgressRange,
-  /** The orange falls from the branch to the middle of the frame (the ring's origin). */
-  release: [at("fall", 0.085), at("fall", 0.45)] as ProgressRange,
-  /** The camera pushes into the orange until it fills the center. */
+  gardener: [at("fall", 0.26), at("fall", 0.42)] as ProgressRange,
+  /** The cut branch falls, tumbling, and is gone. */
+  branch: [at("fall", 0.21), at("fall", 0.4)] as ProgressRange,
+  /** The orange's flight, from its stem to where it strikes (the ring's origin, on the screen). */
+  release: [at("fall", 0.21), at("fall", 0.45)] as ProgressRange,
+  /** After the strike the camera pulls back from the sinking orange and starts up between the rows. */
   push: [at("fall", 0.45), at("fall", 0.55)] as ProgressRange,
   /** The orange goes soft and out of focus. */
   soften: [at("fall", 0.45), at("fall", 0.72)] as ProgressRange,
-  /** The orange keeps falling, out of the bottom of the frame. */
-  exit: [at("fall", 0.55), at("fall", 1)] as ProgressRange,
   /** The orange fades out for good before the scene ends. */
   fade: [at("fall", 0.84), at("fall", 1)] as ProgressRange,
 } as const;
+
+/**
+ * The falling orange's flight (world units, seconds of story time), shared by the camera that follows
+ * it (CAMERA) and the art that draws it (`fall-plan.ts`): it leaves its stem from rest, under a light
+ * air drag, taking up a spin; where the flight ends (`FALL.release`) it meets
+ * the sky as if it were water, and the drag that takes its speed rises to `water` (its speed never
+ * jumps, only how fast it changes), and it sinks, buoyed, still turning a little.
+ */
+export const FALL_FLIGHT = {
+  /** Air drag, per second (it leaves its stem from rest). */
+  air: 0.55,
+  /** Drag once it has struck, per second. */
+  water: 24,
+  /** Share of gravity it still feels once in. */
+  sinking: 0.15,
+  /** The spin it takes up as it goes (radians per second, clockwise), and how quickly (seconds): the stem's snap turns it from rest. */
+  spin: -2.4,
+  spinUp: 0.2,
+  /** How far it is pressed flat as it strikes (a share of its height), and how it rings back (cycles per second, decay per second). */
+  squash: { amount: 0.16, frequency: 3.2, decay: 9 },
+} as const;
+
+/**
+ * Physics on the scrubbed stage (`src/components/stage/motion-kit.ts`): how many seconds of story
+ * time one screen of scrolling stands for, so things fall, ring and settle at a believable pace, and
+ * gravity in world units (an adult is 1.75 tall: a world unit is about a metre). Story time is a
+ * function of progress, so every fall and every settle plays backwards exactly. At a reading pace (a
+ * screen in about two seconds) the story's physics runs at half speed; scrolled briskly, in real time.
+ */
+export const PHYSICS = {
+  secondsPerScreen: 1,
+  gravity: 9.81,
+} as const;
+
+/** The fruit on the branch the gardener cuts: where the orange's flight starts. */
+const STEM_FRUIT = platePoint("prune/branch-right", "fruit");
+const flightAxisX: [number, number] = [0, 0];
+const flightAxisY: [number, number] = [0, 0];
+
+/**
+ * Where the falling orange is (world, the middle of the ball) and how fast it moves (m/s) at progress
+ * p, from `FALL_FLIGHT` (`src/lib/flight.ts`): on its stem before `FALL.release`, in the air, then
+ * sinking. A function of progress alone. Writes into `out`.
+ */
+export function fallingOrangeAt(p: number, out: { x: number; y: number; vx: number; vy: number; t: number } = { x: 0, y: 0, vx: 0, vy: 0, t: 0 }) {
+  const seconds = (q: number) => (q / SCREEN) * PHYSICS.secondsPerScreen;
+  const t = Math.max(0, seconds(p - FALL.release[0]));
+  const strike = seconds(FALL.release[1] - FALL.release[0]);
+  const g = PHYSICS.gravity;
+  const air = Math.min(t, strike);
+  dragAxis(STEM_FRUIT[0], 0, 0, FALL_FLIGHT.air, air, flightAxisX);
+  dragAxis(STEM_FRUIT[1], 0, -g, FALL_FLIGHT.air, air, flightAxisY);
+  if (t > strike) {
+    const s = t - strike;
+    dragAxis(flightAxisX[0], flightAxisX[1], 0, FALL_FLIGHT.water, s, flightAxisX);
+    dragAxis(flightAxisY[0], flightAxisY[1], -g * FALL_FLIGHT.sinking, FALL_FLIGHT.water, s, flightAxisY);
+  }
+  out.x = flightAxisX[0];
+  out.y = flightAxisY[0];
+  out.vx = flightAxisX[1];
+  out.vy = flightAxisY[1];
+  out.t = t;
+  return out;
+}
 
 /**
  * Scrubbed acting of the painted figures (`src/components/stage/acting.ts`): small moves of a head, a
@@ -736,8 +869,8 @@ export const FALL = {
 export const ACTING = {
   /** The onlookers' heads tip up further as the orange brightens (the glow's lift over the hero). */
   crowdLook: [at("hero", 0), at("hero", 1)] as ProgressRange,
-  /** The harvester's head turns to the orange as he takes it from the hand. */
-  harvesterHead: [PLUCK.reveal[1], PLUCK.handoff[1]] as ProgressRange,
+  /** The harvester's head turns to the orange in his hand: it starts as his arm comes up and settles a beat after the arm has arrived. */
+  harvesterHead: [PLUCK.armUp[0] + 0.6 * (PLUCK.armUp[1] - PLUCK.armUp[0]), PLUCK.release[1]] as ProgressRange,
   /** The architect leans in, her head bowing toward the plan, as it opens panel by panel. */
   architectLean: [BLUEPRINT.panels[0], BLUEPRINT.panels[1]] as ProgressRange,
   /** The astronomer's raised arm settles into the point as the fabric sky clears, before the stars grow from his fingertip. */
@@ -829,9 +962,26 @@ const faqCamera = (n: number): [Vec3, Vec3] => {
 const STATUE = framedKey("statue");
 
 /** The statue's box once the ascent has raised it by fraction `t` of the scene (the rise of `ASCENT`). */
+/**
+ * The share of the ascent's rise done at fraction t (0 to 1) of the scene: t^risePower, from rest and
+ * faster and faster, until the last `riseSettle` of the scene, where a cubic takes it on at the same
+ * speed and brings it to rest at the full rise. Shared by the art (`ascent-tree.ts`) and the camera.
+ */
+export function ascentRiseShare(t: number): number {
+  const u = t <= 0 ? 0 : t >= 1 ? 1 : t;
+  const k = ASCENT.risePower;
+  const from = 1 - ASCENT.riseSettle;
+  if (u <= from) return u ** k;
+  const h = 1 - from;
+  const s = (u - from) / h;
+  const p0 = from ** k;
+  const m0 = k * from ** (k - 1) * h;
+  return (2 * s ** 3 - 3 * s * s + 1) * p0 + (s ** 3 - 2 * s * s + s) * m0 + (-2 * s ** 3 + 3 * s * s);
+}
+
 const risenStatue = (t: number): WorldBox => {
   const box = plateBox("hero/statue");
-  const rise = ASCENT.riseTotal * t ** ASCENT.risePower;
+  const rise = ASCENT.riseTotal * ascentRiseShare(t);
   return { ...box, y0: box.y0 + rise, y1: box.y1 + rise };
 };
 
@@ -861,8 +1011,14 @@ const CLOUDS_HIGH: Vec3 = [0, 8.5, 13.5];
 const WORK_BUILDER = framedKey("workBuilder");
 const BLUEPRINT_BUILDER = framedKey("blueprintBuilder");
 const ARCHITECT = framedKey("architect");
-/** Into the open plan as the paper unfold covers the screen. */
-const INTO_PLAN = shot({ box: unionBox(plateBox("blueprint/plan-1"), plateBox("blueprint/plan-4")), width: 1.15, at: [0.5, 0.5], fov: 34 });
+/** Into the open plan, in her hands, as the paper unfold covers the screen. */
+const OPEN_PLAN = unionBox(plateBox("blueprint/plan-1"), plateBox("blueprint/plan-4"));
+const INTO_PLAN = shot({
+  box: { x0: OPEN_PLAN.x0 + PLAN_HELD[0], x1: OPEN_PLAN.x1 + PLAN_HELD[0], y0: OPEN_PLAN.y0 + PLAN_HELD[1], y1: OPEN_PLAN.y1 + PLAN_HELD[1], z: -PLAN_DEPTH },
+  width: 1.15,
+  at: [0.5, 0.5],
+  fov: 34,
+});
 
 const SITE_BUILDER = framedKey("siteBuilder");
 /** The whole site at ground level, the sea behind it: where the rise to straight above starts. */
@@ -873,6 +1029,37 @@ const TOP_DOWN_FAR: Vec3 = [0, 24, 0.01];
 const GARDENER = framedKey("gardener");
 /** Toward the gardener's face (his head, from his rig), before he drifts out of the frame to the right. */
 const GARDENER_FACE = withPhone({ box: rigBox("prune/gardener", "head"), height: 0.5, at: [0.56, 0.4], fov: 32 }, { height: 0.35, at: [0.5, 0.42] });
+
+/** Following the falling orange: the field of view, and how near the camera is as it strikes (the orange fills the center). */
+const FOLLOW_FOV = 32;
+const STRIKE_DISTANCE = 0.65;
+/** The keys of the follow (fractions of the scene) and the camera's distance from the orange there. */
+const FOLLOW: readonly (readonly [number, number])[] = [
+  [0.3, 0.95],
+  [0.36, 0.85],
+  [0.41, 0.74],
+];
+/** After the strike the camera eases back from the sinking orange and carries on down a little past it (it sits this share of the half-height above the middle) before it climbs between the rows. */
+const AFTER_STRIKE = -0.2;
+const AFTER_DISTANCE = 1.5;
+/** The ring's origin on the screen, below the middle by this share of the half-height (the orange is there as it strikes). */
+const RING_BELOW = (() => {
+  const ring = TRANSITIONS.find((t) => t.id === "ring");
+  return ring?.origin ? (ring.origin[1] - 0.5) * 2 : 0;
+})();
+/**
+ * The camera on the falling orange at progress p (`fallingOrangeAt`), `distance` in front of it,
+ * looking straight at it, the orange at the ring's origin on the screen (or `below` of the
+ * half-height under the middle).
+ */
+const followOrange = (p: number, distance: number, fov = FOLLOW_FOV, below = RING_BELOW): [Vec3, Vec3] => {
+  const o = fallingOrangeAt(p);
+  const y = round6(o.y + below * distance * Math.tan((fov * Math.PI) / 360));
+  return [
+    [round6(o.x), y, distance],
+    [round6(o.x), y, 0],
+  ];
+};
 
 const ASTRONOMER = framedKey("astronomer");
 const KEEPERS = framedKey("keepers");
@@ -915,10 +1102,10 @@ export const CAMERA: readonly CameraKey[] = [
   key("work", WORK.rise[0], "push", CARD_THREE, [CARD_THREE[0], CARD_THREE[1] + 0.5, 0], 39.5, NO_PAN),
   shotKey("work", at("work", 0.97), "hold", WORK_BUILDER),
   // Blueprint: the scaffold appears around the builder of the work; across to the builder on his
-  // platform, down the scaffold to the architect as she brings the plan, then into the plan as it opens.
+  // platform, down the scaffold to the architect holding the folded plan, then into the plan as it opens in her hands.
   shotKey("blueprint", at("blueprint", 0), "pan", WORK_BUILDER),
   shotKey("blueprint", at("blueprint", 0.12), "hold", BLUEPRINT_BUILDER),
-  shotKey("blueprint", BLUEPRINT.bring[0], "pan", BLUEPRINT_BUILDER),
+  shotKey("blueprint", BLUEPRINT.toArchitect[0], "pan", BLUEPRINT_BUILDER),
   shotKey("blueprint", BLUEPRINT.panels[0], "push", ARCHITECT),
   shotKey("blueprint", UNFOLD_COVERED, "reframe", INTO_PLAN, ARCHITECT.pan),
   // Site: a builder at work at ground level; pull back to the whole site by the sea, rise to
@@ -933,9 +1120,11 @@ export const CAMERA: readonly CameraKey[] = [
   shotKey("prune", DUST_CLEARING, "hold", GARDENER),
   // Fall: toward the gardener's face, follow the orange down, push into it, then dolly up the rows.
   shotKey("fall", at("fall", 0), "push", GARDENER),
-  shotKey("fall", at("fall", 0.22), "dolly-down", GARDENER_FACE),
-  key("fall", at("fall", 0.45), "push", [0, -3, 5], [0, -3, 0], 32, NO_PAN),
-  key("fall", FALL.push[1], "dolly-up", [0, -4, 2.6], [0, -4, 0], 30, NO_PAN),
+  shotKey("fall", FALL.cut[0], "dolly-down", GARDENER_FACE),
+  ...FOLLOW.map(([f, distance]) => key("fall", at("fall", f), "dolly-down", ...followOrange(at("fall", f), distance), FOLLOW_FOV, NO_PAN)),
+  key("fall", FALL.release[1], "push", ...followOrange(FALL.release[1], STRIKE_DISTANCE), FOLLOW_FOV, NO_PAN),
+  key("fall", at("fall", 0.47), "pull", ...followOrange(at("fall", 0.47), 0.72), FOLLOW_FOV, NO_PAN),
+  key("fall", FALL.push[1], "dolly-up", ...followOrange(FALL.push[1], AFTER_DISTANCE, 30, AFTER_STRIKE), 30, NO_PAN),
   // Questions: climb between the rows one step per card, while the card arrives, and hold while it
   // is read (so its orange holds still under the line); then forward into the blue as the last card
   // dissolves, under the fabric sky.

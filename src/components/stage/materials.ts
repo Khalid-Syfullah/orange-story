@@ -108,7 +108,7 @@ uniform float plateAspect;
 uniform vec4 lifeA[MAX_FIGURES]; // breath (rise), head turn, sway, hem swing
 uniform vec4 lifeB[MAX_FIGURES]; // feet xy, neck xy (q space)
 uniform vec4 lifeC[MAX_FIGURES]; // hem phase
-uniform vec4 armTurn;            // shoulder xy, angle
+uniform vec4 armTurn;            // shoulder xy, angle, curl (a part's fingers: knuckles, turn, how far they close in)
 varying vec2 vUv;
 vec2 turnAbout(vec2 p, vec2 c, float a) {
   float s = sin(a);
@@ -128,6 +128,8 @@ void main() {
     vec4 b = lifeB[i];
     vec2 q = vec2(uv.x * plateAspect, uv.y);
     q = mix(q, turnAbout(q, armTurn.xy, armTurn.z), w.a);
+    // A part's fingers curling closed, seen from the palm: they shorten in toward the knuckles.
+    q = mix(q, armTurn.xy + (q - armTurn.xy) * (1.0 - armTurn.w), w.a);
     q = mix(q, turnAbout(q, b.zw, a.y * zone), w.b);
     q.y += a.x * w.r * zone;
     q.x += a.w * w.g * zone * sin(lifeC[i].x + uv.x * ${LIFE.hem.waves.toFixed(1)});
@@ -245,6 +247,13 @@ uniform vec2 rimStep;
 uniform float rimAmount;
 uniform vec4 rimJoint; // a part's joint (uv), the radius around it with no rim (plate heights), the plate's aspect
 uniform vec3 bounce; // amount, the ground's height in uv, how high it reaches
+// Where the painting is cut by its image's edge (a sleeve): the widths (uv) it fades out over toward the left, bottom, right and top edges.
+uniform vec4 cutFade;
+// Only part of the plate (the fingers drawn again in front of what they hold): a soft window in uv, left, bottom, right, top; off when empty.
+uniform vec4 crop;
+uniform float cropSoft;
+// The back of a plate turned away on its hinge (a fold panel seen from behind): its colour, and how far toward it (0: the painting shows through, mirrored).
+uniform vec4 backTint;
 varying vec2 vUv;
 ${OUTPUT}
 ${REVEAL}
@@ -262,9 +271,22 @@ vec3 gradeColor(vec3 c) {
   float l2 = luma(c);
   return mix(vec3(l2), c, 1.0 + grade.z);
 }
+// How much of the plate shows at vUv: all of it, but for its cut edges (faded) and outside its crop window.
+float plateKeep() {
+  float keep = 1.0;
+  if (cutFade.x > 0.0) keep *= smoothstep(0.0, cutFade.x, vUv.x);
+  if (cutFade.y > 0.0) keep *= smoothstep(0.0, cutFade.y, vUv.y);
+  if (cutFade.z > 0.0) keep *= smoothstep(0.0, cutFade.z, 1.0 - vUv.x);
+  if (cutFade.w > 0.0) keep *= smoothstep(0.0, cutFade.w, 1.0 - vUv.y);
+  if (crop.z > crop.x) {
+    vec2 inside = smoothstep(crop.xy - cropSoft, crop.xy + cropSoft, vUv) * (1.0 - smoothstep(crop.zw - cropSoft, crop.zw + cropSoft, vUv));
+    keep *= inside.x * inside.y;
+  }
+  return keep;
+}
 void main() {
   vec2 uv = vUv * uvTransform.xy + uvTransform.zw;
-  vec4 color = sampleMap(uv);
+  vec4 color = sampleMap(uv) * plateKeep();
   if (color.a > 0.0 && (figureOn > 0.5 || (quality > 1.5 && grainAmount + crackAmount > 0.0))) {
     vec3 c = color.rgb / color.a;
     if (figureOn > 0.5) {
@@ -290,6 +312,7 @@ void main() {
     }
     color.rgb = c * color.a;
   }
+  if (!gl_FrontFacing) color.rgb = mix(color.rgb, backTint.rgb * color.a, backTint.a);
   color.rgb = mix(color.rgb, tint * color.a, tintAmount);
   finish(color);
 }
@@ -391,6 +414,73 @@ void main() {
     vec3 c = mix(dotColor, vec3(1.0), lift * 0.6);
     color = vec4(c * d, d);
   }
+  finish(color);
+}
+`;
+
+/**
+ * The water of the finale's jug: a stream (a ribbon along its parabola, `stream` = across -1..1,
+ * along, how much water) and the drops it breaks into (instanced quads, `drop` = how much water). In
+ * the halftone of the painted water: light dots where the water is, on a faint wash of it, the dot
+ * grid in world space at 45 degrees so it stays put as the water runs through it.
+ */
+const WATER_VERTEX = /* glsl */ `
+attribute vec3 stream;
+#ifdef DROPS
+attribute float drop;
+#endif
+varying vec3 vStream;
+varying vec2 vWorld;
+varying vec2 vUv;
+void main() {
+  vUv = uv;
+  #ifdef DROPS
+  vStream = vec3(0.0, 0.0, drop);
+  #else
+  vStream = stream;
+  #endif
+  vec4 local = vec4(position, 1.0);
+  #ifdef USE_INSTANCING
+  local = instanceMatrix * local;
+  #endif
+  vec4 world = modelMatrix * local;
+  vWorld = world.xy;
+  gl_Position = projectionMatrix * viewMatrix * world;
+}
+`;
+
+const WATER_FRAGMENT = /* glsl */ `
+uniform float opacity;
+uniform float time;
+uniform float quality;
+uniform float cell;
+uniform vec3 dotColor;
+varying vec3 vStream;
+varying vec2 vWorld;
+varying vec2 vUv;
+${OUTPUT}
+${REVEAL}
+${CLEARING}
+${FINISH}
+${HALFTONE_DOT}
+void main() {
+  #ifdef DROPS
+  // A drop: round, soft at its rim.
+  float body = (1.0 - smoothstep(0.45, 1.0, length(vUv - 0.5) * 2.0)) * vStream.z;
+  vec4 color = vec4(dotColor * body, body);
+  #else
+  // A rope of water: full along its middle, thinning to its edges, ripples running down it.
+  float across = abs(vStream.x);
+  float ripple = 0.8 + 0.2 * sin(vStream.y * 60.0 - time * 16.0 + vStream.x * 1.7);
+  float body = (1.0 - smoothstep(0.5, 1.0, across)) * ripple * vStream.z;
+  vec2 g = mat2(0.70710678, 0.70710678, -0.70710678, 0.70710678) * (vWorld / cell);
+  float perPixel = length(fwidth(g));
+  float aa = clamp(perPixel * 0.75, 0.01, 0.5);
+  float lod = quality > 0.5 ? smoothstep(${HALFTONE.minCellPx.toFixed(2)}, ${HALFTONE.fullCellPx.toFixed(2)}, 1.0 / max(perPixel, 1e-4)) : 0.0;
+  float d = halftoneDot(g, body, aa);
+  vec4 soft = vec4(dotColor * body, body) * 0.7;
+  vec4 color = mix(soft, vec4(dotColor * d, d) + soft * 0.4, lod);
+  #endif
   finish(color);
 }
 `;
@@ -576,6 +666,12 @@ export class PlateMaterial extends ShaderMaterial {
         rimAmount: { value: 0 },
         rimJoint: { value: new Vector4(0, 0, 0, 1) },
         bounce: { value: new Vector3(0, 0, 0) },
+        // Cut edges (from the manifest's `paint.cut`) and the crop window (off).
+        cutFade: { value: new Vector4(0, 0, 0, 0) },
+        crop: { value: new Vector4(0, 0, 0, 0) },
+        cropSoft: { value: 0.01 },
+        // The back face (off).
+        backTint: { value: new Vector4(1, 1, 1, 0) },
         // Life.
         lifeOn: { value: 0 },
         rigMap: { value: noRigTexture() },
@@ -671,6 +767,27 @@ export class MorphMaterial extends ShaderMaterial {
         grainMap: STAGE_UNIFORMS.grainMap,
         crackMap: STAGE_UNIFORMS.crackMap,
         ...revealUniforms(),
+      },
+    });
+  }
+}
+
+/** The finale's water: its stream (a ribbon) or, with `drops`, the drops it breaks into (instanced). */
+export class WaterMaterial extends ShaderMaterial {
+  constructor(drops = false) {
+    super({
+      ...PAINTER,
+      defines: drops ? { DROPS: "" } : {},
+      vertexShader: WATER_VERTEX,
+      fragmentShader: WATER_FRAGMENT,
+      uniforms: {
+        opacity: { value: 1 },
+        time: { value: 0 },
+        cell: { value: HALFTONE.waterCell },
+        dotColor: { value: paletteColor(mixColors("white", "skySoft", 0.2)) },
+        quality: STAGE_UNIFORMS.quality,
+        ...revealUniforms(),
+        ...clearingUniforms(),
       },
     });
   }

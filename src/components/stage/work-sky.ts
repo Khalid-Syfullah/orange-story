@@ -1,6 +1,8 @@
-import { clamp01, ease, envelope, remap } from "@/lib/progress";
+import { envelope } from "@/lib/progress";
 import { beatOf } from "@/scroll/helpers";
 import { SCREEN, WORK } from "@/scroll/script";
+
+import { glide, type MotionChannel, type SceneMotion } from "./motion-kit";
 
 /**
  * Scene 6, services in the clouds, as pure functions (no React, no three). Timings live in `WORK`
@@ -13,7 +15,8 @@ import { SCREEN, WORK } from "@/scroll/script";
  * - While the cards are on screen the clouds part around the card column (`CARD_CLEARING`,
  *   `cloudClearing`): a cloud drifting toward the text thins out and re-forms beyond it, so the
  *   clouds pass on both sides of the cards and white text never sits on a white cloud.
- * - The giant orange on its minaret and the builder rise into view during the third card.
+ * - The giant orange on its minaret and the builder rise into view during the third card, and he
+ *   works with his mallet once he is up (`acting.ts`).
  */
 
 /**
@@ -57,9 +60,9 @@ export const RISE_FROM = 6.5;
 /** Parallax weight of a cloud at a depth: near clouds move more than far ones. */
 export const cloudWeight = (depth: number) => 2.4 / (1 + depth * 0.6);
 
-/** Scroll shift to the right of a cloud at a depth, for story progress p. Monotonic, so it reverses exactly. */
+/** Scroll shift to the right of a cloud at a depth, for story progress p. Monotonic, so it reverses exactly; it starts and ends at rest. */
 export function cloudShiftAt(p: number, depth: number): number {
-  return ease(remap(p, WORK.clouds[0], WORK.clouds[1])) * CLOUD_SCROLL * cloudWeight(depth) * 0.5;
+  return glide(p, WORK.clouds) * CLOUD_SCROLL * cloudWeight(depth) * 0.5;
 }
 
 /**
@@ -81,21 +84,25 @@ export interface Rise {
   opacity: number;
 }
 
-/** The giant orange rising into view over card 3. */
+/** Share of the rise over which the giant orange and the builder fade in (they come up from below the frame). */
+const FADE_IN = 1 / 6;
+
+/** The giant orange rising into view over card 3: from rest, slowing into its place. */
 export function giantOrangeAt(p: number): Rise {
-  const t = remap(p, WORK.rise[0], WORK.rise[1]);
-  return { y: -RISE_FROM * (1 - ease(t)), opacity: clamp01(t * 6) };
+  const [a, b] = WORK.rise;
+  return { y: -RISE_FROM * (1 - glide(p, WORK.rise)), opacity: glide(p, [a, a + (b - a) * FADE_IN]) };
 }
 
-export interface BuilderPose extends Rise {
-  /** Rotation in radians: the builder's to-and-fro while he works, zero until he arrives. */
-  rotate: number;
+/** The builder rises with the orange (his mallet is acting, `acting.ts`). */
+export function builderAt(p: number): Rise {
+  return giantOrangeAt(p);
 }
 
-/** The builder rises with the orange and, once there, works to and fro as the story scrolls. */
-export function builderAt(p: number): BuilderPose {
-  const orange = giantOrangeAt(p);
-  const arrived = remap(p, WORK.rise[0] + (WORK.rise[1] - WORK.rise[0]) * 0.6, WORK.rise[1]);
-  const phase = remap(p, WORK.rise[0], WORK.rise[1]) * Math.PI * 14;
-  return { ...orange, rotate: Math.sin(phase) * 0.05 * arrived };
-}
+/** What the work drives from progress (the builder's mallet is acting, `acting.ts`; the clouds' drift is idle time). */
+const channels: MotionChannel[] = [
+  { name: "giant orange · rise", at: (p) => giantOrangeAt(p).y },
+  { name: "giant orange · opacity", at: (p) => giantOrangeAt(p).opacity },
+  { name: "clouds · scroll shift", at: (p) => cloudShiftAt(p, 1) },
+];
+
+export const WORK_MOTION: SceneMotion = { channels };

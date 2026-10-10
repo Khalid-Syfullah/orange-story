@@ -22,6 +22,8 @@ The whole story is data in `src/scroll/script.ts`: chapters, scenes, text beats,
 | Smoke-out for text | `src/components/motion/smoke-out.tsx` |
 | Framing: the world scale's figures framed by targets, worked out into camera keys (`FRAMING`, `framedKey`, `phonePan`); the fit to a tall screen (`camera-fit.ts`); the report (`npm run framing`) | `src/scroll/framing.ts`, `src/scroll/camera-fit.ts`, `scripts/framing-report.mjs`, `scripts/framing/core.mjs` |
 | The living, painted stage: the canvas, the figure treatment, the halftone layer (`paint.ts`), rigs (`rig.ts`), idle life (`life.ts`), scrubbed acting (`acting.ts`, ranges in `ACTING`), figures and their parts (`figure-life.ts`), the shared uniforms and textures (`materials.ts`, `stage-surface.tsx`) | `src/components/stage/` |
+| Natural motion: the motion kit (weighted curves, two-bone IK, grips, flights, damped rings, live lag), every scene's driven values (`motion-channels.ts`) and the check that walks them; the shared flight and monotone curves | `src/components/stage/motion-kit.ts`, `src/components/stage/motion-channels.ts`, `src/lib/flight.ts`, `src/lib/monotone.ts` |
+| The motion lab (scene picker, scrubbing, bones, pivots, grips, arcs, the driven values plotted) and the motion capture (`npm run motion:capture`) | `/design` (`src/app/design/motion-lab.tsx`), `scripts/motion-capture.mjs`, `test-results/motion/` |
 
 ## The final numbers
 
@@ -40,6 +42,8 @@ What phase 21 tuned, in one place (all of it lives in `src/scroll/script.ts`):
 | Camera | a monotone cubic through the keys (see Camera) | The story curve front-loaded every move: 76% of it in the first quarter and 96% by half way, so long moves lurched and then sat still. |
 | Framing | the figure scenes' keys are worked out from targets (`src/scroll/framing.ts`, see Framing) | Phase 24: the figures stood full length in the middle of wide shots (the statue 26% of the height, each onlooker 15%); now they fill the frame and are cropped by it. |
 | Stage pixel ratio | 1 to 1.5 (1.25 on a phone), stepping down to 0.75 on a device that cannot keep up | `quality.ts` |
+| Wheel smoothing (`WHEEL_LERP`) | 0.085 (Lenis's lerp per 60th of a second; touch stays native) | Phase 25: a wheel notch arrives as a glide of about a fifth of a second, so motion that is smooth in progress stays smooth on screen (see Natural motion). |
+| Story time (`PHYSICS`) | 1 second per screen, gravity 9.81 (a world unit is a metre) | Phase 25: the stage's falls, rings and settles run on story time, a function of progress. |
 
 ## The stage
 
@@ -422,13 +426,88 @@ Each person has their own phase (`figurePhase`, from the plate and their place o
 | --- | --- | --- |
 | The onlookers | tip their heads up further toward the statue, as the orange brightens (up to 4.3 degrees) | over the hero, 0.00 to 1.59 |
 | The harvester | turns his head from the descending fruit to the orange in his hand (7.4 degrees) | 8.99 to 9.34 |
-| The architect | leans in (`architectLean`) and bows her head toward the plan (4.9 degrees) as it opens | 19.10 to 20.54 |
-| The gardener | his body leans into each of the seven snips, and back between them | 25.84 to 28.82 |
-| The astronomer | his raised arm settles into the point (8.6 degrees), before the stars grow from his fingertip | 40.86 to 41.29 |
+| The builders (work, blueprint, site) | the forearm turns on the elbow with the mallet: a wind-up (5.7 degrees), a fast strike that stops hard (9.7 degrees past the painted pose), a recoil and the lift back; the body leans and the head nods a beat later (`mallet`, `malletActing`) | work 16.96 to 17.89, blueprint 17.95 to 19.13, site 21.62 to 22.81 (the two half a blow apart) |
+| The architect | leans in (`architectLean`) and bows her head toward the plan (4.9 degrees) as it opens | 18.57 to 20.54 |
+| The gardener | his body leans into each of the seven squeezes, a beat behind his arms, and back as they open; in the fall he leans back as he lifts the shears to the branch and bows his head after the fruit | 25.84 to 28.82; 29.80 to 30.73 |
+| The astronomer | his raised arm comes up past the point (8.6 degrees) and settles, before the stars grow from his fingertip | 40.86 to 41.29 |
 
 **The canvas and the halftone** (`paint.ts`, `materials.ts`). The canvas grain (one tile per 1.6 world units on a plate, 5.5 tiles per screen height on the sky) and the craquelure (one tile per 2.6 world units, about ten cells) are read in each plate's own UV space with mipmaps: they move and scale with the art, so they never crawl or shimmer while the camera moves. The halftone's dots are cells of 0.12 world units on a cloud, 0.03 on the water and 0.11 in the hero's ripple rings, in plate space at 45 degrees; where a cell would be smaller than about 3 screen pixels it gives way to the plain soft version (no moire). The ripple rings run on the same ripple clock as the glow's droplets (`RINGS`, eight fronts), so the lift still quickens them without a jump and scrolling up slows them again.
 
 **Quality tiers** (`qualityTier` in `quality.ts`, one shared uniform): 2 everything; 1 (a low-memory device, or a pixel ratio that had to come below 1) without the canvas; 0 (still slow at the lowest pixel ratio) plain soft paint: no canvas, no rim or bounce, the halftone soft. The grade and idle life cost next to nothing and stay on. `?quality=low`, `medium` or `high` forces a tier (low also takes the lowest pixel ratio).
+
+## Natural motion
+
+Phase 25 rebuilt every movement on the stage so it moves the way bodies and things do: from rest to
+rest, along arcs, with weight, held where it is held, falling as things fall. The list of what was
+artificial, scene by scene, and what became of each, is `test-results/motion/issues.md`.
+
+**The rules.**
+
+- A scrubbed value is a function of progress alone (it plays backwards exactly) and its speed never
+  jumps: every move starts and ends at rest, two moves meet at one speed, a contact (a mallet on a
+  chisel, a jug's pour) is a hard but continuous stop. `motion-channels.test.ts` walks the whole
+  script and fails on any jump in the speed of any driven value; the camera has its own check.
+- The story curve (`EASE`) is for the words. It leaves rest at four and a half times its average
+  speed, and Motion's solver for it is a staircase at fine scale, so stage bodies never move on it.
+- Limbs reach with two-bone IK from their shoulders (the forearm plates bend at the wrist and curl
+  their fingers in the shader); hands travel on arcs; things held stay at their holder's grip point
+  (`platePoint`) and at the holder's depth, so the camera's moves never slide them out of the hand.
+- Falls are flights: gravity and drag in closed form on story time (`PHYSICS`: a second per screen),
+  spin taken up from rest, a landing or a strike that takes the speed without a jump. Shakes and
+  rings are damped (`A e^(-kt) sin(wt)`, eased in so they start from rest).
+- A frame swap stays only where a pose cannot be bent (the shears' open and closed frames, the
+  graft's knots): inside the quick part of a move, in a short cross-fade, one frame replacing the
+  other. Faces turning are foreshortening, panels opening are hinges (`turnY`), never a stretch.
+- Time-driven motion (idle life, the finale's loop) only adds movement that settles; it is faded in
+  and out by progress.
+
+**The kit** (`src/components/stage/motion-kit.ts`, pure, unit tested):
+
+| Part | What |
+| --- | --- |
+| `glide`, `smoother`, `span` | a move over a range, from rest to rest (the quintic smoothstep) |
+| `track`, `beat`, `strike`, `blows` | one C1 curve through keys (the camera's monotone rule, `src/lib/monotone.ts`); a move with anticipation and overshoot as keys of their own; a strike that speeds up to its contact and stops hard, recoils and settles; a run of tool blows (wind-up 42%, swing 20%, recoil 16%, lift back) |
+| `arcPoint`, `moves` | a point along gentle arcs, one move after another, each from rest to rest |
+| `solveArm`, `forearmRig`, `reachWith` | two-bone IK with a soft reach limit; a forearm plate's elbow, wrist and grip from its rig, and the pose that puts the grip on a target |
+| `fromAnchor`, `placeOn`, `poseThrough`, `holdAt`, `offsetsFrom` | grips and attachment: where a plate's point is, a thing held at a hand's grip by its own grip |
+| `ballistic`, `dragAxis` (`src/lib/flight.ts`) | a flight with drag, spin and bounces as damped half-periods ending in a critically damped settle, all closed form in time |
+| `dampedRelease`, `dampedKick` | a spring let go from a bend; a kick that rings out, eased in from rest |
+| `springStep` | the optional live lag: an exact critically damped step on idle time that always settles to nothing |
+| `storyTime`, `perSecond` | story seconds from progress, and speeds per second |
+| `velocityJumps` | where a value's speed jumps (it zooms in on each suspect, so a quick but smooth change passes) |
+
+**Where it is used.** The graft's hands (IK, arcs, a grasp before each pull, the stem springing
+back), the pluck (the reach, the grasp drawn again in front of the fruit, the snap and the branch's
+damped shake, the fruit at the hand's grip, the handoff to the harvester's palm), the share (the
+knife's arc and its pressure through the rind, the halves hinging about their cut edges, the second
+hand), the builders' mallets, the architect's plan (an accordion on hinges in her hands, shaded by
+its turn, its paper back), the gardener's squeezes and the tree's shake, the cut branch and the
+orange falling (`FALL_FLIGHT`, the camera following the same flight, `fallingOrangeAt`), the
+ascent's rise slowing to rest (`ascentRiseShare`, shared with the camera keys), and the finale: the
+walk-ins (a step's rise in time with the ground covered), the man's squeeze and the falling fruit,
+and the water (`WaterStream`: a parabola from the spout that follows the jug's tilt, as much water as
+the tilt lets out, breaking into drops).
+
+**The scroll that reaches it.** Motion that is smooth in progress is smooth on screen only if
+progress is smooth in time:
+
+- Wheel: Lenis, `WHEEL_LERP` 0.085 per 60th of a second (frame-rate independent). At 0.1 a notch
+  reached the stage in about 0.16 s; 0.085 gives about a fifth of a second, which rounds off the
+  steps of a notched wheel without the page trailing the hand. Lower felt late on a trackpad.
+- Touch: native momentum (`syncTouch` off). The phone's own inertia is already smooth; smoothing it
+  again would only add lag.
+- Desktop maps scroll to progress in a straight line. The phone's map bends at every scene boundary
+  (each scene keeps `MOBILE.weights` of its length): it was a polyline, so a steady thumb changed the
+  story's speed at each boundary; it is now a monotone cubic through the same boundaries
+  (`mobile.ts`), so scenes still start and end at the same moments and the speed changes smoothly
+  (unit tested with `velocityJumps`).
+
+**Seeing it.** On `/design`, the motion lab films any scene on the real stage: pick it, scrub it,
+show the bones, pivots, grips and arcs, and read every driven value plotted with its speed (a jump
+shows as a white dot). `?motion=<scene>&at=<0..1>` opens it on a moment. `npm run motion:capture`
+scrubs every scene in 60 steps in the production build and saves the frames, a contact sheet and an
+animated preview per scene (`--reverse` also scrubs each back up and compares the stage pixel for
+pixel; `--range a:b:name` films any stretch, for the transitions' own work).
 
 ## Helpers
 
@@ -479,6 +558,17 @@ The framing (phase 24: figures at one world scale, the camera close on them, the
 | Reading pace, CPU throttled 4 times | 16.7 / 16.8 / 16.8 ms | 0.36% | 667 ms | 1.5 |
 | Phone (Pixel 7, scripted scroll, 48 s) | 16.7 / 16.7 / 16.8 ms | 0.39% | 50 ms | 1.25 |
 | Lowest tier (`?quality=low`), fast | 16.7 / 16.8 / 16.8 ms | 0.35% | 233 ms | 0.75 |
+
+Natural motion (phase 25: the motion kit, the hands and figures on IK with their fingers bent in the shader, the hand drawn a second time in front of the fruit, the plan's panels turning in perspective, the falls as flights, the finale's water drawn as a stream and its drops), measured the same way on the same machine:
+
+| Run | p50 / p95 / p99 | Frames over 20 ms | Slowest frame | Pixel ratio |
+| --- | --- | --- | --- | --- |
+| Reading pace (about 110 s) | 16.7 / 16.7 / 16.8 ms | 0.12% | 217 ms | 1.5 |
+| Fast (about 48 s) | 16.7 / 16.8 / 16.8 ms | 0.35% | 233 ms | 1.5 |
+| Reading pace, CPU throttled 4 times | 16.7 / 16.8 / 16.8 ms | 0.30% | 600 ms | 1.5 |
+| Phone (Pixel 7, scripted scroll, 48 s) | 16.7 / 16.7 / 16.8 ms | 0.42% | 50 ms | 1.25 |
+
+At or under phase 21's 16.7 / 16.8 / 16.8 ms. The motion kit's work per frame is a few dozen closed-form numbers (no stepping: a value at any progress is computed directly, so scrubbing far costs the same as scrubbing near); the water is one dynamic strip of 58 vertices and one instanced draw of at most 28 drops, and only while the loop shows.
 
 The percentiles are phase 21's; the share of frames over 20 ms is phase 23's (where a scene mounts), within a few frames of phase 21's. A figure drawn larger costs no more to draw: the plates are the same images, the same meshes and the same shaders. When the larger paintings of "Regenerate at higher resolution" (`docs/ART-BRIEFS.md`) land, the texture cap (2560 on the long side, `TEXTURE_CAP`) bounds what they cost on the GPU. What keeps it smooth:
 

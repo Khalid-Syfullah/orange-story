@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
@@ -8,6 +9,7 @@ import { Tag } from "@/components/ui/tag";
 import { colors, EASE_CSS } from "@/styles/tokens";
 import { cn } from "@/lib/utils";
 
+import { MotionLab } from "./motion-lab";
 import { PlateLab } from "./plate-lab";
 import { Playground } from "./playground";
 import { TransitionLab } from "./transition-lab";
@@ -168,6 +170,14 @@ export default function DesignPage() {
       <section className="px-col-a py-12">
         <SectionLabel>{designPage.sections.transitions}</SectionLabel>
         <TransitionLab />
+      </section>
+
+      {/* The real stage scrubbed scene by scene, its skeleton drawn over it, every driven value plotted. */}
+      <section className="px-col-a py-12">
+        <SectionLabel>{designPage.sections.motionLab}</SectionLabel>
+        <Suspense fallback={<div className="aspect-[16/10] w-full" />}>
+          <MotionLab />
+        </Suspense>
       </section>
 
       {/* Easing */}

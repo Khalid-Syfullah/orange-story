@@ -124,6 +124,24 @@ export interface PlateRigFigure {
   neck?: Pair;
   /** Where the arm turns. */
   shoulder?: Pair;
+  /**
+   * A part's hand (an arm or a forearm on its own plate), which turns on `wrist`: the same joint as a
+   * body's head on its neck (the same weight channel), named for what it is. A rig has a head or a hand.
+   */
+  hand?: RigBox;
+  /** Where the hand turns. Default: the middle of the hand's edge nearest the pivot. */
+  wrist?: Pair;
+  /**
+   * A whole arm on its own plate (shoulder to fingertips, `pivot` at the shoulder) bends at the
+   * elbow: its forearm (with the hand) turns on `elbow`. The head's channel again: a rig has a head,
+   * a hand or a forearm.
+   */
+  forearm?: RigBox;
+  elbow?: Pair;
+  /** A part's fingers (with whatever they hold), which close and open on `knuckles`: the arm's channel. */
+  fingers?: RigBox;
+  /** Where the fingers turn. */
+  knuckles?: Pair;
 }
 
 /** Regions of a painted figure, as fractions of its image, for the stage to move it by. */
@@ -147,6 +165,10 @@ export interface PlateRig extends PlateRigFigure {
  * - `life`: false keeps a rigged figure still (a statue).
  * - `cell`: a multiplier of the halftone's dot cell (default 1): a cloud or a stream laid out smaller,
  *   for a scene filmed from near (the finale's, life size with its keepers), keeps fine dots.
+ * - `cut`: where the painting is cut by its image's own edge (a sleeve, the forearm of a hand that
+ *   reaches in from outside the frame): how far, as fractions of the image's [left, top, right,
+ *   bottom] edges, it fades out toward that edge, so a cut arm softens away instead of ending in a
+ *   straight line wherever it shows.
  */
 export interface PlatePaint {
   figure?: boolean;
@@ -156,6 +178,7 @@ export interface PlatePaint {
   contact?: number;
   life?: boolean;
   cell?: number;
+  cut?: RigBox;
 }
 
 /** The paint of a plate with its defaults resolved. */
@@ -169,13 +192,24 @@ export interface ResolvedPaint {
   life: boolean;
   /** A finished painting (subtler treatment, no grain). */
   painted: boolean;
+  /** How far it fades out toward each image edge that cuts it: [left, top, right, bottom] fractions (zero: no cut). */
+  cut: RigBox;
 }
 
 /** True when a rig (or one of its figures) has regions that move. */
 export function rigMoves(rig: PlateRig | undefined): boolean {
   if (!rig) return false;
-  const moves = (f: PlateRigFigure) => Boolean(f.chest || f.hem || f.head || f.arm);
+  const moves = (f: PlateRigFigure) => Boolean(f.chest || f.hem || f.head || f.arm || f.hand || f.forearm || f.fingers);
   return moves(rig) || (rig.figures ?? []).some(moves);
+}
+
+/**
+ * True for a part of a figure (a head, an arm, a forearm on its own plate): a rig with the joint it
+ * turns on (`pivot`) and no body of its own (no chest, no hem, no people). Its joints, if any, are a
+ * hand on its wrist and fingers on their knuckles. Where it meets its body is a cut, not an edge.
+ */
+export function rigIsPart(rig: PlateRig | undefined): boolean {
+  return Boolean(rig?.pivot && !rig.chest && !rig.hem && !rig.figures?.length);
 }
 
 /** The paint of a plate, defaults filled in. */
@@ -194,6 +228,7 @@ export function platePaint(entry: PlateEntry): ResolvedPaint {
     contact: paint.contact ?? 0,
     life: figure && paint.life !== false && rigMoves(entry.rig),
     painted,
+    cut: paint.cut ?? [0, 0, 0, 0],
   };
 }
 

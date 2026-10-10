@@ -7,6 +7,8 @@ import { useMotionValue, useTransform, type MotionValue } from "motion/react";
 import { plateEntry, type PlateId } from "@/art/manifest";
 import { useStacked } from "@/lib/use-stacked";
 
+import { BUILDERS, malletActing } from "./acting";
+import { useFigureLife } from "./figure-life";
 import { useIdleClock } from "./idle";
 import { Plate, type PlateClearing } from "./plate";
 import type { SceneArtProps } from "./scene-layers";
@@ -20,7 +22,8 @@ import { builderAt, CARD_CLEARING, CLOUD_COPY, cloudClearing, cloudShiftAt, drif
  *   on idle time (paused offscreen and with reduced motion) and shift right with the scroll, at their
  *   own depths; the camera dollies upward through them (camera script). While the cards are up the
  *   clouds part around the card text (`cloudClearing`), so it always sits on clear sky.
- * - During card 3 the giant orange on its minaret rises into view, the builder with it, working.
+ * - During card 3 the giant orange on its minaret rises into view, the builder with it; once up he
+ *   works with his mallet (his forearm turning on the elbow, his body and head following).
  */
 const CLOUDS = ["work/cloud-1", "work/cloud-2", "work/cloud-3", "work/cloud-4", "work/cloud-5", "work/cloud-6"] as const satisfies readonly PlateId[];
 
@@ -55,7 +58,7 @@ export function WorkArt({ scene }: SceneArtProps) {
   const builder = useTransform(progress, builderAt);
   const builderY = useTransform(builder, (b) => b.y);
   const builderO = useTransform(builder, (b) => b.opacity);
-  const builderR = useTransform(builder, (b) => b.rotate);
+  const builderLife = useFigureLife(plateEntry("work/builder"), { acting: (p, _t, _i, out) => malletActing(BUILDERS.work, p, out) });
 
   // The clouds part around the card column while the cards are up.
   const stacked = useStacked();
@@ -72,7 +75,7 @@ export function WorkArt({ scene }: SceneArtProps) {
         </React.Fragment>
       ))}
       <Plate id="work/giant-orange" y={orangeY} opacity={orangeO} sway={false} />
-      <Plate id="work/builder" y={builderY} opacity={builderO} rotate={builderR} sway={false} />
+      <Plate id="work/builder" y={builderY} opacity={builderO} sway={false} life={builderLife} />
       {CLOUDS.slice(0, 3).map((id) => (
         <React.Fragment key={id}>
           <Cloud id={id} progress={progress} clearing={clearing} />

@@ -3,10 +3,9 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { HELD as PACKET_HELD } from "@/components/stage/blueprint-plan";
 import { BRANCH_FRUIT } from "@/components/stage/fall-plan";
 import { CUT_POINT, SPOUT } from "@/components/stage/finale-plan";
-import { CAMERA } from "@/scroll/script";
+import { CAMERA, PLAN_HELD } from "@/scroll/script";
 import { poseOf, projectPoint } from "@/components/stage/camera-path";
 import { crowdFacing, ORANGE } from "@/components/stage/hero-art";
 import { HELD } from "@/components/stage/pluck-harvest";
@@ -71,7 +70,8 @@ describe("the art manifest", () => {
       // Every file comes from somewhere: the generator (a placeholder spec) or a painting (painted).
       expect(Boolean(plate.placeholder) !== Boolean(plate.painted), `${name} has a placeholder spec or is painted, not both`).toBe(true);
       expect(rigProblems(plate.rig), `${name} rig`).toEqual([]);
-      for (const key of Object.keys(plate.paint ?? {})) expect(["figure", "grain", "craquelure", "halftone", "contact", "life", "cell"], `${name} paint.${key}`).toContain(key);
+      for (const key of Object.keys(plate.paint ?? {})) expect(["figure", "grain", "craquelure", "halftone", "contact", "life", "cell", "cut"], `${name} paint.${key}`).toContain(key);
+      if (plate.paint?.cut) expect(plate.paint.cut.length === 4 && plate.paint.cut.every((v) => v >= 0 && v <= 0.5), `${name} paint.cut is four fractions up to a half`).toBe(true);
       if (plate.paint?.halftone) expect(["cloud", "water"], `${name} paint.halftone`).toContain(plate.paint.halftone);
       if (plate.paint?.contact !== undefined) expect(plate.paint.contact > 0 && plate.paint.figure, `${name} contact is for a standing figure`).toBe(true);
       if (plate.paint?.cell !== undefined) expect(plate.paint.cell > 0 && Boolean(plate.paint.halftone), `${name} cell is for the halftone layer`).toBe(true);
@@ -146,8 +146,8 @@ describe("the art manifest", () => {
     // scenes were tuned on, moved with their figures to life size.
     expect(HELD[0]).toBeCloseTo(2.5924, 3);
     expect(HELD[1]).toBeCloseTo(4.3125, 3);
-    expect(PACKET_HELD[0]).toBeCloseTo(1.05, 5);
-    expect(PACKET_HELD[1]).toBeCloseTo(-0.18, 5);
+    expect(PLAN_HELD[0]).toBeCloseTo(0.12, 5);
+    expect(PLAN_HELD[1]).toBeCloseTo(-0.065, 5);
     expect(CUT_POINT[0]).toBeCloseTo(0.7542, 3);
     expect(CUT_POINT[1]).toBeCloseTo(5.215, 3);
     expect(BRANCH_FRUIT.x).toBeCloseTo(0.4813, 3);

@@ -6,6 +6,7 @@ import type { MotionValue } from "motion/react";
 import { Mesh, NoBlending, PlaneGeometry, ShaderMaterial, Vector2, Vector4, type IUniform } from "three";
 
 import { plateEntry } from "@/art/manifest";
+import { idleHeld } from "@/components/stage/idle";
 import { IDLE_MAX_STEP, TRANSITION_PRELOAD_SCREENS, transitionDpr } from "@/components/stage/quality";
 import { PauseWhenHidden } from "@/components/stage/pause-when-hidden";
 import { useStacked } from "@/lib/use-stacked";
@@ -124,7 +125,9 @@ function TransitionEffect({ progress, transitions }: TransitionCanvasProps) {
   const invalidate = useThree((s) => s.invalidate);
   const gl = useThree((s) => s.gl);
   const camera = useThree((s) => s.camera);
-  const reduced = usePrefersReducedMotion() === true;
+  // `?idle=off` holds the drift still too, so a frame of a transition is a function of progress alone.
+  const [held] = React.useState(idleHeld);
+  const reduced = usePrefersReducedMotion() === true || held;
   const materials = React.useMemo(() => Object.fromEntries(CANVAS_KINDS.map((kind) => [kind, createMaterial(kind)])) as Record<CanvasKind, ShaderMaterial>, []);
   const quad = React.useRef<Mesh>(null);
   const idle = React.useRef(0);

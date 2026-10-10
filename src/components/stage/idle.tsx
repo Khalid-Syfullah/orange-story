@@ -40,11 +40,23 @@ export function useIdleClock(): IdleClock {
   return React.useContext(IdleContext);
 }
 
+/**
+ * `?idle=off` holds idle time still, as reduced motion does, so every frame of the scrubbed story is
+ * a function of progress alone (to compare frames: `npm run motion:capture`, the way back). While it
+ * is held, a `stage:idle-time` event (its `detail` in seconds) sets the held time, so a capture can
+ * step through the finale's loop frame by frame.
+ */
+export const IDLE_TIME_EVENT = "stage:idle-time";
+
+/** True when the address holds idle time still (`?idle=off`). */
+export function idleHeld(): boolean {
+  return typeof window !== "undefined" && new URLSearchParams(window.location.search).get("idle") === "off";
+}
+
 export function IdleClockProvider({ children }: { children: React.ReactNode }) {
   const invalidate = useThree((s) => s.invalidate);
   const canvas = useThree((s) => s.gl.domElement);
-  // `?idle=off` holds idle time still, as reduced motion does (to compare frames of the scrubbed story).
-  const [held] = React.useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("idle") === "off");
+  const [held] = React.useState(idleHeld);
   const reduced = usePrefersReducedMotion() === true || held;
   const state = React.useRef({ time: 0, holders: new Set<object>(), onScreen: true, frustum: new Frustum(), matrix: new Matrix4() });
 
@@ -58,11 +70,20 @@ export function IdleClockProvider({ children }: { children: React.ReactNode }) {
       if (!document.hidden) invalidate();
     };
     document.addEventListener("visibilitychange", onVisibility);
+    // A held clock can be set to a moment (a capture stepping through the finale's loop).
+    const onIdleTime = (event: Event) => {
+      const t = Number((event as CustomEvent<number>).detail);
+      if (!held || !Number.isFinite(t)) return;
+      state.current.time = Math.max(0, t);
+      invalidate();
+    };
+    window.addEventListener(IDLE_TIME_EVENT, onIdleTime);
     return () => {
       observer.disconnect();
       document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener(IDLE_TIME_EVENT, onIdleTime);
     };
-  }, [canvas, invalidate]);
+  }, [canvas, invalidate, held]);
 
   // After the camera rig (-2), before the plates (0): fresh frustum, then advance time.
   useFrame(({ camera }, delta) => {

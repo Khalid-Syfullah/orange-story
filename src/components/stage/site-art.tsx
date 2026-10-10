@@ -5,19 +5,23 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useMotionValue, useTransform } from "motion/react";
 import type { Group, PerspectiveCamera } from "three";
 
+import { plateEntry } from "@/art/manifest";
 import { useStacked } from "@/lib/use-stacked";
 
+import { BUILDERS, malletActing } from "./acting";
+import { useFigureLife } from "./figure-life";
 import { Plate } from "./plate";
 import type { SceneArtProps } from "./scene-layers";
 import { useStageProgress } from "./stage-context";
-import { builderSwing, seaOpacity, sideOpacity, siteShift, siteShiftStacked, tileField, tilesOpacity, topDownOpacity } from "./site-plan";
+import { seaOpacity, sideOpacity, siteShift, siteShiftStacked, tileField, tilesOpacity, topDownOpacity } from "./site-plan";
 
 /**
  * Scene 8, the building site by the sea (`site-plan.ts`, timings in `SITE`).
  *
  * - Side view: the sea and level ground, the low marble platform, the timber stage with its steps,
  *   the large orange under construction and the three builders (left, right, and seated with the
- *   plan). The builders work a little while the camera is near the ground.
+ *   plan). The two standing builders work with their mallets while the camera is near the ground,
+ *   half a blow apart (their forearms turning on the elbow, `acting.ts`); the seated one reads.
  * - As the camera rises (camera script) to straight above, the side plates cross-fade into the
  *   matching top-down set: the crown of the orange, the marble, the stage, the tops of the heads.
  *   The sea and its sky leave last, so the top-down view has no sky; the plain ground under the
@@ -72,9 +76,8 @@ export function SiteArt({ scene }: SceneArtProps) {
   const field = useTransform(progress, tileField);
   const fieldSize = useTransform(field, (f) => f.size);
   const fieldTiles = useTransform(field, (f) => f.tiles);
-  const leftSwing = useTransform(progress, (p) => builderSwing(0, p));
-  const rightSwing = useTransform(progress, (p) => builderSwing(1, p));
-  const seatedSwing = useTransform(progress, (p) => builderSwing(2, p) * 0.5);
+  const left = useFigureLife(plateEntry("site/builder-left"), { acting: (p, _t, _i, out) => malletActing(BUILDERS.siteLeft, p, out) });
+  const right = useFigureLife(plateEntry("site/builder-right"), { acting: (p, _t, _i, out) => malletActing(BUILDERS.siteRight, p, out) });
 
   return (
     <SiteFrame>
@@ -84,9 +87,9 @@ export function SiteArt({ scene }: SceneArtProps) {
       <Plate id="site/platform" opacity={side} sway={false} />
       <Plate id="site/stage" opacity={side} sway={false} />
       <Plate id="site/orange" opacity={side} sway={false} />
-      <Plate id="site/builder-left" opacity={side} rotate={leftSwing} sway={false} />
-      <Plate id="site/builder-right" opacity={side} rotate={rightSwing} sway={false} />
-      <Plate id="site/builder-seated" opacity={side} rotate={seatedSwing} sway={false} />
+      <Plate id="site/builder-left" opacity={side} sway={false} life={left} />
+      <Plate id="site/builder-right" opacity={side} sway={false} life={right} />
+      <Plate id="site/builder-seated" opacity={side} sway={false} />
       <Plate id="site/top-down" opacity={topDown} layer={21} focus={false} sway={false} />
     </SiteFrame>
   );

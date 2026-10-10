@@ -3,9 +3,9 @@
 import * as React from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { isMotionValue, type MotionValue } from "motion/react";
-import { PlaneGeometry, Vector2, Vector3, type Color, type Group, type Mesh, type PerspectiveCamera, type ShaderMaterial, type Vector4 } from "three";
+import { Color, PlaneGeometry, Vector2, Vector3, type Group, type Mesh, type PerspectiveCamera, type ShaderMaterial, type Vector4 } from "three";
 
-import { hasPlate, plateEntry, platePaint, plateWorldSize, rigMoves, type Pair, type PlateEntry, type PlateId, type ResolvedPaint } from "@/art/manifest";
+import { hasPlate, plateEntry, platePaint, plateWorldSize, rigIsPart, type Pair, type PlateEntry, type PlateId, type ResolvedPaint } from "@/art/manifest";
 import { revealCircle } from "@/components/transitions/choreography";
 import { transitionOf } from "@/scroll/helpers";
 import { SCENE_PAINT } from "@/scroll/script";
@@ -93,6 +93,11 @@ export interface PlateMotion {
   scaleY?: Num;
   /** Rotation in the plate's own plane about the anchor, in radians. */
   rotate?: Num;
+  /**
+   * A turn about the vertical axis through the anchor (radians; positive brings the plate's left
+   * toward the camera): a panel of paper swinging on its hinge, seen in perspective, not stretched.
+   */
+  turnY?: Num;
   /** 0 to 1, multiplied by the scene's presence. */
   opacity?: Num;
   /** Extra blur as a fraction of the view height (0.01 is about 10px on a 1000px screen). */
@@ -124,6 +129,11 @@ export interface PlateMotion {
   ride?: PartRide;
   /** A constant factor on the opacity (the contact shadow's strength). */
   opacityScale?: number;
+  /**
+   * Draw only part of the plate: a window of the image ([left, top, right, bottom] fractions) with a
+   * soft edge `soft` wide. The fingers of a hand drawn a second time in front of what they hold.
+   */
+  crop?: { box: readonly [number, number, number, number]; soft: number };
   name?: string;
 }
 
@@ -133,6 +143,12 @@ export interface PlateProps extends PlatePlacement, PlateMotion {
   tint?: string;
   /** How far toward `tint`, 0 to 1. Default 1 when a tint is given. */
   tintAmount?: Num;
+  /**
+   * The plate's back, where it is turned away (`turnY` past a quarter turn): the colour it shows there
+   * and how far toward it (a sheet of paper's plain back, the drawing faintly through it). Default: the
+   * painting itself, mirrored.
+   */
+  backTint?: { color: string; amount: Num };
   /**
    * A living figure's life (`useFigureLife`), when the scene drives it (acting, parts riding it).
    * Default: a figure plate with a rig lives on its own; `false` keeps it still.
@@ -187,7 +203,7 @@ function applyReveal(material: ShaderMaterial, reveal: PlateReveal | undefined, 
 }
 
 /** Sets a material's clearing for this frame (drawing-buffer pixels, as `gl_FragCoord`). */
-function applyClearing(material: ShaderMaterial, clearing: PlateClearing | undefined, gl: { getDrawingBufferSize(target: Vector2): Vector2 }): void {
+export function applyClearing(material: ShaderMaterial, clearing: PlateClearing | undefined, gl: { getDrawingBufferSize(target: Vector2): Vector2 }): void {
   const u = material.uniforms;
   if (!u.clearAmount) return; // a material without the clearing uniforms
   const amount = clearing ? read(clearing.amount, 0) : 0;
@@ -252,7 +268,7 @@ export function usePlateFrame(
   const backdrop = props.backdrop ?? entry.role === "backdrop";
   const sway = resolveSway(props.sway, entry, props.name ?? entry.id);
 
-  useInvalidateOnChange([props.x, props.y, props.z, props.scale, props.scaleX, props.scaleY, props.rotate, props.opacity, props.blur, props.height, props.uvRepeat?.[0], props.uvRepeat?.[1], props.uvOffset?.[0], props.uvOffset?.[1], props.clearing?.amount, props.clearing?.left, props.clearing?.right, props.clearing?.top, props.clearing?.bottom]);
+  useInvalidateOnChange([props.x, props.y, props.z, props.scale, props.scaleX, props.scaleY, props.rotate, props.turnY, props.opacity, props.blur, props.height, props.uvRepeat?.[0], props.uvRepeat?.[1], props.uvOffset?.[0], props.uvOffset?.[1], props.clearing?.amount, props.clearing?.left, props.clearing?.right, props.clearing?.top, props.clearing?.bottom]);
   React.useEffect(() => () => clock.drop(key), [clock, key]);
 
   useFrame((state) => {
@@ -296,7 +312,7 @@ export function usePlateFrame(
       if (sway) angle = swayAngle(clock.time(), sway);
       const ride = props.ride;
       g.position.set(px + read(props.x, 0) + (ride?.x ?? 0), py + read(props.y, 0) + (ride?.y ?? 0), -(props.depth ?? entry.depth) + read(props.z, 0));
-      g.rotation.set(rx * DEG, ry * DEG, rz * DEG + read(props.rotate, 0) + angle + (ride?.rotate ?? 0));
+      g.rotation.set(rx * DEG, ry * DEG + read(props.turnY, 0), rz * DEG + read(props.rotate, 0) + angle + (ride?.rotate ?? 0));
       const s = read(props.scale, 1);
       g.scale.set(s * read(props.scaleX, 1) * (props.flipX ? -1 : 1), s * read(props.scaleY, 1) * (props.flipY ? -1 : 1), 1);
       m.position.set((0.5 - ax) * w, (ay - 0.5) * h, 0);
@@ -351,6 +367,8 @@ const halftoneCell = (mode: number) => (mode < 0.5 ? HALFTONE.cloudCell : mode <
 export function configurePaint(material: ShaderMaterial, entry: PlateEntry, paint: ResolvedPaint, scene: SceneId | null): void {
   const u = material.uniforms;
   const scenePaint = scene ? SCENE_PAINT[scene] : null;
+  // Where the painting is cut by its image's edge, it fades out toward that edge (left, bottom, right, top in uv).
+  if (u.cutFade) (u.cutFade.value as Vector4).set(paint.cut[0], paint.cut[3], paint.cut[2], paint.cut[1]);
   if (u.grainAmount) u.grainAmount.value = paint.grain ? (entry.role === "backdrop" ? CANVAS.grainAmount.backdrop : CANVAS.grainAmount.plate) : 0;
   if (u.crackAmount) u.crackAmount.value = CANVAS.crackAmount * paint.craquelure * (scenePaint?.craquelure ?? 0.5);
   if (!u.figureOn) return;
@@ -361,11 +379,11 @@ export function configurePaint(material: ShaderMaterial, entry: PlateEntry, pain
   const aspect = entry.size[0] / entry.size[1];
   u.rimAmount.value = light.rim;
   (u.rimStep.value as Vector2).set((SHADOW_SIDE[0] * FIGURE_LIGHT.rimReach) / aspect, SHADOW_SIDE[1] * FIGURE_LIGHT.rimReach);
-  // A part (a head, an arm: a rig with only its joint): no rim along the cut where it meets its body.
-  const part = entry.rig?.pivot && !rigMoves(entry.rig);
+  // A part (a head, an arm, a forearm: a rig with its joint and no body): no rim along the cut where it meets its body.
+  const part = rigIsPart(entry.rig);
   (u.rimJoint.value as Vector4).set(part ? entry.rig!.pivot![0] : 0, part ? 1 - entry.rig!.pivot![1] : 0, part ? FIGURE_LIGHT.jointClear : 0, aspect);
-  // The warm bounce: only on a standing body (its feet near the plate's foot), not on a head or an arm.
-  const feet = paint.life || paint.contact > 0 ? rigFigures(entry.rig)[0]?.pivot : undefined;
+  // The warm bounce: only on a standing body (its feet near the plate's foot), not on a head, an arm or a hand.
+  const feet = !part && (paint.life || paint.contact > 0) ? rigFigures(entry.rig)[0]?.pivot : undefined;
   if (feet && feet[1] > 0.85) (u.bounce.value as Vector3).set(light.bounce, 1 - feet[1], FIGURE_LIGHT.bounceReach);
   else (u.bounce.value as Vector3).set(0, 0, 1);
 }
@@ -379,7 +397,7 @@ export function setColorUniform(material: ShaderMaterial, name: string, value: s
   (material.uniforms[name].value as Color).set(next);
 }
 
-export function Plate({ id, tint, tintAmount, life, children, ...props }: PlateProps) {
+export function Plate({ id, tint, tintAmount, backTint, life, crop, children, ...props }: PlateProps) {
   const entry = plateEntry(id);
   const paint = platePaint(entry);
   const scene = useSceneLayer()?.scene.id ?? null;
@@ -393,7 +411,7 @@ export function Plate({ id, tint, tintAmount, life, children, ...props }: PlateP
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [texture, halftone, entry, scene]);
   React.useEffect(() => () => material.dispose(), [material]);
-  useInvalidateOnChange([tintAmount]);
+  useInvalidateOnChange([tintAmount, backTint?.amount]);
 
   // A figure lives on its own unless the scene drives it (or keeps it still).
   const own = useFigureLife(entry, { enabled: life === undefined && paint.life && !halftone });
@@ -408,6 +426,20 @@ export function Plate({ id, tint, tintAmount, life, children, ...props }: PlateP
     if (m.uniforms.tint) {
       setColorUniform(m, "tint", tint);
       m.uniforms.tintAmount.value = tint ? read(tintAmount, 1) : 0;
+    }
+    // The crop window, in uv (from the bottom): off unless asked for.
+    if (m.uniforms.crop) {
+      if (crop) (m.uniforms.crop.value as Vector4).set(crop.box[0], 1 - crop.box[3], crop.box[2], 1 - crop.box[1]);
+      else (m.uniforms.crop.value as Vector4).set(0, 0, 0, 0);
+      m.uniforms.cropSoft.value = crop?.soft ?? 0.01;
+    }
+    if (m.uniforms.backTint) {
+      const back = m.uniforms.backTint.value as Vector4;
+      if (backTint) {
+        const seen = (m.userData.backColor ??= { key: "", color: new Color() }) as { key: string; color: Color };
+        if (seen.key !== backTint.color) seen.color.set((seen.key = backTint.color));
+        back.set(seen.color.r, seen.color.g, seen.color.b, read(backTint.amount, 1));
+      } else back.w = 0;
     }
     if (living && rig) {
       // The rig's weights are bound in the same frame as the life that reads them (never a frame without).

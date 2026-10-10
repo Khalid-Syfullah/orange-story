@@ -1,6 +1,8 @@
 import { plateEntry, type PlateId } from "@/art/manifest";
-import { clamp01, ease, lerp, remap, seeded } from "@/lib/progress";
-import { ASCENT } from "@/scroll/script";
+import { clamp01, remap, seeded } from "@/lib/progress";
+import { ASCENT, ascentRiseShare } from "@/scroll/script";
+
+import { beat, glide, track, type MotionChannel, type SceneMotion } from "./motion-kit";
 
 /**
  * The ascent as pure functions of story progress (no React, no three), so every part of the scene
@@ -24,12 +26,12 @@ const SHAFT = plateEntry(MINARET);
 
 /** World height the statue has risen by the end of the scene (`ASCENT.riseTotal`: the camera keys follow the same rise). */
 export const RISE_TOTAL = ASCENT.riseTotal;
-/** The rise starts slowly and accelerates: the trunk "keeps growing" faster and faster. */
-const RISE_POWER = ASCENT.risePower;
-
-/** How far the statue and the shaft top have risen at progress p (world units). */
+/**
+ * How far the statue and the shaft top have risen at progress p (world units): from rest, faster and
+ * faster (the trunk "keeps growing"), slowing to a stop at the end of the scene (`ascentRiseShare`).
+ */
 export function riseAt(p: number): number {
-  return RISE_TOTAL * remap(p, ASCENT.rise[0], ASCENT.rise[1]) ** RISE_POWER;
+  return RISE_TOTAL * ascentRiseShare(remap(p, ASCENT.rise[0], ASCENT.rise[1]));
 }
 
 export interface ShaftState {
@@ -52,18 +54,13 @@ export function shaftAt(p: number): ShaftState {
   return { top: SHAFT.position[1] + rise, bottom: SHAFT_BOTTOM, height, repeatY: (SHAFT_TILES * height) / SHAFT.height };
 }
 
-/** World height of the stone-to-bark front at progress p: bark below it, stone above. */
+/** The front's climb: one smooth curve through its keys and on to the top of the trunk by `barked`. */
+const frontTrack = track([...ASCENT.front.map(([p, y]) => [p, y] as const), [ASCENT.barked, shaftAt(ASCENT.barked).top] as const]);
+
+/** World height of the stone-to-bark front at progress p: bark below it, stone above (once it reaches the top of the trunk it rides it). */
 export function frontAt(p: number): number {
   const top = shaftAt(p).top;
-  const keys = ASCENT.front;
-  const first = keys[0];
-  const last = keys[keys.length - 1];
-  if (p <= first[0]) return Math.min(first[1], top);
-  for (let i = 1; i < keys.length; i++) {
-    if (p <= keys[i][0]) return Math.min(lerp(keys[i - 1][1], keys[i][1], remap(p, keys[i - 1][0], keys[i][0])), top);
-  }
-  // After the last key the front closes in on the top of the trunk, then rides it.
-  return Math.min(lerp(last[1], top, ease(remap(p, last[0], ASCENT.barked))), top);
+  return p >= ASCENT.barked ? top : Math.min(frontTrack(p), top);
 }
 
 /** Morph progress (0 stone, 1 bark) for the shaft's mask at progress p. */
@@ -73,15 +70,14 @@ export function morphAt(p: number): number {
   return clamp01((frontAt(p) - bottom) / height);
 }
 
-/** How much of a branch has grown, 0 to 1 (eased). */
+/** How much of a branch has grown, 0 to 1, from rest to rest. */
 export function branchAt(id: BranchId, p: number): number {
-  const [a, b] = ASCENT.branches[id];
-  return ease(remap(p, a, b));
+  return glide(p, ASCENT.branches[id]);
 }
 
 /** How much of the statue and its glow is left, 1 to 0, as they leave the picture. */
 export function statueAt(p: number): number {
-  return 1 - ease(remap(p, ASCENT.statueFade[0], ASCENT.statueFade[1]));
+  return 1 - glide(p, ASCENT.statueFade);
 }
 
 /* Leaves */
@@ -158,12 +154,27 @@ export interface LeafPose {
   rotate: number;
 }
 
+/** A leaf's unfurling: it opens from rest, swings a touch past its rest and settles (the turn); it fills out from rest to rest (the scale). */
+const UNFURL = track(beat([0, 1], 0, 1, { overshoot: 0.08, settle: 0.35 }));
+
 /** How a leaf looks at progress p: a small closed bud turned toward its branch, opening to rest. */
 export function leafAt(leaf: LeafSpec, p: number): LeafPose {
-  const open = ease(remap(p, leaf.range[0], leaf.range[1]));
+  const t = remap(p, leaf.range[0], leaf.range[1]);
+  const open = glide(t, [0, 1]);
   return {
     scaleX: 0.05 + 0.95 * open,
     scaleY: open,
-    rotate: leaf.angle + leaf.fold * FOLD * (1 - open),
+    rotate: leaf.angle + leaf.fold * FOLD * (1 - UNFURL(t)),
   };
 }
+
+/** What the ascent drives (the camera's rise is the camera's own; the leaves follow `leafAt`). */
+const channels: MotionChannel[] = [
+  { name: "statue · rise", at: riseAt },
+  { name: "bark · front", at: frontAt },
+  ...BRANCHES.map((id): MotionChannel => ({ name: `${id.slice(7)} · growth`, at: (p) => branchAt(id, p) })),
+  { name: "statue · fade", at: statueAt },
+  ...LEAVES.slice(0, 4).map((leaf): MotionChannel => ({ name: `leaf ${leaf.id} · turn`, at: (p) => leafAt(leaf, p).rotate })),
+];
+
+export const ASCENT_MOTION: SceneMotion = { channels };

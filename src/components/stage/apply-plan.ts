@@ -1,9 +1,10 @@
 import { plateEntry } from "@/art/manifest";
-import { ease, remap } from "@/lib/progress";
 import { fitFov, panAmount } from "@/scroll/camera-fit";
 import { DESKTOP_ASPECT, plateBox } from "@/scroll/framing";
 import { APPLY, CAMERA } from "@/scroll/script";
 import type { CameraKey } from "@/scroll/types";
+
+import { glide, type SceneMotion } from "./motion-kit";
 
 /**
  * Scene 13, the application, as pure functions of progress (no React, no three). The constellation
@@ -59,7 +60,7 @@ export const SINK_DEPTH_STACKED = Math.max(...PHONE_SHAPES.map(([w, h]) => TOP -
 
 /** Vertical offset of the astronomer and his platform at progress p: 0 before the sink, `-depth` after. */
 export function figureOffset(p: number, depth: number = SINK_DEPTH): number {
-  return -depth * ease(remap(p, APPLY.sink[0], APPLY.sink[1]));
+  return -depth * glide(p, APPLY.sink);
 }
 
 /** How far the astronomer sinks in the application scene on a layout. */
@@ -75,3 +76,6 @@ export const FINALE_SINK = (() => {
   const margin = 0.05 * astronomer.height;
   return Math.max(below(SINK_DEPTH, DESKTOP_ASPECT), ...PHONE_SHAPES.map(([w, h]) => below(SINK_DEPTH_STACKED, w / h))) + margin;
 })();
+
+/** What the application scene drives: the astronomer and his platform stepping down. */
+export const APPLY_MOTION: SceneMotion = { channels: [{ name: "astronomer · sink", at: (p) => figureOffset(p) }] };

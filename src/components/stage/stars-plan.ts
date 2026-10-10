@@ -1,9 +1,10 @@
 import { platePoint } from "@/art/manifest";
-import { clamp01, ease, remap, seeded } from "@/lib/progress";
+import { clamp01, seeded } from "@/lib/progress";
 import { fitFov, panAmount } from "@/scroll/camera-fit";
 import { PHONE_ASPECT } from "@/scroll/framing";
 import { CAMERA, STARS } from "@/scroll/script";
 
+import { glide, type SceneMotion } from "./motion-kit";
 import { hazeAmount } from "./text-haze";
 
 import type { TwinklePoint } from "./twinkle";
@@ -160,7 +161,7 @@ export function constellation(): Constellation {
 
 /** How much of the graph has grown, 0 to 1 (scrubbed over `STARS.grow`). */
 export function growth(p: number): number {
-  return remap(p, STARS.grow[0], STARS.grow[1]);
+  return glide(p, STARS.grow);
 }
 
 /** The `reveal` the twinkle field takes: points with `appear` below it are shown. */
@@ -171,7 +172,7 @@ export function starReveal(p: number): number {
 /** How drawn an edge is at progress p, 0 to 1 (it draws out from its older node). */
 export function edgeDraw(edge: StarEdge, p: number): number {
   const g = growth(p);
-  return ease(remap(g, edge.start * 0.9 + 0.02, edge.start * 0.9 + 0.02 + STARS.draw));
+  return glide(g, [edge.start * 0.9 + 0.02, edge.start * 0.9 + 0.02 + STARS.draw]);
 }
 
 /** How far the constellation recedes while the application is up, at most (its opacity drops by this much). */
@@ -188,3 +189,6 @@ const OVER_STARS = ["apply-intro", "apply-form"] as const;
 export function starsDim(p: number): number {
   return 1 - STARS_RECEDE * hazeAmount(OVER_STARS, p);
 }
+
+/** What the stargazer scene drives: the constellation's growth (its stars appear and its edges draw as it passes them). */
+export const STARS_MOTION: SceneMotion = { channels: [{ name: "constellation · growth", at: growth }] };

@@ -12,7 +12,8 @@
     "art:placeholders": "node scripts/art-placeholders.mjs",
     "art:briefs": "node scripts/art-briefs.mjs",
     "art:import": "node scripts/art-import.mjs",
-    "framing": "node scripts/framing-report.mjs"
+    "framing": "node scripts/framing-report.mjs",
+    "motion:capture": "node scripts/motion-capture.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

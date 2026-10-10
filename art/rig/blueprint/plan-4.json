@@ -1,6 +1,15 @@
 {
   "fit": "canvas",
-  "points": {},
+  "points": {
+    "grip-left": [
+      0.56,
+      0.6
+    ],
+    "grip-right": [
+      0.98,
+      0.6
+    ]
+  },
   "matte": {
     "defringe": 0
   }

@@ -4,7 +4,7 @@ import * as React from "react";
 import { animate, useMotionValue, useTransform, type MotionValue } from "motion/react";
 
 import { plateEntry, platePoint, plateWorldSize, type PlateId } from "@/art/manifest";
-import { ease } from "@/lib/progress";
+import { smoother } from "./motion-kit";
 import { sceneProgress } from "@/scroll/helpers";
 import { CAMERA } from "@/scroll/script";
 
@@ -146,7 +146,7 @@ export function HeroArt({ scene }: SceneArtProps) {
   const nearY = useTransform(crowdNear, (a) => -(1 - a) * CROWD_RISE);
 
   // The glow brightens as the story starts to move: over the hero scene, scrubbed by progress.
-  const lift = useTransform(progress ?? none, (p) => (progress ? ease(sceneProgress("hero", p)) : 0));
+  const lift = useTransform(progress ?? none, (p) => (progress ? smoother(sceneProgress("hero", p)) : 0));
   const whitening = useTransform(lift, (l) => l * ORANGE_WHITENING);
   const halo = useTransform([glow, lift], ([g, l]: number[]) => g * (0.5 + 0.35 * l));
   const far = useCrowdLife("hero/crowd-far");

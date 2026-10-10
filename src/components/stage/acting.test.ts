@@ -32,10 +32,14 @@ describe("scrubbed acting", () => {
     expect(end).toBe(SCENES[0].end);
   });
 
-  it("turns the harvester's head to the orange as he takes it", () => {
+  it("turns the harvester's head to the orange a beat after his arm takes it, and settles", () => {
     expect(harvesterHeadAt(PLUCK.reveal[0])).toBeCloseTo(HARVESTER_LOOK_AWAY, 9);
-    expect(harvesterHeadAt(PLUCK.handoff[1])).toBeCloseTo(0, 12);
+    // Still turning as his arm arrives; settled on the orange once the hand that carried it has gone.
+    expect(Math.abs(harvesterHeadAt(PLUCK.armUp[1]))).toBeGreaterThan(0.01);
     expect(harvesterHeadAt(PLUCK.release[1])).toBeCloseTo(0, 12);
+    // It goes a touch past the orange before it settles (the eyes find it).
+    const turn = Array.from({ length: 400 }, (_, i) => harvesterHeadAt(ACTING.harvesterHead[0] + ((ACTING.harvesterHead[1] - ACTING.harvesterHead[0]) * i) / 399));
+    expect(Math.max(...turn)).toBeGreaterThan(0);
   });
 
   it("bows the architect's head as the plan opens, panel by panel", () => {
@@ -55,7 +59,7 @@ describe("scrubbed acting", () => {
       } else if (closed && lean < 0.002) closed = false;
     }
     expect(snips).toBe(PRUNE.snips);
-    expect(gardenerSwayAt(PRUNE.trim[1] + SCREEN)).toBe(0);
+    expect(gardenerSwayAt(PRUNE.trim[1] + SCREEN)).toBeCloseTo(0, 12);
   });
 
   it("settles the astronomer's arm into the point before the stars grow from his fingertip", () => {

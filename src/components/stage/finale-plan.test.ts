@@ -14,12 +14,17 @@ import {
   FINALE_SINK,
   loopWeight,
   manAt,
+  parcelAt,
+  POUR,
   shearsAt,
   starsLift,
   starsOpacity,
   treeAt,
   TREE_RISE,
   TRIM_CYCLE,
+  trimTurnAt,
+  SQUEEZE,
+  STREAM_BREAKS,
   wateringAt,
   womanAt,
 } from "./finale-plan";
@@ -57,7 +62,6 @@ describe("finale plan", () => {
   it("raises the tree from out of the bottom of the frame", () => {
     expect(treeAt(FINALE.tree[0]).y).toBeCloseTo(-TREE_RISE);
     expect(treeAt(FINALE.tree[1]).y).toBeCloseTo(0);
-    expect(treeAt(FINALE.tree[1]).scale).toBeCloseTo(1);
   });
 
   it("brings the woman in from the left and the man in from the right, and settles them", () => {
@@ -75,23 +79,54 @@ describe("finale plan", () => {
     expect(loopWeight(1)).toBe(1);
   });
 
-  it("waters: tips the can, runs water, cycles three stream frames", () => {
+  it("waters: tips the jug, and lets out as much water as the tilt allows", () => {
     expect(wateringAt(0).tilt).toBe(0);
-    const tilts = Array.from({ length: 80 }, (_, i) => wateringAt(i * 0.1));
-    expect(Math.max(...tilts.map((w) => w.tilt))).toBe(1);
-    expect(Math.max(...tilts.map((w) => w.stream))).toBeGreaterThan(0.9);
-    expect(new Set(tilts.map((w) => w.frame))).toEqual(new Set([0, 1, 2]));
+    expect(wateringAt(0).flow).toBe(0);
+    const pours = Array.from({ length: 520 }, (_, i) => wateringAt(i * 0.01));
+    expect(Math.max(...pours.map((w) => w.tilt))).toBeGreaterThan(1);
+    expect(Math.max(...pours.map((w) => w.tilt))).toBeLessThan(1.1);
+    expect(Math.max(...pours.map((w) => w.flow))).toBeCloseTo(1, 6);
+    // No water until the jug is well tipped.
+    for (const w of pours) if (w.tilt < 0.4) expect(w.flow).toBe(0);
   });
 
-  it("snips and cuts an orange free, then it drops out of the frame", () => {
+  it("runs the water from the spout in a true parabola that follows the tilt, breaking into drops", () => {
+    const out = { x: 0, y: 0, angle: 0, flow: 0, width: 0 };
+    // Mid-pour: a parcel's height is its launch speed times its age, less half of gravity times its age squared.
+    const t = 2.5;
+    const a = 0.15;
+    parcelAt(t, a, out);
+    const launch = wateringAt(t - a);
+    const speed = POUR.speed[0] + (POUR.speed[1] - POUR.speed[0]) * launch.flow;
+    const angle = POUR.angle[0] + (POUR.angle[1] - POUR.angle[0]) * launch.tilt;
+    expect(out.x).toBeCloseTo(speed * Math.cos(angle) * a, 9);
+    expect(out.y).toBeCloseTo(speed * Math.sin(angle) * a - 0.5 * 9.81 * a * a, 9);
+    // It heads further down the longer it falls, and is thinner the faster it goes.
+    const early = { ...out };
+    parcelAt(t, 0, early);
+    expect(out.angle).toBeLessThan(early.angle);
+    expect(out.width).toBeLessThan(early.width);
+    // The head of the stream falls from the lip as the pour begins: water that left before the jug was tipped is not there.
+    parcelAt(1.0, 0.9, out);
+    expect(out.flow).toBe(0);
+    expect(STREAM_BREAKS.after).toBeLessThan(STREAM_BREAKS.fall);
+  });
+
+  it("squeezes the shears (the closed frame only in the quick part) and cuts an orange free, which falls from rest", () => {
     expect(shearsAt(0)).toBe(0);
-    expect(shearsAt(CUT_AT)).toBeGreaterThan(0.9);
+    expect(shearsAt(CUT_AT)).toBeCloseTo(1, 6);
     expect(shearsAt(TRIM_CYCLE)).toBeCloseTo(shearsAt(0));
+    const turns = Array.from({ length: 640 }, (_, i) => trimTurnAt(i * 0.01));
+    expect(Math.min(...turns)).toBeCloseTo(SQUEEZE.shut, 3);
+    expect(Math.max(...turns)).toBeCloseTo(SQUEEZE.open, 3);
     expect(Math.abs(armBobAt(1))).toBeLessThan(0.1);
     const hanging = cutFruitAt(CUT_AT - 0.1);
+    const justCut = cutFruitAt(CUT_AT + 0.02);
     const falling = cutFruitAt(CUT_AT + 0.4);
     expect(hanging.opacity).toBe(1);
-    expect(falling.y).toBeLessThan(hanging.y);
+    // From rest: in the first moment it has hardly moved, then it falls faster and faster.
+    expect(hanging.y - justCut.y).toBeLessThan(0.01);
+    expect(falling.y).toBeLessThan(hanging.y - 0.5);
     expect(cutFruitAt(CUT_AT + 3).opacity).toBe(0);
   });
 

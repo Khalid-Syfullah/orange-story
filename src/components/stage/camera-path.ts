@@ -1,5 +1,7 @@
 import { gsap } from "gsap";
 
+import { monotoneSlopes } from "@/lib/monotone";
+
 import { fitFov, panAmount, REFERENCE_ASPECT } from "@/scroll/camera-fit";
 import { registerGsap } from "@/scroll/stage-scroll";
 import type { CameraKey, Vec3 } from "@/scroll/types";
@@ -149,20 +151,7 @@ export function poseOf(key: CameraKey): CameraPose {
  * the value never overshoots a key and its speed never jumps.
  */
 export function cameraSlopes(times: readonly number[], values: readonly number[], rest: readonly boolean[] = []): number[] {
-  const n = times.length;
-  const slopes = new Array<number>(n).fill(0);
-  for (let i = 1; i + 1 < n; i++) {
-    if (rest[i - 1] || rest[i]) continue;
-    const h0 = times[i] - times[i - 1];
-    const h1 = times[i + 1] - times[i];
-    const d0 = (values[i] - values[i - 1]) / h0;
-    const d1 = (values[i + 1] - values[i]) / h1;
-    if (d0 === 0 || d1 === 0 || Math.sign(d0) !== Math.sign(d1)) continue;
-    const w0 = 2 * h1 + h0;
-    const w1 = h1 + 2 * h0;
-    slopes[i] = (w0 + w1) / (w0 / d0 + w1 / d1);
-  }
-  return slopes;
+  return monotoneSlopes(times, values, rest);
 }
 
 /**

@@ -32,16 +32,22 @@ All plates live in `public/art/<scene>/<plate>.webp` (with alpha), listed in `pu
   | `pluck/harvester-arm`, `share/arm-open` | `orange` | the plucked fruit lands there and is cut there (`HELD`, `pluck-harvest.ts`; `CUT_X`, `share-cut.ts`) |
   | `share/knife-hand` | `knife-tip` | the blade tip follows the cut path, wherever it is on the plate (`knifeAt`, `share-cut.ts`) |
   | `share/peel-*`, `share/face-*` | `cut-edge` | the halves are placed by their cut edges (`HALF_EDGE`, `share-cut.ts`) |
-  | `blueprint/architect` | `plan` | the folded drawing is held there (`HELD`, `blueprint-plan.ts`) |
+  | `blueprint/architect` | `grip-left`, `grip-right` (and `plan`) | her two hands: the drawing's last panel is held with its own `grip-left`/`grip-right` on them (`PLAN_HELD`, `script.ts`) |
+  | `blueprint/plan-4` | `grip-left`, `grip-right` | where her hands hold the panel that stays in them; the other panels hang from it on hinges |
+  | `graft/cutting`, `pluck/hand`, `share/knife-hand`, `share/second-hand` | `grip` | where the hand holds what it carries: the hand's IK puts its grip on the target, the thing held puts its own grip there (`holdAt`, `motion-kit.ts`) |
+  | `pluck/hero-orange` | `stem`, `centre` | where the twig snaps and where the fingers close round it |
+  | `share/peel-*`, `share/face-*` | `hinge` | the edge each half tips about as the halves part |
   | `prune/branch-right` | `fruit` | the falling orange starts there (`BRANCH_FRUIT`, `fall-plan.ts`) |
   | `fall/trees-*-near` | `question-1` to `-5` | the question cards' connector lines are fixed there |
   | `stars/astronomer` | `fingertip` | the constellation grows from there, seen from the stargazer camera (`FINGERTIP`, `stars-plan.ts`) |
-  | `finale/woman-arm` | `spout` | the water frames hang from there (`SPOUT`, `finale-plan.ts`) |
+  | `finale/woman-arm` | `spout` | the water leaves the jug there (`SPOUT`, `finale-plan.ts`; the stream is drawn, `WaterStream`: the painted `finale/water-*` frames are kept as the reference for its halftone and no longer drawn) |
   | `finale/man-arms-*` | `shears-tip` | where he cuts an orange free in the loop (`CUT_POINT`, `finale-plan.ts`) |
   | `prune/gardener-arms-*` | `shears-tip` | where the blades meet the branch he trims |
   | `graft/hand-*`, `pluck/hand`, `share/second-hand` | `grip`, `fingertips` | where the hand holds or reaches (each plate's anchor sits there) |
 
   For the stand-ins the fractions were chosen so every place came out where the scenes were tuned (the unit test holds them to it), except the fingertip: the old constant was not on the figure at all, and the stars now grow from the painted finger.
+- **`paint.cut`** (`[left, top, right, bottom]`, fractions of the image): where the painting is cut by its own image edge on purpose (a sleeve where an arm plate meets its body), it fades out over that width toward the edge, so a forearm that turns never shows a hard cut line.
+- **Drawing parts of a plate** (`Plate` props, `plate.tsx`): `crop` draws only a window of the image (a hand's fingers drawn a second time in front of the fruit they close round); `turnY` turns a plate about the vertical through its anchor, in perspective (a fold panel on its hinge); `backTint` colours the side of a turned plate that faces away (the plain back of the paper).
 - **`rig`**: how the living stage moves a figure (`src/components/stage/rig.ts`, `life.ts`), in the plate's own fractions:
 
   | Field | What it is | What moves |
@@ -49,10 +55,12 @@ All plates live in `public/art/<scene>/<plate>.webp` (with alpha), listed in `pu
   | `chest` | `[left, top, right, bottom]` around the chest and shoulders | it and everything above it rise as the figure breathes (about 0.7% of its height, at about 0.2 Hz) |
   | `hem` | around the bottom of the robe | it ripples a little in the breeze, most at its bottom edge; the feet below stay planted |
   | `head` | around the head (hat or veil included) | it turns a little every few seconds, and with the scene's acting, on `neck` |
-  | `arm` | around a raised arm (the astronomer's) | it settles into the point on `shoulder` |
+  | `arm` | around a raised arm (the astronomer's), or a raised forearm with its mallet (the builders') | it settles into the point, or strikes, on `shoulder` (for a forearm, the elbow) |
   | `pivot` | the feet | the whole figure shifts its weight about it; the contact shadow sits there |
   | `neck`, `shoulder` | the joints | (default: the middle of the head's bottom edge; the arm's lower left corner) |
   | `figures` | a list of the above, one per person (at most four) | each person on a shared plate (the onlookers) moves on their own |
+
+  A **forearm or hand plate** (the graft's hands, the pluck's hand, the knife hand, the second hand, the harvester's open arm) has a part's `pivot` at its elbow (the top of the sleeve's cut, so the cut never turns into view) and two more regions, read by the same shader channels: `hand` with `wrist` (the hand bends at the wrist, the head channel) and `fingers` with `knuckles` (the fingers close round what they hold, the arm channel, with a curl toward the knuckles); `forearm` with `elbow` aliases them for a plate whose whole forearm bends. The motion kit reaches with it by two-bone IK from a shoulder the scene gives (`forearmRig`, `reachWith`).
 
   A small build step (`rigWeightData`) turns the rectangles into a soft-edged weight texture (`linear`, one channel each for breath, hem, head and arm), so a finished painting needs no hand-painted mask; the plate is drawn as a subdivided mesh bent by it in the vertex shader. A **part** of a figure on its own plate (a head, an arm: `PART_PLATES` in `scripts/art/cast.mjs`) carries only its `pivot`, the joint it turns on (its anchor): the scene carries it on its body (`useFigureLife`, `figure-life.ts`), so a head or an arm moves with the body's breathing and weight shifts and turns on its own joint (the harvester's head to the orange, the gardener's arms with the shears, the jug as it tips). Things the figure holds that are plates of their own (the fruit in the harvester's hand and its halves, the knife and the second hand, the architect's folded plan, the stream from the jug, the fruit the man cuts free) move with the hand that holds them.
 

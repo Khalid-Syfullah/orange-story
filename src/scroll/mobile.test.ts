@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { BEATS, MOBILE, SCENES, STAGE_VH } from "./script";
+import { velocityJumps } from "@/components/stage/motion-kit";
+
 import { LINEAR_SCROLL, MOBILE_SCROLL, screensBetween, screensOf } from "./mobile";
 
 describe("the phone's scroll map", () => {
@@ -27,6 +29,10 @@ describe("the phone's scroll map", () => {
       last = u;
       expect(MOBILE_SCROLL.toProgress(u)).toBeCloseTo(p, 9);
     }
+  });
+
+  it("bends smoothly at the scene boundaries: under a steady thumb the story's speed never jumps", () => {
+    expect(velocityJumps(MOBILE_SCROLL.toProgress, 0, 1)).toEqual([]);
   });
 
   it("clamps outside 0 to 1", () => {
