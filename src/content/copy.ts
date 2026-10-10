@@ -249,12 +249,10 @@ export const storyScenes = {
   },
 } as const satisfies Record<SceneId, { name: string; still: string }>;
 
-/** Labels for the story outside the copy deck: the finale's part name and placeholder art. */
+/** Labels for the story outside the copy deck: the finale's part name. */
 export const story = {
   /** The finale's part of the story (the ruler has four chapters; the storyboard calls this "End"). */
   endPart: "End",
-  placeholder: "Placeholder art",
-  sceneNumber: (n: number, total: number) => `Scene ${n} of ${total}`,
 } as const;
 
 /** Labels for the dev-only story timeline (toggled with the backtick key). */
@@ -292,6 +290,15 @@ export const designPage = {
     hairlines: "Hairlines and grid",
     motion: "Easing",
     playground: "Components on a fake progress",
+    plates: "Plates, morph and twinkle",
+  },
+  plateLab: {
+    slider: "Amount",
+    hint: "One value drives all three: the morph edge, the plate's tint and blur, and how much of the star field is revealed. Sway and twinkle run on idle time.",
+    morph: "MorphPlate · stone to bark through the mask",
+    plate: "Plate · sway, tint and blur",
+    twinkle: "Twinkle · reveal grows the field",
+    readout: (t: number) => t.toFixed(2),
   },
   playground: {
     slider: "Fake progress",

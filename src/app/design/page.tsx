@@ -8,6 +8,7 @@ import { Tag } from "@/components/ui/tag";
 import { colors, EASE_CSS } from "@/styles/tokens";
 import { cn } from "@/lib/utils";
 
+import { PlateLab } from "./plate-lab";
 import { Playground } from "./playground";
 
 export const metadata: Metadata = {
@@ -154,6 +155,12 @@ export default function DesignPage() {
       <section className="px-col-a py-12">
         <SectionLabel>{designPage.sections.playground}</SectionLabel>
         <Playground />
+      </section>
+
+      {/* The stage machinery: a morph, a plate and a twinkle field on one value. */}
+      <section className="px-col-a py-12">
+        <SectionLabel>{designPage.sections.plates}</SectionLabel>
+        <PlateLab />
       </section>
 
       {/* Easing */}

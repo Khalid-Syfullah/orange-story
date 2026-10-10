@@ -3,11 +3,11 @@ import type { SceneId } from "@/scroll/types";
 import { colors } from "@/styles/tokens";
 
 /**
- * Placeholder art: one tidy plate per scene, made of silhouettes and color fields from the palette,
- * until the painted plates exist. Each scene is a list of shapes in frame fractions (x and y from 0
- * to 1 of the width and height; radii as fractions of the shorter side), drawn by two renderers:
- * `drawPlaceholder` (a 2D canvas, the texture of the scene plate on the stage) and
- * `PlaceholderStill` (SVG, the still for each scene on the reduced-motion page).
+ * Placeholder stills: one tidy flat picture per scene, made of silhouettes and color fields from the
+ * palette, until painted stills exist. Each scene is a list of shapes in frame fractions (x and y
+ * from 0 to 1 of the width and height; radii as fractions of the shorter side), drawn as SVG by
+ * `PlaceholderStill` (the still for each scene on the reduced-motion page). The stage itself draws
+ * the plates of `public/art/manifest.json` in depth instead.
  */
 
 type Pt = readonly [number, number];
@@ -336,73 +336,4 @@ export function placeholderPlate(id: SceneId): PlaceholderPlate {
     cache.set(id, plate);
   }
   return plate;
-}
-
-/* Canvas renderer */
-
-export interface PlateLabel {
-  number: string;
-  name: string;
-  meta: string;
-  /** The page's mono family (`--font-mono`). */
-  monoFont: string;
-}
-
-/**
- * Draws a scene's placeholder plate into a 2D canvas, with its label as one small line in the strip
- * along the bottom edge: below the bottom text slot and clear of the percent counter, so it never
- * sits under a beat.
- */
-export function drawPlaceholder(ctx: CanvasRenderingContext2D, id: SceneId, width: number, height: number, label?: PlateLabel) {
-  const plate = placeholderPlate(id);
-  const unit = Math.min(width, height);
-  const gradient = ctx.createLinearGradient(0, 0, 0, height);
-  gradient.addColorStop(0, plate.ground[0]);
-  gradient.addColorStop(1, plate.ground[1]);
-  ctx.globalAlpha = 1;
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, width, height);
-
-  for (const shape of plate.shapes) {
-    ctx.globalAlpha = shape.alpha ?? 1;
-    if (shape.kind === "line") {
-      ctx.strokeStyle = shape.stroke;
-      ctx.lineWidth = Math.max(1, shape.width * unit);
-      ctx.lineCap = "round";
-      ctx.beginPath();
-      ctx.moveTo(shape.from[0] * width, shape.from[1] * height);
-      ctx.lineTo(shape.to[0] * width, shape.to[1] * height);
-      ctx.stroke();
-      continue;
-    }
-    ctx.fillStyle = shape.fill;
-    ctx.beginPath();
-    if (shape.kind === "rect") ctx.rect(shape.x * width, shape.y * height, shape.w * width, shape.h * height);
-    else if (shape.kind === "circle") ctx.arc(shape.x * width, shape.y * height, shape.r * unit, 0, Math.PI * 2);
-    else if (shape.kind === "ellipse") ctx.ellipse(shape.x * width, shape.y * height, shape.rx * unit, shape.ry * unit, 0, 0, Math.PI * 2);
-    else {
-      shape.points.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x * width, y * height) : ctx.lineTo(x * width, y * height)));
-      ctx.closePath();
-    }
-    ctx.fill();
-  }
-
-  if (label) {
-    const dark = plate.ground[0] === milk;
-    const text = `${label.number}  ·  ${label.name}  ·  ${label.meta}`.toUpperCase();
-    // Fit the line inside the middle 56% of the width (the percent counter sits to the right).
-    let size = Math.max(9, unit * 0.017);
-    ctx.font = `500 ${Math.round(size)}px ${label.monoFont}`;
-    const fit = (width * 0.56) / Math.max(1, ctx.measureText(text).width);
-    if (fit < 1) {
-      size = Math.max(6, size * fit);
-      ctx.font = `500 ${Math.round(size)}px ${label.monoFont}`;
-    }
-    ctx.globalAlpha = 0.62;
-    ctx.fillStyle = dark ? ink : white;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(text, width / 2, height - Math.max(18, unit * 0.03));
-  }
-  ctx.globalAlpha = 1;
 }

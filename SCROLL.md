@@ -13,7 +13,8 @@ The whole story is data in `src/scroll/script.ts`: chapters, scenes, text beats,
 | Scroll engine (Lenis, ScrollTrigger, `progress` and `velocity`) | `src/scroll/stage-scroll.ts` |
 | React access to the story (context and hooks) | `src/scroll/story-scroll.tsx` |
 | The pinned stage, the beats, the dev timeline, the reduced-motion page | `src/components/story/` |
-| Placeholder plates (one per scene) | `src/components/stage/` |
+| Art manifest (every plate, its file, size and place in depth) | `public/art/manifest.json`, read by `src/art/manifest.ts` |
+| Stage canvas: plates, morph, twinkle, sway, camera rig, scene presence | `src/components/stage/` |
 
 ## The stage
 
@@ -180,7 +181,7 @@ Covering transitions (sand, unfold, dust, fabric) straddle a scene boundary and 
 
 ## Camera
 
-Each key is a camera position, a target and a vertical field of view (world units: x right, y up, z toward the viewer; plates sit at z 0 or behind), plus the kind of move that starts there and runs to the next key: `hold`, `push`, `pull`, `pan`, `dolly-up`, `dolly-down`, or `reframe`. The camera always interpolates between keys and never cuts; a `reframe` happens only while a transition fully covers the screen. Every scene has at least one key, and keys never share a position.
+The camera rig (`src/components/stage/camera-rig.tsx`) builds one paused GSAP timeline from these keys (`camera-path.ts`), with the story's easing curve on every move, and seeks it to the progress every frame, so the camera always interpolates and plays backwards exactly. Each key is a camera position, a target and a vertical field of view (world units: x right, y up, z toward the viewer; plates sit at z 0 or behind), plus the kind of move that starts there and runs to the next key: `hold`, `push`, `pull`, `pan`, `dolly-up`, `dolly-down`, or `reframe`. The camera always interpolates between keys and never cuts; a `reframe` happens only while a transition fully covers the screen. Every scene has at least one key, and keys never share a position.
 
 | Scene | At | Move from here | Position | Target | FOV |
 | --- | --- | --- | --- | --- | --- |
@@ -217,6 +218,10 @@ Each key is a camera position, a target and a vertical field of view (world unit
 | stars | 0.7690 | hold | 0, 6, 7 | 0, 6.5, 0 | 38 |
 | apply | 0.8180 | hold | 0, 6, 7 | 0, 6.5, 0 | 38 |
 | finale | 0.8980 | hold | 0, 6, 7 | 0, 6.5, 0 | 38 |
+
+## Scenes on the canvas
+
+Only the scene on stage and its two neighbours are mounted on the WebGL canvas, and only the current scene and the next one are preloaded. Each scene's art fades with its presence (`src/components/stage/presence.ts`): where a covering transition hands one scene to the next, the swap is a step at the boundary, under full cover; at a plain boundary the incoming scene fades in over the outgoing one across 0.2 screen to each side. Scenes without custom art (`SCENE_ART` in `scene-layers.tsx`) draw their manifest plates where the manifest places them.
 
 ## Hairlines, progress lines and tone
 

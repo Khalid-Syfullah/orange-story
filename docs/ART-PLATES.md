@@ -19,3 +19,10 @@ All plates live in `public/art/<scene>/<plate>.webp` (with alpha), listed in `pu
 | faq | orchard plates reused; sparkle sprite |
 | stars | fabric sky texture; billowing cloud; marble platform and stairs; astronomer with raised arm; star sprite |
 | finale | tree; woman with watering can (body, arm, water stream frames); man with shears (body, arms frames); falling orange sprite; cloud sprites |
+
+## Manifest, placeholders and final art
+
+- `public/art/manifest.json` lists every plate: its file (`src`), pixel `size`, `depth` (distance behind the picture plane in world units, z = -depth), `anchor` (the image point, as fractions from the left and top, placed at `position`), world `height`, and the `scenes` that use it (the first one owns the folder). Optional fields: `role` (`plate`, `backdrop`, `texture`, `sprite`), `rotation`, `layer`, `tile` and `repeat` for tileable images, `linear` for masks, a default `sway` in degrees, and `frame` for animation frames.
+- `npm run art:placeholders` draws a placeholder for every entry that still has a `placeholder` spec (flat palette colors and simple silhouettes). `npm run art:placeholders -- --check` verifies that every entry has a WebP file of the listed size.
+- To add final art: save the painting as WebP with alpha at the entry's path and size (or update `size`), then delete the entry's `placeholder` spec so the generator never overwrites it. No code changes; the unit test (`npm test`) checks every file against the manifest.
+- Textures are capped at 2048 px on the longest side (1024 on low-memory and small touch devices) and loaded only for the scene on stage and the next one.
