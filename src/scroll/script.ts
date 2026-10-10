@@ -642,6 +642,19 @@ export const PRUNE = {
 } as const;
 
 /**
+ * The stargazer's timings (progress). `src/components/stage/stars-plan.ts` choreographs on these:
+ * the constellation grows outward from the astronomer's fingertip (`grow`, scrubbed: stars appear
+ * and edges draw as progress passes them, and shrink back when scrolling up) once the fabric sky
+ * has cleared, and its edges each draw over `draw` of the growth.
+ */
+export const STARS = {
+  /** The constellation grows. */
+  grow: [at("stars", 0.22), at("stars", 0.95)] as ProgressRange,
+  /** How long one edge takes to draw, as a fraction of `grow`. */
+  draw: 0.08,
+} as const;
+
+/**
  * The falling orange's timings (progress). `src/components/stage/fall-plan.ts` choreographs on
  * these: the cut branch drops (`cut`, `branch`), the gardener drifts right and out of frame
  * (`gardener`), the orange falls from the branch with the camera following it (`release`), the

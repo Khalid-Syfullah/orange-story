@@ -21,6 +21,7 @@ import { PluckArt } from "./pluck-art";
 import { mountedScenes, scenePresence } from "./presence";
 import { ShareArt } from "./share-art";
 import { SiteArt } from "./site-art";
+import { StarsArt } from "./stars-art";
 import { WorkArt } from "./work-art";
 import { SceneLayerContext, type SceneLayer } from "./stage-context";
 import { configureTextures, preloadTextures } from "./textures";
@@ -51,6 +52,7 @@ export const SCENE_ART: Partial<Record<SceneId, React.ComponentType<SceneArtProp
   site: SiteArt,
   prune: PruneArt,
   fall: FallArt,
+  stars: StarsArt,
 };
 
 const SCENE_IDS: readonly SceneId[] = SCENES.map((s) => s.id);
