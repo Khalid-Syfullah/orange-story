@@ -2,7 +2,7 @@
 
 The orange.io website: one continuous scroll story about a growth partner paid from the harvest, not the hours.
 
-The whole site is a single pinned stage, about 53 screens of ordinary scrolling. As the visitor scrolls, painted scenes of an orange tree, its keepers and its harvest pass by in 2.5D (flat painted plates at different depths, filmed by a moving camera), and the text arrives and leaves in set places: four chapters, The Model, The Work, The Terms and Questions, and a finale. Everything is driven by one scroll position, so scrolling back up plays the story backwards exactly. The artwork is a stand-in for now: procedurally painted oil studies of the cast (`docs/ART-DIRECTION.md`) at the paths the final paintings will use, with a brief for every painting and an importer that turns finished paintings into plates.
+The whole site is a single pinned stage, about 53 screens of ordinary scrolling. As the visitor scrolls, painted scenes of an orange tree, its keepers and its harvest pass by in 2.5D (flat painted plates at different depths, filmed by a moving camera), and the text arrives and leaves in set places: four chapters, The Model, The Work, The Terms and Questions, and a finale. Everything is driven by one scroll position, so scrolling back up plays the story backwards exactly. The cast, props, foliage and architecture now use 90 finished AI-generated paintings following `docs/ART-DIRECTION.md`, with realistic faces, anatomy and materials. The original briefs and importer remain available for future art revisions.
 
 ![The opening: a statue on a minaret raises a glowing orange; "Grown to be found."](docs/screenshots/hero.webp)
 
@@ -51,7 +51,7 @@ npx playwright install chromium   # once
 npm run test:story                # builds, serves on port 3100, runs e2e/story.spec.ts
 ```
 
-`npm run art:placeholders` repaints every stand-in plate on worker threads (`-- --check` verifies every file against the manifest and fails a flat character plate). `npm run art:briefs` writes the painting briefs, `npm run art:import` brings finished paintings in (see "Replacing the art").
+`npm run art:placeholders` repaints every stand-in plate on worker threads and writes the stand-ins' rigs (`-- --rigs` writes only the rigs; `-- --check` verifies every file against the manifest, fails a flat character plate and a stale rig). `npm run art:briefs` writes the painting briefs, `npm run art:import` brings finished paintings in (see "Replacing the art").
 
 ## Project structure
 
@@ -88,7 +88,7 @@ npm run test:story                # builds, serves on port 3100, runs e2e/story.
 1. `npm run art:briefs` writes `docs/ART-BRIEFS.md`: the generation order (a reference sheet per recurring character first) and, per plate, the size, key colour, prompt, negative prompt and checks.
 2. Generate or paint each one on its flat key colour and save it as `art/source/<scene>/<name>.png` (not committed).
 3. Write its sidecar `art/rig/<scene>/<name>.json` (committed): the key colour, an `anchor` point for plates not standing on their foot, and the named points (the orange in the hand, the fingertip, ...), in the painting's own fractions.
-4. `npm run art:import` cuts each painting out, fits it to its plate, writes the WebP and the points, and marks the entry `painted` so the stand-in generator leaves it alone; `npm run art:import -- --check` checks the result.
+4. `npm run art:import` cuts each painting out, fits it to its plate, writes the WebP, the points and the rig (the sidecar's, or a first guess from the cut-out), and marks the entry `painted` so the stand-in generator leaves it alone; `npm run art:import -- --rigs` writes the rigs alone; `npm run art:import -- --check` checks the result.
 5. If a point is off, place it by hand in the plate lab on `/design` (Points), copy the sidecar JSON, and import again. No code changes.
 
 **Pacing.** Everything that moves is placed in `src/scroll/script.ts`: `STAGE_VH` (the stage length), the scene shares, the beats, the transitions, the camera keys and each scene's own timing object. Positions inside a scene move with it when its share changes; text lengths are in screens. `validateScript()` stops the page in development on an impossible script (and fails `npm test`), the dev timeline (the backtick key) shows the live values, and `SCROLL.md` explains every number. Run `npm test` and `npm run test:story` after a change.
@@ -110,4 +110,4 @@ npm run test:story                # builds, serves on port 3100, runs e2e/story.
 
 ## Credits
 
-The artwork is a procedural stand-in, painted by `scripts/art/` from an original cast, until the original paintings are added. Copy and code are original to Orange. Newsreader, Geist and Geist Mono are served from Google Fonts through `next/font`. The site was built phase by phase with Claude Code (`docs/BUILD.md`).
+The finished cast and scene artwork was generated with the built-in image-generation tool and registered to the existing animation plates. Utility masks, shadows and stage textures remain procedural. Copy and code are original to Orange. Newsreader, Geist and Geist Mono are served from Google Fonts through `next/font`. The site was built phase by phase with Claude Code (`docs/BUILD.md`).

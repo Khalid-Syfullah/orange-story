@@ -4,16 +4,24 @@ import {
   DataTexture,
   DoubleSide,
   LinearFilter,
+  NoColorSpace,
   NormalBlending,
   RedFormat,
+  RepeatWrapping,
+  RGBAFormat,
   ShaderMaterial,
   Vector2,
+  Vector3,
   Vector4,
   type Texture,
 } from "three";
 
 import { seeded } from "@/lib/progress";
-import { colors } from "@/styles/tokens";
+import { colors, mixColors } from "@/styles/tokens";
+
+import { LIFE } from "./life";
+import { HALFTONE, RINGS } from "./paint";
+import { RIG_MAX_FIGURES } from "./rig";
 
 /**
  * The plate shaders. Every texture is sampled premultiplied (see `textures.ts`), every material
@@ -21,18 +29,28 @@ import { colors } from "@/styles/tokens";
  * scene sorts them.
  *
  * - `PlateMaterial`: one painted plate with opacity, tint and blur (a small golden-angle ring of
- *   reads on a mip-biased texture: cheap depth of field).
+ *   reads on a mip-biased texture: cheap depth of field), on the painted canvas: grain and
+ *   craquelure in the plate's own UV space, and for figures the scene's colour grade, a sky rim on
+ *   the shadow edge, a warm bounce from below and idle life (a subdivided mesh bent by the rig's
+ *   weight texture, `rig.ts`, `life.ts`).
+ * - `HalftoneMaterial`: the graphic layer over the painting: clouds, water and the hero's ripple
+ *   rings as a dot grid at 45 degrees in plate space (`paint.ts`).
  * - `MorphMaterial`: two textures blended through a mask with a moving, soft edge (stone turning
  *   into bark), with an optional glow along the edge.
  * - `TwinkleMaterial`: instanced sprites that pulse on idle time and appear as `reveal` passes
  *   each one's threshold (stars, sparkles).
  * - `RippleMaterial`: instanced droplets of light that drift outward from a source, brightened by a
- *   slow ring wave (the hero's glow). Their whole motion is computed in the vertex shader.
+ *   slow ring wave (the hero's glow), drawn as crisp dots whose size carries their brightness. Their
+ *   whole motion is computed in the vertex shader.
  *
  * Plates and morphs can also be cut to a screen-space circle (`revealMask`): the rainbow ring shows
  * the new scene inside it and the old one outside. Plates can also thin out of, or recede into the
  * sky's haze inside, a soft screen-space rectangle behind text (`clearInside`): the clouds parting
  * around the service cards, the foliage and fruit fading back behind a headline.
+ *
+ * The shared uniforms (`STAGE_UNIFORMS`) are one object for every material: the quality tier, the
+ * grain and craquelure textures and the palette colours of the figure treatment. Setting one value
+ * changes every plate at once.
  */
 
 const VERTEX = /* glsl */ `
@@ -40,6 +58,83 @@ varying vec2 vUv;
 void main() {
   vUv = uv;
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+`;
+
+/* ------------------------------------------------------------------ */
+/* Shared uniforms                                                     */
+/* ------------------------------------------------------------------ */
+
+/** A 1x1 texture of one grey value (data, not colour), standing in until the canvas textures load. */
+function flatTexture(value: number): DataTexture {
+  const texture = new DataTexture(new Uint8Array([value, value, value, 255]), 1, 1, RGBAFormat);
+  texture.colorSpace = NoColorSpace;
+  texture.wrapS = texture.wrapT = RepeatWrapping;
+  texture.needsUpdate = true;
+  return texture;
+}
+
+/** Linear colour from a palette colour (`Color.set` converts sRGB to the working space). */
+const paletteColor = (hex: string) => new Color(hex);
+
+/**
+ * Uniforms every stage material shares (the same objects, so one write reaches them all):
+ * - `quality`: the adaptive quality tier, 0 (lowest: plain soft paint, no canvas, rim or halftone)
+ *   to 2 (`quality.ts`);
+ * - `grainMap`, `crackMap`: the shared canvas textures (`hero/canvas-grain`, `hero/craquelure`),
+ *   neutral until they load;
+ * - the figure treatment's palette: the warm sun, the cool sky, the rim and the bounce.
+ */
+export const STAGE_UNIFORMS = {
+  quality: { value: 2 },
+  grainMap: { value: flatTexture(128) as Texture },
+  crackMap: { value: flatTexture(0) as Texture },
+  warmColor: { value: paletteColor(mixColors("milk", "orange", 0.35)) },
+  coolColor: { value: paletteColor(colors.skySoft) },
+  rimColor: { value: paletteColor(mixColors("skySoft", "white", 0.25)) },
+  bounceColor: { value: paletteColor(mixColors("milk", "orange", 0.55)) },
+};
+
+/* ------------------------------------------------------------------ */
+/* The plate: life in the vertex shader                                */
+/* ------------------------------------------------------------------ */
+
+const PLATE_VERTEX = /* glsl */ `
+#define MAX_FIGURES ${RIG_MAX_FIGURES}
+attribute vec2 figure;
+uniform float lifeOn;
+uniform sampler2D rigMap;
+uniform float plateAspect;
+uniform vec4 lifeA[MAX_FIGURES]; // breath (rise), head turn, sway, hem swing
+uniform vec4 lifeB[MAX_FIGURES]; // feet xy, neck xy (q space)
+uniform vec4 lifeC[MAX_FIGURES]; // hem phase
+uniform vec4 armTurn;            // shoulder xy, angle
+varying vec2 vUv;
+vec2 turnAbout(vec2 p, vec2 c, float a) {
+  float s = sin(a);
+  float k = cos(a);
+  p -= c;
+  return c + vec2(k * p.x - s * p.y, s * p.x + k * p.y);
+}
+void main() {
+  vUv = uv;
+  vec3 pos = position;
+  if (lifeOn > 0.5) {
+    // The rig's weights at this vertex: breath, hem, head, arm (rig.ts). The same bend as deformQ (life.ts).
+    vec4 w = textureLod(rigMap, uv, 0.0);
+    int i = int(figure.x + 0.5);
+    float zone = figure.y;
+    vec4 a = lifeA[i];
+    vec4 b = lifeB[i];
+    vec2 q = vec2(uv.x * plateAspect, uv.y);
+    q = mix(q, turnAbout(q, armTurn.xy, armTurn.z), w.a);
+    q = mix(q, turnAbout(q, b.zw, a.y * zone), w.b);
+    q.y += a.x * w.r * zone;
+    q.x += a.w * w.g * zone * sin(lifeC[i].x + uv.x * ${LIFE.hem.waves.toFixed(1)});
+    q = turnAbout(q, b.xy, a.z * zone);
+    pos.xy = vec2(q.x / plateAspect, q.y) - 0.5;
+  }
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
 }
 `;
 
@@ -90,18 +185,8 @@ float clearInside() {
 }
 `;
 
-const PLATE_FRAGMENT = /* glsl */ `
-uniform sampler2D map;
-uniform vec4 uvTransform;
-uniform float opacity;
-uniform vec3 tint;
-uniform float tintAmount;
-uniform vec2 blurRadius;
-uniform float blurBias;
-varying vec2 vUv;
-${OUTPUT}
-${REVEAL}
-${CLEARING}
+/** The blurred read of a plate's map (depth of field), shared by the plate and the halftone. */
+const SAMPLE_MAP = /* glsl */ `
 vec4 sampleMap(vec2 uv) {
   if (blurRadius.x <= 0.0 && blurRadius.y <= 0.0) return texture2D(map, uv);
   vec4 sum = texture2D(map, uv, blurBias) * 2.0;
@@ -113,9 +198,11 @@ vec4 sampleMap(vec2 uv) {
   }
   return sum / 10.0;
 }
-void main() {
-  vec4 color = sampleMap(vUv * uvTransform.xy + uvTransform.zw);
-  color.rgb = mix(color.rgb, tint * color.a, tintAmount);
+`;
+
+/** Clearing and output, the same for every plate-like material. */
+const FINISH = /* glsl */ `
+void finish(vec4 color) {
   float cleared = clearInside();
   gl_FragColor = toOutput(color, opacity * revealMask() * (1.0 - cleared * (1.0 - clearHaze)));
   if (cleared * clearHaze > 0.0) {
@@ -125,6 +212,186 @@ void main() {
     gl_FragColor.rgb = mix(gl_FragColor.rgb, haze * gl_FragColor.a, cleared * clearHaze);
   }
   if (gl_FragColor.a < 0.002) discard;
+}
+`;
+
+const LUMA = /* glsl */ `
+float luma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
+`;
+
+const PLATE_FRAGMENT = /* glsl */ `
+uniform sampler2D map;
+uniform vec4 uvTransform;
+uniform float opacity;
+uniform vec3 tint;
+uniform float tintAmount;
+uniform vec2 blurRadius;
+uniform float blurBias;
+// The painted canvas (paint.ts): grain and craquelure in the plate's own UV space.
+uniform float quality;
+uniform sampler2D grainMap;
+uniform sampler2D crackMap;
+uniform vec4 canvasRepeat;
+uniform float grainAmount;
+uniform float crackAmount;
+// The figure treatment: the scene grade, the sky rim on the shadow edge, the warm bounce from below.
+uniform float figureOn;
+uniform vec3 grade;
+uniform vec3 warmColor;
+uniform vec3 coolColor;
+uniform vec3 rimColor;
+uniform vec3 bounceColor;
+uniform vec2 rimStep;
+uniform float rimAmount;
+uniform vec4 rimJoint; // a part's joint (uv), the radius around it with no rim (plate heights), the plate's aspect
+uniform vec3 bounce; // amount, the ground's height in uv, how high it reaches
+varying vec2 vUv;
+${OUTPUT}
+${REVEAL}
+${CLEARING}
+${LUMA}
+${SAMPLE_MAP}
+${FINISH}
+// gradeColor in paint.ts: warm highlights, cool shadows, a saturation trim.
+vec3 gradeColor(vec3 c) {
+  float l = luma(c);
+  float hi = smoothstep(0.3, 0.85, l);
+  float lo = 1.0 - smoothstep(0.05, 0.45, l);
+  c = mix(c, c * (warmColor / max(1e-4, luma(warmColor))), grade.x * hi);
+  c = mix(c, c * (coolColor / max(1e-4, luma(coolColor))), grade.y * lo);
+  float l2 = luma(c);
+  return mix(vec3(l2), c, 1.0 + grade.z);
+}
+void main() {
+  vec2 uv = vUv * uvTransform.xy + uvTransform.zw;
+  vec4 color = sampleMap(uv);
+  if (color.a > 0.0 && (figureOn > 0.5 || (quality > 1.5 && grainAmount + crackAmount > 0.0))) {
+    vec3 c = color.rgb / color.a;
+    if (figureOn > 0.5) {
+      c = gradeColor(c);
+      if (quality > 0.5) {
+        // Only on the paint itself, not on the soft matte around it (its colour is the cut-out's, not the figure's).
+        float body = smoothstep(0.6, 0.95, color.a);
+        // The sky wraps the shadow edge: where the alpha falls away toward the shadow side (read as soft
+        // as the paint itself is drawn, so a blurred plate gets no rim outside its blurred edge). Not
+        // where a part meets its body (rimJoint: the cut at a neck or a shoulder is not an edge).
+        float ahead = 0.5 * (texture2D(map, uv + rimStep, blurBias).a + texture2D(map, uv + rimStep * 2.2, blurBias).a);
+        float joint = rimJoint.z > 0.0 ? smoothstep(rimJoint.z, rimJoint.z * 1.8, length((vUv - rimJoint.xy) * vec2(rimJoint.w, 1.0))) : 1.0;
+        float edge = clamp((color.a - ahead) * 1.6, 0.0, 1.0) * body * joint;
+        c = 1.0 - (1.0 - c) * (1.0 - rimColor * (edge * rimAmount));
+        // Warm light bounced up from the ground, on the lower part of a standing figure, in its darks.
+        float low = 1.0 - smoothstep(bounce.y, bounce.y + bounce.z, vUv.y);
+        c += bounceColor * (bounce.x * low * body * (1.0 - smoothstep(0.1, 0.8, luma(c))));
+      }
+    }
+    if (quality > 1.5) {
+      if (grainAmount > 0.0) c *= 1.0 + (texture2D(grainMap, vUv * canvasRepeat.xy).r - 0.5) * 2.0 * grainAmount;
+      if (crackAmount > 0.0) c *= 1.0 - texture2D(crackMap, vUv * canvasRepeat.zw).r * crackAmount;
+    }
+    color.rgb = c * color.a;
+  }
+  color.rgb = mix(color.rgb, tint * color.a, tintAmount);
+  finish(color);
+}
+`;
+
+/* ------------------------------------------------------------------ */
+/* The halftone layer                                                  */
+/* ------------------------------------------------------------------ */
+
+/** The dot of a halftone cell (`halftoneCoverage` in paint.ts). */
+const HALFTONE_DOT = /* glsl */ `
+float halftoneTone(float t) { return smoothstep(${HALFTONE.low.toFixed(3)}, ${HALFTONE.high.toFixed(3)}, t); }
+float halftoneDot(vec2 cell, float tone, float aa) {
+  float r = 0.70710678 * sqrt(halftoneTone(tone));
+  if (r <= 0.0) return 0.0;
+  float d = length(fract(cell) - 0.5);
+  return 1.0 - smoothstep(r - aa, r + aa, d);
+}
+`;
+
+/** The ripple rings' tone (`ringTone` in paint.ts). */
+const RING_TONE = /* glsl */ `
+float ringTone(float r, float t, float reach) {
+  float tone = 0.0;
+  for (int k = 0; k < ${RINGS.count}; k++) {
+    float life = fract(float(k) / ${RINGS.count.toFixed(1)} + t * ${RINGS.speed});
+    float radius = ${RINGS.start} + reach * pow(life, 0.62);
+    float born = smoothstep(0.0, 0.12, life) * (1.0 - smoothstep(0.35, 1.0, life));
+    float d = (r - radius) / (${RINGS.width} * (0.6 + life));
+    tone = max(tone, exp(-d * d) * born);
+  }
+  return tone;
+}
+`;
+
+const HALFTONE_FRAGMENT = /* glsl */ `
+uniform sampler2D map;
+uniform vec4 uvTransform;
+uniform float opacity;
+uniform vec2 blurRadius;
+uniform float blurBias;
+uniform float quality;
+uniform float mode;      // 0: cloud, 1: water, 2: ripple rings
+uniform vec2 cells;      // dot cells across and down the plate
+uniform vec3 litColor;
+uniform vec3 shadeColor;
+uniform vec3 dotColor;
+// The rings: ripple time, reach and lift, the plane's world size, and where the left of the stage calms.
+uniform float time;
+uniform float reach;
+uniform float lift;
+uniform vec2 ringSize;
+uniform vec2 calm;       // world x offsets (from the source) where the rings are gone, and full
+varying vec2 vUv;
+${OUTPUT}
+${REVEAL}
+${CLEARING}
+${LUMA}
+${SAMPLE_MAP}
+${FINISH}
+${HALFTONE_DOT}
+${RING_TONE}
+void main() {
+  // The dot grid lives in plate space, at 45 degrees: it moves with the art, the same size on any screen.
+  vec2 g = mat2(0.70710678, 0.70710678, -0.70710678, 0.70710678) * (vUv * cells);
+  float perPixel = length(fwidth(g));
+  float aa = clamp(perPixel * 0.75, 0.01, 0.5);
+  // Cells too small to draw cleanly give way to the plain soft version, as does the lowest quality tier.
+  float lod = quality > 0.5 ? smoothstep(${HALFTONE.minCellPx.toFixed(2)}, ${HALFTONE.fullCellPx.toFixed(2)}, 1.0 / max(perPixel, 1e-4)) : 0.0;
+  vec4 color;
+  if (mode < 1.5) {
+    vec4 soft = sampleMap(vUv * uvTransform.xy + uvTransform.zw);
+    color = soft;
+    if (lod > 0.0 && soft.a > 0.001) {
+      vec3 c = soft.rgb / soft.a;
+      float lum = luma(linearToOutputTexel(vec4(c, 1.0)).rgb);
+      vec4 dots;
+      if (mode < 0.5) {
+        // A cloud: the soft edge breaks into dots (toned as the paint there); inside, the shadow side is
+        // dots of the cool shade on the lit body, dense where it is darkest. One grid for both.
+        float solid = smoothstep(0.8, 0.98, soft.a);
+        float body = mix(halftoneDot(g, soft.a, aa), 1.0, solid);
+        float tone = smoothstep(0.93, 0.5, lum);
+        float shade = halftoneDot(g, tone, aa) * solid;
+        vec3 rim = mix(litColor, shadeColor, tone * 0.6);
+        dots = vec4(mix(mix(rim, litColor, solid), shadeColor, shade) * body, body);
+      } else {
+        // Water: light dots where the stream is, over a faint wash of it.
+        float d = halftoneDot(g, soft.a * smoothstep(0.15, 0.9, lum), aa);
+        dots = vec4(dotColor * d, d) + soft * 0.2;
+      }
+      color = mix(soft, dots, lod);
+    }
+  } else {
+    // Rings of dots spreading from the orange (the glow's ripple), calming toward the words on the left.
+    vec2 p = (vUv - 0.5) * ringSize;
+    float tone = ringTone(length(p), time, reach) * smoothstep(calm.x, calm.y, p.x) * (0.75 + 0.25 * lift);
+    float d = mix(tone * 0.16, halftoneDot(g, tone * 0.42, aa), lod) * 0.75;
+    vec3 c = mix(dotColor, vec3(1.0), lift * 0.6);
+    color = vec4(c * d, d);
+  }
+  finish(color);
 }
 `;
 
@@ -139,6 +406,13 @@ uniform float softness;
 uniform vec3 edgeColor;
 uniform float edgeAmount;
 uniform float opacity;
+// The painted canvas, as on a plate.
+uniform float quality;
+uniform sampler2D grainMap;
+uniform sampler2D crackMap;
+uniform vec4 canvasRepeat;
+uniform float grainAmount;
+uniform float crackAmount;
 varying vec2 vUv;
 ${OUTPUT}
 ${REVEAL}
@@ -153,6 +427,10 @@ void main() {
   vec4 color = mix(b, a, keep);
   float band = 1.0 - abs(2.0 * keep - 1.0);
   color.rgb += edgeColor * (band * band * edgeAmount * color.a);
+  if (quality > 1.5) {
+    if (grainAmount > 0.0) color.rgb *= 1.0 + (texture2D(grainMap, vUv * canvasRepeat.xy).r - 0.5) * 2.0 * grainAmount;
+    if (crackAmount > 0.0) color.rgb *= 1.0 - texture2D(crackMap, vUv * canvasRepeat.zw).r * crackAmount;
+  }
   gl_FragColor = toOutput(color, opacity * revealMask());
   if (gl_FragColor.a < 0.002) discard;
 }
@@ -228,14 +506,27 @@ const RIPPLE_FRAGMENT = /* glsl */ `
 uniform sampler2D map;
 uniform float opacity;
 uniform float lift;
+uniform float quality;
+uniform vec3 dotColor;
 varying vec2 vUv;
 varying float vAlpha;
 ${OUTPUT}
 void main() {
-  vec4 color = texture2D(map, vUv);
-  // The glow brightens toward white as the story starts to move.
-  color.rgb = mix(color.rgb, vec3(color.a), lift * 0.7);
-  gl_FragColor = toOutput(color, opacity * vAlpha);
+  if (quality > 0.5) {
+    // A crisp dot of light whose size carries its brightness: the glow as a halftone.
+    float d = length(vUv - 0.5);
+    float r = 0.22 * sqrt(clamp(vAlpha, 0.0, 1.0));
+    float aa = fwidth(d) * 0.8 + 0.002;
+    float dotA = 1.0 - smoothstep(r - aa, r + aa, d);
+    // The dots brighten toward white as the story starts to move.
+    vec3 c = mix(dotColor, vec3(1.0), 0.35 + lift * 0.55);
+    gl_FragColor = toOutput(vec4(c * dotA, dotA), opacity * 0.85);
+  } else {
+    vec4 color = texture2D(map, vUv);
+    // The glow brightens toward white as the story starts to move.
+    color.rgb = mix(color.rgb, vec3(color.a), lift * 0.7);
+    gl_FragColor = toOutput(color, opacity * vAlpha);
+  }
   if (gl_FragColor.a < 0.002) discard;
 }
 `;
@@ -249,11 +540,20 @@ const PAINTER = {
   toneMapped: false,
 } as const;
 
+/** Per-figure uniform arrays of the plate's life (one entry per person a plate can hold). */
+const lifeArray = () => Array.from({ length: RIG_MAX_FIGURES }, () => new Vector4(0, 0, 0, 0));
+
+/** No rig: life reads zero weights. */
+let noRig: DataTexture | null = null;
+function noRigTexture(): DataTexture {
+  return (noRig ??= flatTexture(0));
+}
+
 export class PlateMaterial extends ShaderMaterial {
   constructor(map: Texture) {
     super({
       ...PAINTER,
-      vertexShader: VERTEX,
+      vertexShader: PLATE_VERTEX,
       fragmentShader: PLATE_FRAGMENT,
       uniforms: {
         map: { value: map },
@@ -263,6 +563,62 @@ export class PlateMaterial extends ShaderMaterial {
         tintAmount: { value: 0 },
         blurRadius: { value: new Vector2(0, 0) },
         blurBias: { value: 0 },
+        // The canvas (set per plate by `Plate`; off until then).
+        canvasRepeat: { value: new Vector4(1, 1, 1, 1) },
+        grainAmount: { value: 0 },
+        crackAmount: { value: 0 },
+        // The figure treatment.
+        figureOn: { value: 0 },
+        grade: { value: new Vector3(0, 0, 0) },
+        rimStep: { value: new Vector2(0, 0) },
+        rimAmount: { value: 0 },
+        rimJoint: { value: new Vector4(0, 0, 0, 1) },
+        bounce: { value: new Vector3(0, 0, 0) },
+        // Life.
+        lifeOn: { value: 0 },
+        rigMap: { value: noRigTexture() },
+        plateAspect: { value: 1 },
+        lifeA: { value: lifeArray() },
+        lifeB: { value: lifeArray() },
+        lifeC: { value: lifeArray() },
+        armTurn: { value: new Vector4(0, 0, 0, 0) },
+        ...STAGE_UNIFORMS,
+        ...revealUniforms(),
+        ...clearingUniforms(),
+      },
+    });
+  }
+}
+
+/** What a halftone plate is: a cloud, water, or the hero's ripple rings (procedural, no texture of its own). */
+export type HalftoneMode = "cloud" | "water" | "rings";
+
+const HALFTONE_MODES: Record<HalftoneMode, number> = { cloud: 0, water: 1, rings: 2 };
+
+export class HalftoneMaterial extends ShaderMaterial {
+  constructor(map: Texture, mode: HalftoneMode) {
+    super({
+      ...PAINTER,
+      vertexShader: VERTEX,
+      fragmentShader: HALFTONE_FRAGMENT,
+      uniforms: {
+        map: { value: map },
+        uvTransform: { value: new Vector4(1, 1, 0, 0) },
+        opacity: { value: 1 },
+        blurRadius: { value: new Vector2(0, 0) },
+        blurBias: { value: 0 },
+        mode: { value: HALFTONE_MODES[mode] },
+        cells: { value: new Vector2(1, 1) },
+        // The story's palette: a milk-white body, the cool sky in the shadow dots, warm light for water and rings.
+        litColor: { value: paletteColor(mixColors("milk", "white", 0.5)) },
+        shadeColor: { value: paletteColor(mixColors("skySoft", "sky", 0.25)) },
+        dotColor: { value: paletteColor(mode === "rings" ? mixColors("white", "orange", 0.3) : mixColors("white", "skySoft", 0.2)) },
+        time: { value: 0 },
+        reach: { value: 7 },
+        lift: { value: 0 },
+        ringSize: { value: new Vector2(1, 1) },
+        calm: { value: new Vector2(-1, 0) },
+        quality: STAGE_UNIFORMS.quality,
         ...revealUniforms(),
         ...clearingUniforms(),
       },
@@ -306,6 +662,12 @@ export class MorphMaterial extends ShaderMaterial {
         // Shared with the plate frame (unused by the morph, kept so one updater fits both).
         blurRadius: { value: new Vector2(0, 0) },
         blurBias: { value: 0 },
+        canvasRepeat: { value: new Vector4(1, 1, 1, 1) },
+        grainAmount: { value: 0 },
+        crackAmount: { value: 0 },
+        quality: STAGE_UNIFORMS.quality,
+        grainMap: STAGE_UNIFORMS.grainMap,
+        crackMap: STAGE_UNIFORMS.crackMap,
         ...revealUniforms(),
       },
     });
@@ -345,6 +707,8 @@ export class RippleMaterial extends ShaderMaterial {
         reach: { value: 7 },
         lift: { value: 0 },
         opacity: { value: 1 },
+        dotColor: { value: paletteColor(mixColors("white", "orange", 0.35)) },
+        quality: STAGE_UNIFORMS.quality,
       },
     });
   }

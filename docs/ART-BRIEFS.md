@@ -16,7 +16,8 @@ Every character is an original design for this story. Never attach, describe or 
    - `keepers reference sheet`: The orchard keeper (she) and The orchard keeper (he)
 2. **Then the plates**, character by character in the order below, attaching the character's sheet as the image or character reference each time.
 3. **Sets of frames come from one pose sequence**: generate the first frame, then edit it (same seed, same image) for the next, changing only what the brief says: `prune/gardener-arms-1` then `prune/gardener-arms-2`; `finale/man-arms-1` then `finale/man-arms-2`; `pluck/harvester-arm` then `share/arm-open`.
-4. Save each painting at `art/source/<scene>/<name>.png` (not committed), write its sidecar at `art/rig/<scene>/<name>.json` (committed), run `npm run art:import`, and calibrate the points in the plate lab (`/design`, points mode) if they are off.
+4. **Parts overlap at their joints.** A head and an arm are their own plates and the stage turns them a few degrees on their joint (the head bows, the arm settles, the body leans with a snip): paint each part on past its joint, about a quarter of a head into the body plate, and paint the body under it (the neck stub, the shoulder under the sleeve), so no gap ever shows when a part turns.
+5. Save each painting at `art/source/<scene>/<name>.png` (not committed), write its sidecar at `art/rig/<scene>/<name>.json` (committed) with its points and its rig (the chest, hem and head rectangles and the pivots the stage moves it by; see `docs/ART-PLATES.md`), run `npm run art:import`, and calibrate the points in the plate lab (`/design`, points mode) if they are off.
 
 ## Reference sheets
 
@@ -118,7 +119,7 @@ cartoon, anime, illustration, vector art, flat colours, cel shading, 3D render, 
 
 Consistency: attach `statue reference sheet`; must match `hero/statue-orange` (same person, costume, scale and light).
 
-Sidecar (fractions of your painting, from its left and top; the plate lab can place them for you): `{"key":"magenta","points":{"orange":[u, v]}}`
+Sidecar (fractions of your painting, from its left and top; the plate lab can place the points for you): `{"key":"magenta","points":{"orange":[u, v]},"rig":{"chest":[l, t, r, b],"hem":[l, t, r, b],"head":[l, t, r, b],"pivot":[u, v],"neck":[u, v]}}`
 
 Check afterwards:
 
@@ -151,7 +152,7 @@ cartoon, anime, illustration, vector art, flat colours, cel shading, 3D render, 
 
 Consistency: attach `statue reference sheet`; must match `hero/statue` (same person, costume, scale and light).
 
-Sidecar (fractions of your painting, from its left and top; the plate lab can place them for you): `{"key":"cyan","points":{"anchor":[u, v]}}`
+Sidecar (fractions of your painting, from its left and top; the plate lab can place the points for you): `{"key":"cyan","points":{"anchor":[u, v]}}`
 
 Check afterwards:
 
@@ -187,7 +188,7 @@ cartoon, anime, illustration, vector art, flat colours, cel shading, 3D render, 
 
 Consistency: must match `hero/crowd-mid`, `hero/crowd-near` (same scale, light and palette, different people).
 
-Sidecar (fractions of your painting, from its left and top; the plate lab can place them for you): `{"key":"magenta","points":{"look-at":[u, v]}}`
+Sidecar (fractions of your painting, from its left and top; the plate lab can place the points for you): `{"key":"magenta","points":{"look-at":[u, v]},"rig":{"figures":"[{ chest, hem, head, pivot, neck } for each person, left to right]"}}`
 
 Check afterwards:
 
@@ -220,7 +221,7 @@ cartoon, anime, illustration, vector art, flat colours, cel shading, 3D render, 
 
 Consistency: must match `hero/crowd-far`, `hero/crowd-near` (same scale, light and palette, different people).
 
-Sidecar (fractions of your painting, from its left and top; the plate lab can place them for you): `{"key":"magenta","points":{"look-at":[u, v]}}`
+Sidecar (fractions of your painting, from its left and top; the plate lab can place the points for you): `{"key":"magenta","points":{"look-at":[u, v]},"rig":{"figures":"[{ chest, hem, head, pivot, neck } for each person, left to right]"}}`
 
 Check afterwards:
 
@@ -252,7 +253,7 @@ cartoon, anime, illustration, vector art, flat colours, cel shading, 3D render, 
 
 Consistency: must match `hero/crowd-far`, `hero/crowd-mid` (same scale, light and palette, different people).
 
-Sidecar (fractions of your painting, from its left and top; the plate lab can place them for you): `{"key":"magenta","points":{"look-at":[u, v]}}`
+Sidecar (fractions of your painting, from its left and top; the plate lab can place the points for you): `{"key":"magenta","points":{"look-at":[u, v]},"rig":{"figures":"[{ chest, hem, head, pivot, neck } for each person, left to right]"}}`
 
 Check afterwards:
 
@@ -289,7 +290,7 @@ cartoon, anime, illustration, vector art, flat colours, cel shading, 3D render, 
 
 Consistency: must match `graft/hand-right` (same person, costume, scale and light).
 
-Sidecar (fractions of your painting, from its left and top; the plate lab can place them for you): `{"key":"cyan","points":{"anchor":[u, v],"grip":[u, v]}}`
+Sidecar (fractions of your painting, from its left and top; the plate lab can place the points for you): `{"key":"cyan","points":{"anchor":[u, v],"grip":[u, v]}}`
 
 Check afterwards:
 
@@ -322,7 +323,7 @@ cartoon, anime, illustration, vector art, flat colours, cel shading, 3D render, 
 
 Consistency: must match `graft/hand-left` (same person, costume, scale and light).
 
-Sidecar (fractions of your painting, from its left and top; the plate lab can place them for you): `{"key":"cyan","points":{"anchor":[u, v],"grip":[u, v]}}`
+Sidecar (fractions of your painting, from its left and top; the plate lab can place the points for you): `{"key":"cyan","points":{"anchor":[u, v],"grip":[u, v]}}`
 
 Check afterwards:
 
@@ -359,7 +360,7 @@ cartoon, anime, illustration, vector art, flat colours, cel shading, 3D render, 
 
 Consistency: attach `harvester reference sheet`; must match `pluck/harvester-arm` (same person, costume, scale and light).
 
-Sidecar (fractions of your painting, from its left and top; the plate lab can place them for you): `{"key":"cyan","points":{"anchor":[u, v],"fingertips":[u, v]}}`
+Sidecar (fractions of your painting, from its left and top; the plate lab can place the points for you): `{"key":"cyan","points":{"anchor":[u, v],"fingertips":[u, v]}}`
 
 Check afterwards:
 
@@ -376,6 +377,7 @@ Check afterwards:
 - **Manifest** 1024 x 2048 px (1:2), anchor [0.5, 1], depth 1. **Ask for** 1536 x 3072 px (same aspect); the importer fits it down.
 - **Key colour** magenta `#ff00ff`.
 - **Placement** the figure stands on the bottom edge (the importer stands it there).
+- **Joints** (parts turn on this body): paint a neck stub up into where the head plate starts, and sleeve caps under the shoulders the arm plate covers, so no gap shows when a part turns.
 
 Prompt:
 
@@ -391,13 +393,14 @@ cartoon, anime, illustration, vector art, flat colours, cel shading, 3D render, 
 
 Consistency: attach `harvester reference sheet`; must match `pluck/harvester-head`, `pluck/harvester-arm`, `share/arm-open` (same person, costume, scale and light).
 
-Sidecar (fractions of your painting, from its left and top; the plate lab can place them for you): `{"key":"magenta","points":{}}`
+Sidecar (fractions of your painting, from its left and top; the plate lab can place the points for you): `{"key":"magenta","points":{},"rig":{"chest":[l, t, r, b],"hem":[l, t, r, b],"pivot":[u, v],"neck":[u, v]}}`
 
 Check afterwards:
 
 - [ ] no head, no forearms
 - [ ] the mantle drapes over his left shoulder
 - [ ] the sleeve cap sits where the arm plate starts
+- [ ] the body is painted under each part's joint (no hole where a part meets it)
 - [ ] five fingers on every hand, believable wrists and necks
 - [ ] no outline, no ground shadow, the background one flat key colour
 - [ ] nothing touches the edge of the image
@@ -409,6 +412,7 @@ Check afterwards:
 - **Key colour** cyan `#00ffff` (skin, red or terracotta dominate this plate).
 - **Placement** the sidecar's `anchor` point, the shoulder joint, lands on the manifest anchor.
 - **Points** (the story ties things to them): `orange`: the centre of the orange in his hand (stand-in at [0.172308, 0.696923]).
+- **Joint** (it turns here, on `pluck/harvester-body`): paint the sleeve on past the shoulder joint, about a quarter of a head into the body's sleeve cap, so no gap shows when it turns.
 
 Prompt:
 
@@ -424,13 +428,14 @@ cartoon, anime, illustration, vector art, flat colours, cel shading, 3D render, 
 
 Consistency: attach `harvester reference sheet`; must match `share/arm-open`, `pluck/harvester-body` (same person, costume, scale and light; the sleeve and shoulder meet the body plate exactly).
 
-Sidecar (fractions of your painting, from its left and top; the plate lab can place them for you): `{"key":"cyan","points":{"anchor":[u, v],"orange":[u, v]}}`
+Sidecar (fractions of your painting, from its left and top; the plate lab can place the points for you): `{"key":"cyan","points":{"anchor":[u, v],"orange":[u, v]},"rig":{"pivot":[u, v]}}`
 
 Check afterwards:
 
 - [ ] the orange is centred on the `orange` point
 - [ ] five fingers curled under the fruit
 - [ ] the sleeve matches the body plate
+- [ ] the part runs on past its joint, overlapping the body plate
 - [ ] five fingers on every hand, believable wrists and necks
 - [ ] no outline, no ground shadow, the background one flat key colour
 - [ ] nothing touches the edge of the image
@@ -441,6 +446,7 @@ Check afterwards:
 - **Manifest** 512 x 512 px (1:1), anchor [0.5, 0.95], depth 0.95. **Ask for** 2048 x 2048 px (same aspect); the importer fits it down.
 - **Key colour** cyan `#00ffff` (skin, red or terracotta dominate this plate).
 - **Placement** the sidecar's `anchor` point, the base of the neck, at the front of the collar, lands on the manifest anchor.
+- **Joint** (it turns here, on `pluck/harvester-body`): paint the neck on down past the anchor, about a quarter of a head into the collar, so no gap shows when it turns.
 
 Prompt:
 
@@ -456,12 +462,13 @@ cartoon, anime, illustration, vector art, flat colours, cel shading, 3D render, 
 
 Consistency: attach `harvester reference sheet`; must match `pluck/harvester-body` (same person, costume, scale and light; the sleeve and shoulder meet the body plate exactly).
 
-Sidecar (fractions of your painting, from its left and top; the plate lab can place them for you): `{"key":"cyan","points":{"anchor":[u, v]}}`
+Sidecar (fractions of your painting, from its left and top; the plate lab can place the points for you): `{"key":"cyan","points":{"anchor":[u, v]},"rig":{"pivot":[u, v]}}`
 
 Check afterwards:
 
 - [ ] the eyes look down to the left
 - [ ] the headband and hair match the reference sheet
+- [ ] the part runs on past its joint, overlapping the body plate
 - [ ] five fingers on every hand, believable wrists and necks
 - [ ] no outline, no ground shadow, the background one flat key colour
 - [ ] nothing touches the edge of the image
@@ -473,6 +480,7 @@ Check afterwards:
 - **Key colour** cyan `#00ffff` (skin, red or terracotta dominate this plate).
 - **Placement** the sidecar's `anchor` point, the shoulder joint, lands on the manifest anchor.
 - **Points** (the story ties things to them): `orange`: the centre of the cupped hand, where the fruit would sit (stand-in at [0.172308, 0.696923]).
+- **Joint** (it turns here, on `pluck/harvester-body`): paint the sleeve on past the shoulder joint, about a quarter of a head into the body's sleeve cap, so no gap shows when it turns.
 
 Prompt:
 
@@ -488,12 +496,13 @@ cartoon, anime, illustration, vector art, flat colours, cel shading, 3D render, 
 
 Consistency: attach `harvester reference sheet`; must match `pluck/harvester-arm` (same person, costume, scale and light); edit `pluck/harvester-arm`, do not generate afresh.
 
-Sidecar (fractions of your painting, from its left and top; the plate lab can place them for you): `{"key":"cyan","points":{"anchor":[u, v],"orange":[u, v]}}`
+Sidecar (fractions of your painting, from its left and top; the plate lab can place the points for you): `{"key":"cyan","points":{"anchor":[u, v],"orange":[u, v]},"rig":{"pivot":[u, v]}}`
 
 Check afterwards:
 
 - [ ] overlays `pluck/harvester-arm` exactly
 - [ ] the cupped hand is at the `orange` point
+- [ ] the part runs on past its joint, overlapping the body plate
 - [ ] five fingers on every hand, believable wrists and necks
 - [ ] no outline, no ground shadow, the background one flat key colour
 - [ ] nothing touches the edge of the image
@@ -501,10 +510,10 @@ Check afterwards:
 #### `share/knife-hand`
 
 - **Save as** `art/source/share/knife-hand.png`; sidecar `art/rig/share/knife-hand.json`.
-- **Manifest** 1024 x 512 px (2:1), anchor [0.26, 0.5], depth 0.3. **Ask for** 2048 x 1024 px (same aspect); the importer fits it down.
+- **Manifest** 1024 x 512 px (2:1), anchor [0.05078125, 0.400390625], depth 0.3. **Ask for** 2048 x 1024 px (same aspect); the importer fits it down.
 - **Key colour** cyan `#00ffff` (skin, red or terracotta dominate this plate).
 - **Placement** the sidecar's `anchor` point, the very tip of the blade, lands on the manifest anchor.
-- **Points** (the story ties things to them): `knife-tip`: the very tip of the blade (stand-in at [0.26, 0.5]).
+- **Points** (the story ties things to them): `knife-tip`: the very tip of the blade (stand-in at [0.05078125, 0.400390625]).
 
 Prompt:
 
@@ -520,7 +529,7 @@ cartoon, anime, illustration, vector art, flat colours, cel shading, 3D render, 
 
 Consistency: attach `harvester reference sheet`; must match `pluck/harvester-arm` (same person, costume, scale and light).
 
-Sidecar (fractions of your painting, from its left and top; the plate lab can place them for you): `{"key":"cyan","points":{"anchor":[u, v],"knife-tip":[u, v]}}`
+Sidecar (fractions of your painting, from its left and top; the plate lab can place the points for you): `{"key":"cyan","points":{"anchor":[u, v],"knife-tip":[u, v]}}`
 
 Check afterwards:
 
@@ -555,7 +564,7 @@ Negative prompt:
 cartoon, anime, illustration, vector art, flat colours, cel shading, 3D render, CGI, plastic skin, photograph, extra fingers, missing fingers, fused fingers, deformed hands, extra limbs, black outlines, contour lines, text, letters, signature, watermark, frame, border, vignette, cast shadow on the ground, floor, horizon, gradient background, busy background, cropped limbs
 ```
 
-Sidecar (fractions of your painting, from its left and top; the plate lab can place them for you): `{"key":"cyan","points":{"anchor":[u, v],"fingertips":[u, v]}}`
+Sidecar (fractions of your painting, from its left and top; the plate lab can place the points for you): `{"key":"cyan","points":{"anchor":[u, v],"fingertips":[u, v]}}`
 
 Check afterwards:
 
@@ -591,7 +600,7 @@ cartoon, anime, illustration, vector art, flat colours, cel shading, 3D render, 
 
 Consistency: attach `builder reference sheet`; must match `blueprint/builder`, `site/builder-left`, `site/builder-right`, `site/builder-seated` (same person, costume, scale and light).
 
-Sidecar (fractions of your painting, from its left and top; the plate lab can place them for you): `{"key":"cyan","points":{}}`
+Sidecar (fractions of your painting, from its left and top; the plate lab can place the points for you): `{"key":"cyan","points":{},"rig":{"chest":[l, t, r, b],"hem":[l, t, r, b],"head":[l, t, r, b],"pivot":[u, v],"neck":[u, v]}}`
 
 Check afterwards:
 
@@ -623,7 +632,7 @@ cartoon, anime, illustration, vector art, flat colours, cel shading, 3D render, 
 
 Consistency: attach `builder reference sheet`; must match `work/builder` (same person, costume, scale and light).
 
-Sidecar (fractions of your painting, from its left and top; the plate lab can place them for you): `{"key":"cyan","points":{}}`
+Sidecar (fractions of your painting, from its left and top; the plate lab can place the points for you): `{"key":"cyan","points":{},"rig":{"chest":[l, t, r, b],"hem":[l, t, r, b],"head":[l, t, r, b],"pivot":[u, v],"neck":[u, v]}}`
 
 Check afterwards:
 
@@ -654,7 +663,7 @@ cartoon, anime, illustration, vector art, flat colours, cel shading, 3D render, 
 
 Consistency: attach `builder reference sheet`; must match `work/builder` (same person, costume, scale and light).
 
-Sidecar (fractions of your painting, from its left and top; the plate lab can place them for you): `{"key":"cyan","points":{}}`
+Sidecar (fractions of your painting, from its left and top; the plate lab can place the points for you): `{"key":"cyan","points":{},"rig":{"chest":[l, t, r, b],"hem":[l, t, r, b],"head":[l, t, r, b],"pivot":[u, v],"neck":[u, v]}}`
 
 Check afterwards:
 
@@ -685,7 +694,7 @@ cartoon, anime, illustration, vector art, flat colours, cel shading, 3D render, 
 
 Consistency: attach `builder reference sheet`; must match `work/builder` (same person, costume, scale and light).
 
-Sidecar (fractions of your painting, from its left and top; the plate lab can place them for you): `{"key":"cyan","points":{}}`
+Sidecar (fractions of your painting, from its left and top; the plate lab can place the points for you): `{"key":"cyan","points":{},"rig":{"chest":[l, t, r, b],"hem":[l, t, r, b],"head":[l, t, r, b],"pivot":[u, v],"neck":[u, v]}}`
 
 Check afterwards:
 
@@ -716,7 +725,7 @@ cartoon, anime, illustration, vector art, flat colours, cel shading, 3D render, 
 
 Consistency: attach `builder reference sheet`; must match `work/builder` (same person, costume, scale and light).
 
-Sidecar (fractions of your painting, from its left and top; the plate lab can place them for you): `{"key":"cyan","points":{}}`
+Sidecar (fractions of your painting, from its left and top; the plate lab can place the points for you): `{"key":"cyan","points":{},"rig":{"chest":[l, t, r, b],"head":[l, t, r, b],"pivot":[u, v],"neck":[u, v]}}`
 
 Check afterwards:
 
@@ -753,7 +762,7 @@ cartoon, anime, illustration, vector art, flat colours, cel shading, 3D render, 
 
 Consistency: attach `architect reference sheet`.
 
-Sidecar (fractions of your painting, from its left and top; the plate lab can place them for you): `{"key":"magenta","points":{"plan":[u, v]}}`
+Sidecar (fractions of your painting, from its left and top; the plate lab can place the points for you): `{"key":"magenta","points":{"plan":[u, v]},"rig":{"chest":[l, t, r, b],"hem":[l, t, r, b],"head":[l, t, r, b],"pivot":[u, v],"neck":[u, v]}}`
 
 Check afterwards:
 
@@ -775,6 +784,7 @@ an older man in his sixties, sturdy, a little stooped; a weathered face, deep li
 - **Manifest** 512 x 1024 px (1:2), anchor [0.5, 1], depth 0. **Ask for** 1024 x 2048 px (same aspect); the importer fits it down.
 - **Key colour** magenta `#ff00ff`.
 - **Placement** the figure stands on the bottom edge (the importer stands it there).
+- **Joints** (parts turn on this body): paint the shoulders and sleeve caps under where the arm plates start, so no gap shows when a part turns.
 
 Prompt:
 
@@ -790,13 +800,14 @@ cartoon, anime, illustration, vector art, flat colours, cel shading, 3D render, 
 
 Consistency: attach `gardener reference sheet`; must match `prune/gardener-arms-1`, `prune/gardener-arms-2` (same person, costume, scale and light).
 
-Sidecar (fractions of your painting, from its left and top; the plate lab can place them for you): `{"key":"magenta","points":{}}`
+Sidecar (fractions of your painting, from its left and top; the plate lab can place the points for you): `{"key":"magenta","points":{},"rig":{"chest":[l, t, r, b],"hem":[l, t, r, b],"head":[l, t, r, b],"pivot":[u, v],"neck":[u, v]}}`
 
 Check afterwards:
 
 - [ ] no arms below the sleeve caps
 - [ ] hat, beard and apron match the sheet
 - [ ] looks to the viewer's left
+- [ ] the body is painted under each part's joint (no hole where a part meets it)
 - [ ] five fingers on every hand, believable wrists and necks
 - [ ] no outline, no ground shadow, the background one flat key colour
 - [ ] nothing touches the edge of the image
@@ -808,6 +819,7 @@ Check afterwards:
 - **Key colour** magenta `#ff00ff`.
 - **Placement** the sidecar's `anchor` point, his near shoulder joint, lands on the manifest anchor.
 - **Points** (the story ties things to them): `shears-tip`: the tips of the open blades (stand-in at [0.1, 0.42]).
+- **Joint** (it turns here, on `prune/gardener`): paint both sleeves on past the shoulders, about a quarter of a head into the body's sleeve caps, so no gap shows when it turns.
 
 Prompt:
 
@@ -823,13 +835,14 @@ cartoon, anime, illustration, vector art, flat colours, cel shading, 3D render, 
 
 Consistency: attach `gardener reference sheet`; must match `prune/gardener`, `prune/gardener-arms-2` (same person, costume, scale and light; the sleeve and shoulder meet the body plate exactly).
 
-Sidecar (fractions of your painting, from its left and top; the plate lab can place them for you): `{"key":"magenta","points":{"anchor":[u, v],"shears-tip":[u, v]}}`
+Sidecar (fractions of your painting, from its left and top; the plate lab can place the points for you): `{"key":"magenta","points":{"anchor":[u, v],"shears-tip":[u, v]},"rig":{"pivot":[u, v]}}`
 
 Check afterwards:
 
 - [ ] the same arms as frame 2, only the blades differ
 - [ ] two hands, five fingers each
 - [ ] the blades end at `shears-tip`
+- [ ] the part runs on past its joint, overlapping the body plate
 - [ ] five fingers on every hand, believable wrists and necks
 - [ ] no outline, no ground shadow, the background one flat key colour
 - [ ] nothing touches the edge of the image
@@ -841,6 +854,7 @@ Check afterwards:
 - **Key colour** magenta `#ff00ff`.
 - **Placement** the sidecar's `anchor` point, his near shoulder joint, lands on the manifest anchor.
 - **Points** (the story ties things to them): `shears-tip`: the tips of the closed blades (stand-in at [0.1, 0.42]).
+- **Joint** (it turns here, on `prune/gardener`): paint both sleeves on past the shoulders, about a quarter of a head into the body's sleeve caps, so no gap shows when it turns.
 
 Prompt:
 
@@ -856,12 +870,13 @@ cartoon, anime, illustration, vector art, flat colours, cel shading, 3D render, 
 
 Consistency: attach `gardener reference sheet`; must match `prune/gardener-arms-1` (same person, costume, scale and light); edit `prune/gardener-arms-1`, do not generate afresh.
 
-Sidecar (fractions of your painting, from its left and top; the plate lab can place them for you): `{"key":"magenta","points":{"anchor":[u, v],"shears-tip":[u, v]}}`
+Sidecar (fractions of your painting, from its left and top; the plate lab can place the points for you): `{"key":"magenta","points":{"anchor":[u, v],"shears-tip":[u, v]},"rig":{"pivot":[u, v]}}`
 
 Check afterwards:
 
 - [ ] overlays frame 1 exactly
 - [ ] blades closed
+- [ ] the part runs on past its joint, overlapping the body plate
 - [ ] five fingers on every hand, believable wrists and necks
 - [ ] no outline, no ground shadow, the background one flat key colour
 - [ ] nothing touches the edge of the image
@@ -892,7 +907,7 @@ cartoon, anime, illustration, vector art, flat colours, cel shading, 3D render, 
 
 Consistency: attach `astronomer reference sheet`.
 
-Sidecar (fractions of your painting, from its left and top; the plate lab can place them for you): `{"key":"magenta","points":{"fingertip":[u, v]}}`
+Sidecar (fractions of your painting, from its left and top; the plate lab can place the points for you): `{"key":"magenta","points":{"fingertip":[u, v]},"rig":{"chest":[l, t, r, b],"hem":[l, t, r, b],"head":[l, t, r, b],"arm":[l, t, r, b],"pivot":[u, v],"neck":[u, v],"shoulder":[u, v]}}`
 
 Check afterwards:
 
@@ -913,6 +928,7 @@ a woman in her thirties, upright and graceful; a calm oval face, a straight nose
 - **Manifest** 512 x 1024 px (1:2), anchor [0.5, 1], depth 0.3. **Ask for** 1024 x 2048 px (same aspect); the importer fits it down.
 - **Key colour** magenta `#ff00ff`.
 - **Placement** the figure stands on the bottom edge (the importer stands it there).
+- **Joints** (parts turn on this body): paint the shoulder and sleeve under where her arm plate starts, so no gap shows when a part turns.
 
 Prompt:
 
@@ -928,13 +944,14 @@ cartoon, anime, illustration, vector art, flat colours, cel shading, 3D render, 
 
 Consistency: attach `keepers reference sheet`; must match `finale/woman-arm`, `finale/man-body` (same person, costume, scale and light; the sleeve and shoulder meet the body plate exactly).
 
-Sidecar (fractions of your painting, from its left and top; the plate lab can place them for you): `{"key":"magenta","points":{}}`
+Sidecar (fractions of your painting, from its left and top; the plate lab can place the points for you): `{"key":"magenta","points":{},"rig":{"chest":[l, t, r, b],"hem":[l, t, r, b],"head":[l, t, r, b],"pivot":[u, v],"neck":[u, v]}}`
 
 Check afterwards:
 
 - [ ] no right arm below the shoulder
 - [ ] sash and braid match the sheet
 - [ ] looks to the viewer's right
+- [ ] the body is painted under each part's joint (no hole where a part meets it)
 - [ ] five fingers on every hand, believable wrists and necks
 - [ ] no outline, no ground shadow, the background one flat key colour
 - [ ] nothing touches the edge of the image
@@ -946,6 +963,7 @@ Check afterwards:
 - **Key colour** cyan `#00ffff` (skin, red or terracotta dominate this plate).
 - **Placement** the sidecar's `anchor` point, her shoulder joint, lands on the manifest anchor.
 - **Points** (the story ties things to them): `spout`: the lip of the jug's spout, where the water leaves it (stand-in at [0.938182, 0.586364]).
+- **Joint** (it turns here, on `finale/woman-body`): paint the sleeve on past the shoulder joint, about a quarter of a head into the body, so no gap shows when it turns.
 
 Prompt:
 
@@ -961,13 +979,14 @@ cartoon, anime, illustration, vector art, flat colours, cel shading, 3D render, 
 
 Consistency: attach `keepers reference sheet`; must match `finale/woman-body` (same person, costume, scale and light; the sleeve and shoulder meet the body plate exactly).
 
-Sidecar (fractions of your painting, from its left and top; the plate lab can place them for you): `{"key":"cyan","points":{"anchor":[u, v],"spout":[u, v]}}`
+Sidecar (fractions of your painting, from its left and top; the plate lab can place the points for you): `{"key":"cyan","points":{"anchor":[u, v],"spout":[u, v]},"rig":{"pivot":[u, v]}}`
 
 Check afterwards:
 
 - [ ] the spout is at the `spout` point
 - [ ] the jug is terracotta, not metal
 - [ ] five fingers round the handle
+- [ ] the part runs on past its joint, overlapping the body plate
 - [ ] five fingers on every hand, believable wrists and necks
 - [ ] no outline, no ground shadow, the background one flat key colour
 - [ ] nothing touches the edge of the image
@@ -982,6 +1001,7 @@ a man in his thirties, broad and easy; an open face, a strong jaw, clean-shaven;
 - **Manifest** 512 x 1024 px (1:2), anchor [0.5, 1], depth 0.3. **Ask for** 1024 x 2048 px (same aspect); the importer fits it down.
 - **Key colour** magenta `#ff00ff`.
 - **Placement** the figure stands on the bottom edge (the importer stands it there).
+- **Joints** (parts turn on this body): paint the shoulders and sleeve caps under where his arm plates start, so no gap shows when a part turns.
 
 Prompt:
 
@@ -997,13 +1017,14 @@ cartoon, anime, illustration, vector art, flat colours, cel shading, 3D render, 
 
 Consistency: attach `keepers reference sheet`; must match `finale/man-arms-1`, `finale/man-arms-2`, `finale/woman-body` (same person, costume, scale and light; the sleeve and shoulder meet the body plate exactly).
 
-Sidecar (fractions of your painting, from its left and top; the plate lab can place them for you): `{"key":"magenta","points":{}}`
+Sidecar (fractions of your painting, from its left and top; the plate lab can place the points for you): `{"key":"magenta","points":{},"rig":{"chest":[l, t, r, b],"hem":[l, t, r, b],"head":[l, t, r, b],"pivot":[u, v],"neck":[u, v]}}`
 
 Check afterwards:
 
 - [ ] no arms below the sleeve caps
 - [ ] the mantle is slate blue
 - [ ] looks to the viewer's left
+- [ ] the body is painted under each part's joint (no hole where a part meets it)
 - [ ] five fingers on every hand, believable wrists and necks
 - [ ] no outline, no ground shadow, the background one flat key colour
 - [ ] nothing touches the edge of the image
@@ -1015,6 +1036,7 @@ Check afterwards:
 - **Key colour** magenta `#ff00ff`.
 - **Placement** the sidecar's `anchor` point, his near shoulder joint, lands on the manifest anchor.
 - **Points** (the story ties things to them): `shears-tip`: the tips of the open blades, where he cuts (stand-in at [0.08, 0.543636]).
+- **Joint** (it turns here, on `finale/man-body`): paint both sleeves on past the shoulders, about a quarter of a head into the body's sleeve caps, so no gap shows when it turns.
 
 Prompt:
 
@@ -1030,12 +1052,13 @@ cartoon, anime, illustration, vector art, flat colours, cel shading, 3D render, 
 
 Consistency: attach `keepers reference sheet`; must match `finale/man-body`, `finale/man-arms-2` (same person, costume, scale and light; the sleeve and shoulder meet the body plate exactly).
 
-Sidecar (fractions of your painting, from its left and top; the plate lab can place them for you): `{"key":"magenta","points":{"anchor":[u, v],"shears-tip":[u, v]}}`
+Sidecar (fractions of your painting, from its left and top; the plate lab can place the points for you): `{"key":"magenta","points":{"anchor":[u, v],"shears-tip":[u, v]},"rig":{"pivot":[u, v]}}`
 
 Check afterwards:
 
 - [ ] the blade tips at `shears-tip`
 - [ ] the same arms as frame 2
+- [ ] the part runs on past its joint, overlapping the body plate
 - [ ] five fingers on every hand, believable wrists and necks
 - [ ] no outline, no ground shadow, the background one flat key colour
 - [ ] nothing touches the edge of the image
@@ -1047,6 +1070,7 @@ Check afterwards:
 - **Key colour** magenta `#ff00ff`.
 - **Placement** the sidecar's `anchor` point, his near shoulder joint, lands on the manifest anchor.
 - **Points** (the story ties things to them): `shears-tip`: the tips of the closed blades (stand-in at [0.08, 0.543636]).
+- **Joint** (it turns here, on `finale/man-body`): paint both sleeves on past the shoulders, about a quarter of a head into the body's sleeve caps, so no gap shows when it turns.
 
 Prompt:
 
@@ -1062,12 +1086,13 @@ cartoon, anime, illustration, vector art, flat colours, cel shading, 3D render, 
 
 Consistency: attach `keepers reference sheet`; must match `finale/man-arms-1` (same person, costume, scale and light); edit `finale/man-arms-1`, do not generate afresh.
 
-Sidecar (fractions of your painting, from its left and top; the plate lab can place them for you): `{"key":"magenta","points":{"anchor":[u, v],"shears-tip":[u, v]}}`
+Sidecar (fractions of your painting, from its left and top; the plate lab can place the points for you): `{"key":"magenta","points":{"anchor":[u, v],"shears-tip":[u, v]},"rig":{"pivot":[u, v]}}`
 
 Check afterwards:
 
 - [ ] overlays frame 1 exactly
 - [ ] blades closed
+- [ ] the part runs on past its joint, overlapping the body plate
 - [ ] five fingers on every hand, believable wrists and necks
 - [ ] no outline, no ground shadow, the background one flat key colour
 - [ ] nothing touches the edge of the image

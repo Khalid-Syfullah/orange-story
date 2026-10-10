@@ -721,3 +721,35 @@ export function castFor(plateId) {
 
 /** Whether a plate shows a character (the texture guard holds these to a painted standard). */
 export const isFigurePlate = (plateId) => CHARACTER_PLATES.includes(plateId);
+
+/**
+ * Parts of a figure on their own plates (a head, an arm): they turn on one joint, their anchor. The
+ * scenes carry them on their bodies (`src/components/stage/figure-life.ts`).
+ */
+export const PART_PLATES = ["pluck/harvester-head", "pluck/harvester-arm", "share/arm-open", "prune/gardener-arms-1", "prune/gardener-arms-2", "finale/woman-arm", "finale/man-arms-1", "finale/man-arms-2"];
+
+/** Close-ups of hands and the statue's fruit: no rig (their scenes move them whole). */
+const UNRIGGED = ["hero/statue-orange", "graft/hand-left", "graft/hand-right", "pluck/hand", "share/knife-hand", "share/second-hand"];
+
+/** Bodies whose head is its own plate (no head region on the body), and seated figures (no hem that swings). */
+const HEADLESS = ["pluck/harvester-body"];
+const SEATED = ["site/builder-seated"];
+
+/**
+ * What kind of rig a character plate has (`docs/ART-PLATES.md`, "rig"): `crowd` (several people,
+ * each its own), `part` (a joint only), `body` (one person: chest, hem, head, feet), or null; and,
+ * for a body, whether it has a head and a hem of its own. Read by the importer's first guess.
+ */
+export function rigKindFor(plateId) {
+  const cast = castFor(plateId);
+  if (!cast || UNRIGGED.includes(plateId)) return null;
+  if (cast.kind === "group") return "crowd";
+  if (PART_PLATES.includes(plateId)) return "part";
+  return "body";
+}
+
+/** Options of the importer's first guess at a plate's rig (`guessRig`). */
+export function rigGuessFor(plateId) {
+  const kind = rigKindFor(plateId);
+  return kind ? { kind, head: !HEADLESS.includes(plateId), hem: !SEATED.includes(plateId) } : null;
+}

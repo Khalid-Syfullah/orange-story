@@ -70,10 +70,14 @@ export interface PlateEntry {
    */
   points?: Readonly<Record<string, Pair>>;
   /**
-   * How a painted figure can be moved (used by the living stage): hem, chest and head rectangles
-   * ([left, top, right, bottom] fractions) and a pivot point, from the painting's sidecar.
+   * How a painted figure can be moved (the living stage, `src/components/stage/rig.ts`): hem, chest
+   * and head rectangles ([left, top, right, bottom] fractions) and the pivots they turn on, from the
+   * painting's sidecar (or, for a stand-in, from the generator). A part of a figure (a head, an arm)
+   * carries only its `pivot`, the joint it turns on.
    */
   rig?: PlateRig;
+  /** How the stage paints the plate: the canvas, the figure treatment, the halftone layer (see `PlatePaint`). */
+  paint?: PlatePaint;
   /** What the plate shows. */
   note: string;
   /** How `npm run art:placeholders` draws the stand-in. Removed when a painting replaces the file. */
@@ -82,12 +86,93 @@ export interface PlateEntry {
   painted?: boolean;
 }
 
-/** Regions of a painted figure, as fractions of its image, for the stage to move it by. */
-export interface PlateRig {
-  hem?: readonly [number, number, number, number];
-  chest?: readonly [number, number, number, number];
-  head?: readonly [number, number, number, number];
+/** A rectangle of an image: [left, top, right, bottom] as fractions from the left and from the top. */
+export type RigBox = readonly [number, number, number, number];
+
+/** One person's regions on a plate, as fractions of the image. */
+export interface PlateRigFigure {
+  /** The hem of the robe, which ripples a little in the breeze. */
+  hem?: RigBox;
+  /** Chest and shoulders, which rise as the figure breathes (everything above rises with them). */
+  chest?: RigBox;
+  /** The head, which turns on `neck`. */
+  head?: RigBox;
+  /** A raised arm, which turns on `shoulder` (the astronomer's, settling into the point). */
+  arm?: RigBox;
+  /** Where the figure stands (its feet): weight shifts turn it here, the contact shadow sits here. For a part, the joint it turns on. */
   pivot?: Pair;
+  /** Where the head turns. Default: the middle of the head's bottom edge. */
+  neck?: Pair;
+  /** Where the arm turns. */
+  shoulder?: Pair;
+}
+
+/** Regions of a painted figure, as fractions of its image, for the stage to move it by. */
+export interface PlateRig extends PlateRigFigure {
+  /** Several people on one plate (the onlookers): each moves on its own, out of step with the others. */
+  figures?: readonly PlateRigFigure[];
+}
+
+/**
+ * How the stage paints a plate (all optional):
+ * - `figure`: a person. The figure treatment applies (a soft sky rim on the shadow edge, a faint warm
+ *   bounce from below, the scene's colour grade) and, with a rig, idle life.
+ * - `grain`: the canvas weave and paint tooth. Default: on for backdrops and stand-ins, always off
+ *   for painted plates (a painting carries its own).
+ * - `craquelure`: the faint crack network, a multiplier of the scene's strength. Default 1, 0 for
+ *   painted plates (they carry their own).
+ * - `halftone`: drawn as the graphic halftone layer: `cloud` (dots dense in the shadow side, the soft
+ *   edge breaking into dots) or `water` (the stream as dots).
+ * - `contact`: the figure stands on something: a soft contact shadow plate under its feet (the rig
+ *   pivot), this many world units wide.
+ * - `life`: false keeps a rigged figure still (a statue).
+ */
+export interface PlatePaint {
+  figure?: boolean;
+  grain?: boolean;
+  craquelure?: number;
+  halftone?: "cloud" | "water";
+  contact?: number;
+  life?: boolean;
+}
+
+/** The paint of a plate with its defaults resolved. */
+export interface ResolvedPaint {
+  figure: boolean;
+  grain: boolean;
+  craquelure: number;
+  halftone: "cloud" | "water" | null;
+  contact: number;
+  /** Idle life: a figure with a rig that moves (chest, hem, head or arm regions). */
+  life: boolean;
+  /** A finished painting (subtler treatment, no grain). */
+  painted: boolean;
+}
+
+/** True when a rig (or one of its figures) has regions that move. */
+export function rigMoves(rig: PlateRig | undefined): boolean {
+  if (!rig) return false;
+  const moves = (f: PlateRigFigure) => Boolean(f.chest || f.hem || f.head || f.arm);
+  return moves(rig) || (rig.figures ?? []).some(moves);
+}
+
+/** The paint of a plate, defaults filled in. */
+export function platePaint(entry: PlateEntry): ResolvedPaint {
+  const paint = entry.paint ?? {};
+  const painted = entry.painted === true;
+  const figure = paint.figure === true;
+  const halftone = paint.halftone ?? null;
+  // The halftone is a graphic layer over the painting: no canvas of its own.
+  const canvas = halftone === null && (entry.role === "backdrop" || entry.role === "plate");
+  return {
+    figure,
+    grain: !painted && canvas && paint.grain !== false,
+    craquelure: canvas ? Math.max(0, paint.craquelure ?? (painted ? 0 : 1)) : 0,
+    halftone,
+    contact: paint.contact ?? 0,
+    life: figure && paint.life !== false && rigMoves(entry.rig),
+    painted,
+  };
 }
 
 export interface ArtManifest {

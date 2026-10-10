@@ -35,3 +35,6 @@ npm-debug.log*
 
 # vercel
 .vercel
+
+# raw source paintings (large; kept local, imported into public/art)
+/art/source/

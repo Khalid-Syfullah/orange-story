@@ -6,6 +6,7 @@ import { PRUNE } from "@/scroll/script";
 
 import { branchDropX, branchDropY, branchTurn, cutBranchOpacity, gardenerX, orangeFrame, stillBranchOpacity } from "./fall-plan";
 import { Plate, type PlateReveal } from "./plate";
+import { useGardenerLife } from "./prune-art";
 import { trimmedScale } from "./prune-plan";
 import type { SceneArtProps } from "./scene-layers";
 import { useStageProgress } from "./stage-context";
@@ -37,6 +38,7 @@ export function FallArt({ scene }: SceneArtProps) {
   const dropY = useTransform(progress, branchDropY);
   const turn = useTransform(progress, branchTurn);
   const drift = useTransform(progress, gardenerX);
+  const gardener = useGardenerLife();
 
   const orangeX = useTransform(progress, (p) => orangeFrame(p).x);
   const orangeY = useTransform(progress, (p) => orangeFrame(p).y);
@@ -62,8 +64,8 @@ export function FallArt({ scene }: SceneArtProps) {
       <Plate id="prune/branch-left" scale={trimmed} reveal={OLD} />
       <Plate id="prune/branch-right" opacity={still} reveal={OLD} />
       <Plate id="fall/branch-cut" opacity={cut} x={dropX} y={dropY} rotate={turn} sway={false} reveal={OLD} />
-      <Plate id="prune/gardener" x={drift} reveal={OLD} />
-      <Plate id="prune/gardener-arms-1" x={drift} layer={1} reveal={OLD} />
+      <Plate id="prune/gardener" x={drift} reveal={OLD} life={gardener} />
+      <Plate id="prune/gardener-arms-1" x={drift} layer={1} reveal={OLD} ride={gardener.ride("prune/gardener-arms-1")} />
 
       {/* The orange: no reveal, so it stays in front while the ring sweeps past it. */}
       <Plate

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ADAPTIVE, adaptDpr, newFrameBudget } from "./quality";
+import { ADAPTIVE, adaptDpr, newFrameBudget, qualityOverride, qualityTier } from "./quality";
 
 /** Feeds `seconds` of frames `delta` apart; returns the pixel ratio after each change. */
 function run(dpr: number, max: number, delta: number, seconds: number, budget = newFrameBudget()) {
@@ -57,5 +57,30 @@ describe("adaptive pixel ratio", () => {
     adaptDpr(budget, 1 / 30, 1.5, 1.5);
     expect(budget).toBe(same);
     expect(budget.average).toBeGreaterThan(1 / 60);
+  });
+});
+
+describe("quality tiers", () => {
+  it("paints everything on a device that keeps up", () => {
+    expect(qualityTier(1.5, 1.5, false)).toBe(2);
+    expect(qualityTier(1, 1.5, false)).toBe(2);
+  });
+
+  it("drops the extras where the pixel ratio had to come below 1, or on a small device", () => {
+    expect(qualityTier(1.5 * ADAPTIVE.stepDown ** 2, 1.5, false)).toBe(1);
+    expect(qualityTier(1.25, 1.25, true)).toBe(1);
+  });
+
+  it("falls back to plain soft paint once the pixel ratio is at its floor", () => {
+    expect(qualityTier(ADAPTIVE.floor, 1.5, false)).toBe(0);
+    expect(qualityTier(ADAPTIVE.floor, 1.25, true)).toBe(0);
+  });
+
+  it("can be forced from the address, to look at a tier", () => {
+    expect(qualityOverride("?quality=low")).toBe(0);
+    expect(qualityOverride("?quality=medium&x=1")).toBe(1);
+    expect(qualityOverride("?quality=high")).toBe(2);
+    expect(qualityOverride("?quality=ultra")).toBeNull();
+    expect(qualityOverride("")).toBeNull();
   });
 });

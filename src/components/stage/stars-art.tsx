@@ -3,12 +3,29 @@
 import * as React from "react";
 import { useMotionValue, useTransform } from "motion/react";
 
+import { plateEntry } from "@/art/manifest";
+
+import { astronomerArmAt } from "./acting";
+import { useFigureLife, type FigureLife } from "./figure-life";
 import { Plate } from "./plate";
 import type { SceneArtProps } from "./scene-layers";
 import { StarEdges } from "./star-edges";
 import { constellation, starReveal } from "./stars-plan";
 import { useStageProgress } from "./stage-context";
 import { Twinkle } from "./twinkle";
+
+/**
+ * The astronomer's life: breathing and small shifts, and his raised arm settling into the point as
+ * the fabric sky clears (`astronomerArmAt`, scrubbed), before the stars grow from his fingertip. The
+ * application and the finale draw him with the same life.
+ */
+export function useAstronomerLife(): FigureLife {
+  return useFigureLife(plateEntry("stars/astronomer"), {
+    acting: (p, _t, _i, out) => {
+      out.arm = astronomerArmAt(p);
+    },
+  });
+}
 
 /**
  * Scene 12, the stargazer (`stars-plan.ts`, timings in `STARS`). After the fabric sky transition
@@ -24,6 +41,7 @@ export function StarsArt({ scene }: SceneArtProps) {
   const progress = stage ?? none;
   const reveal = useTransform(progress, starReveal);
   const { nodes } = React.useMemo(() => constellation(), []);
+  const astronomer = useAstronomerLife();
 
   return (
     <>
@@ -32,7 +50,7 @@ export function StarsArt({ scene }: SceneArtProps) {
       <StarEdges layer={2} />
       <Plate id="stars/cloud" layer={3} />
       <Plate id="stars/platform" layer={4} />
-      <Plate id="stars/astronomer" layer={5} />
+      <Plate id="stars/astronomer" layer={5} life={astronomer} />
     </>
   );
 }

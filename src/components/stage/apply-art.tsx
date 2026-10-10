@@ -9,6 +9,7 @@ import { figureOffset, sinkDepth } from "./apply-plan";
 import { Plate } from "./plate";
 import type { SceneArtProps } from "./scene-layers";
 import { StarEdges } from "./star-edges";
+import { useAstronomerLife } from "./stars-art";
 import { useStageProgress } from "./stage-context";
 import { constellation, starReveal, starsDim } from "./stars-plan";
 import { Twinkle } from "./twinkle";
@@ -37,6 +38,7 @@ export function ApplyArt({ scene }: SceneArtProps) {
   const depth = sinkDepth(useStacked());
   const sink = useTransform(progress, (p) => figureOffset(p, depth));
   const { nodes } = React.useMemo(() => constellation(), []);
+  const astronomer = useAstronomerLife();
 
   return (
     <>
@@ -45,7 +47,7 @@ export function ApplyArt({ scene }: SceneArtProps) {
       <StarEdges layer={2} opacity={dim} />
       <Plate id="stars/cloud" layer={3} clearing={clear} />
       <Plate id="stars/platform" layer={4} y={sink} />
-      <Plate id="stars/astronomer" layer={5} y={sink} />
+      <Plate id="stars/astronomer" layer={5} y={sink} life={astronomer} />
     </>
   );
 }

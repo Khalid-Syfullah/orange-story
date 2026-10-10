@@ -13,8 +13,51 @@
       "anchor": [0.5, 0.5],
       "position": [0, 0],
       "height": 1,
-      "note": "Sky gradient: deep blue overhead to soft blue at the horizon. Fills the view behind every sky scene.",
+      "note": "Painted cobalt sky: deep overhead, a little softer toward the horizon, large soft mottling and cloudy brushing with a few faint strokes; never lighter than the 42% mix behind text. Fills the view behind every sky scene.",
       "placeholder": { "kind": "sky" }
+    },
+    {
+      "id": "hero/canvas-grain",
+      "scenes": ["hero", "ascent", "graft", "pluck", "share", "work", "blueprint", "site", "prune", "fall", "faq", "stars", "apply", "finale"],
+      "role": "texture",
+      "src": "/art/hero/canvas-grain.webp",
+      "size": [256, 256],
+      "depth": 0,
+      "anchor": [0.5, 0.5],
+      "position": [0, 0],
+      "height": 1,
+      "tile": true,
+      "linear": true,
+      "note": "The canvas weave and paint tooth (grey around mid-grey, tileable), laid over backdrops and stand-in plates in their own UV space; one small texture for the whole stage.",
+      "placeholder": { "kind": "grain" }
+    },
+    {
+      "id": "hero/craquelure",
+      "scenes": ["hero", "ascent", "graft", "pluck", "share", "work", "blueprint", "site", "prune", "fall", "faq", "stars", "apply", "finale"],
+      "role": "texture",
+      "src": "/art/hero/craquelure.webp",
+      "size": [512, 512],
+      "depth": 0,
+      "anchor": [0.5, 0.5],
+      "position": [0, 0],
+      "height": 1,
+      "tile": true,
+      "linear": true,
+      "note": "A fine network of cracks (white on black, tileable), laid very faintly over everything but finished paintings.",
+      "placeholder": { "kind": "craquelure" }
+    },
+    {
+      "id": "hero/contact-shadow",
+      "scenes": ["hero", "ascent", "blueprint", "site", "prune", "fall", "stars", "apply", "finale"],
+      "role": "sprite",
+      "src": "/art/hero/contact-shadow.webp",
+      "size": [256, 64],
+      "depth": 0,
+      "anchor": [0.5, 0.5],
+      "position": [0, 0],
+      "height": 0.1,
+      "note": "The soft contact shadow under a standing figure's feet (a cool, soft ellipse), so it stands on its platform.",
+      "placeholder": { "kind": "contact" }
     },
     {
       "id": "hero/glow-droplet",
@@ -42,7 +85,7 @@
       "tile": true,
       "repeat": [1, 10],
       "note": "Slender minaret shaft, tileable vertically so it can keep rising.",
-      "placeholder": { "kind": "minaret" }
+      "painted": true
     },
     {
       "id": "hero/statue",
@@ -55,8 +98,10 @@
       "position": [3.45, 1.5],
       "height": 2.45,
       "points": { "orange": [0.7, 0.065306] },
+      "rig": { "chest": [0.2448, 0.2668, 0.5729, 0.46], "hem": [0.1852, 0.8409, 0.6135, 0.9954], "head": [0.2645, 0.1122, 0.6078, 0.2764], "pivot": [0.4401, 0.9961], "neck": [0.3953, 0.2764] },
+      "paint": { "figure": true, "life": false, "contact": 0.62 },
       "note": "Marble statue of a woman on top of the minaret, one arm raised high (the orange is its own layer, over her hand at the `orange` point).",
-      "placeholder": { "kind": "study" }
+      "painted": true
     },
     {
       "id": "hero/statue-orange",
@@ -70,7 +115,7 @@
       "height": 0.3,
       "layer": 1,
       "note": "The orange held up to the sky like a torch, a gilded leaf at its stem; its own layer so it can glow.",
-      "placeholder": { "kind": "study" }
+      "painted": true
     },
     {
       "id": "hero/crowd-far",
@@ -83,8 +128,10 @@
       "position": [4.8, -3.35],
       "height": 1,
       "points": { "look-at": [0.05, 0] },
+      "rig": { "figures": [{ "chest": [0.2858, 0.1719, 0.3821, 0.3645], "hem": [0.2533, 0.7952, 0.4006, 0.9492], "head": [0.3015, 0.0179, 0.3619, 0.1815], "pivot": [0.3048, 0.9961], "neck": [0.334, 0.1815] }, { "chest": [0.4219, 0.1999, 0.5039, 0.3851], "hem": [0.3992, 0.8343, 0.5152, 0.9824], "head": [0.4403, 0.0518, 0.5005, 0.2092], "pivot": [0.4514, 0.9941], "neck": [0.4677, 0.2092] }, { "chest": [0.528, 0.3178, 0.5996, 0.476], "hem": [0.5031, 0.7094, 0.608, 0.8359], "head": [0.5436, 0.1912, 0.5931, 0.3257], "pivot": [0.5676, 0.9941], "neck": [0.5678, 0.3257] }, { "chest": [0.6403, 0.1663, 0.7314, 0.3593], "hem": [0.6031, 0.7128, 0.7546, 0.8672], "head": [0.6439, 0.012, 0.7116, 0.176], "pivot": [0.6758, 0.9961], "neck": [0.6763, 0.176] }] },
+      "paint": { "figure": true },
       "note": "Onlookers in ochre, terracotta, indigo and olive, far row, faces turned up to the statue (toward the `look-at` point).",
-      "placeholder": { "kind": "study" }
+      "painted": true
     },
     {
       "id": "hero/crowd-mid",
@@ -97,8 +144,10 @@
       "position": [3.9, -3.85],
       "height": 1.2,
       "points": { "look-at": [0.375, 0] },
+      "rig": { "figures": [{ "chest": [0.2686, 0.1879, 0.3571, 0.3754], "hem": [0.2437, 0.8266, 0.391, 0.9766], "head": [0.2996, 0.0379, 0.3527, 0.1973], "pivot": [0.3236, 0.9922], "neck": [0.3251, 0.1973] }, { "chest": [0.3972, 0.1747, 0.4927, 0.3657], "hem": [0.3833, 0.8179, 0.5086, 0.9707], "head": [0.42, 0.0219, 0.4745, 0.1843], "pivot": [0.4294, 0.9961], "neck": [0.4491, 0.1843] }, { "chest": [0.5215, 0.2086, 0.6068, 0.3922], "hem": [0.4988, 0.8277, 0.6275, 0.9746], "head": [0.5367, 0.0617, 0.5968, 0.2178], "pivot": [0.5677, 0.9961], "neck": [0.5661, 0.2178] }, { "chest": [0.6383, 0.1683, 0.7321, 0.3613], "hem": [0.6216, 0.7577, 0.7494, 0.9121], "head": [0.6608, 0.0139, 0.7135, 0.1779], "pivot": [0.6688, 0.9961], "neck": [0.6865, 0.1779] }] },
+      "paint": { "figure": true },
       "note": "Onlookers, middle row, faces turned up to the statue (toward the `look-at` point).",
-      "placeholder": { "kind": "study" }
+      "painted": true
     },
     {
       "id": "hero/crowd-near",
@@ -111,8 +160,10 @@
       "position": [4.4, -4.45],
       "height": 1.45,
       "points": { "look-at": [0.28, 0] },
+      "rig": { "figures": [{ "chest": [0.3478, 0.165, 0.4433, 0.356], "hem": [0.3365, 0.812, 0.4626, 0.9648], "head": [0.3777, 0.0121, 0.4477, 0.1745], "pivot": [0.3834, 0.9863], "neck": [0.4127, 0.1745] }, { "chest": [0.4684, 0.17, 0.5615, 0.3625], "hem": [0.4426, 0.7385, 0.5713, 0.8926], "head": [0.4955, 0.0159, 0.5553, 0.1796], "pivot": [0.4995, 0.9961], "neck": [0.528, 0.1796] }, { "chest": [0.57, 0.2918, 0.6514, 0.4546], "hem": [0.5612, 0.7994, 0.6645, 0.9297], "head": [0.5923, 0.1614, 0.6479, 0.2999], "pivot": [0.6178, 0.9902], "neck": [0.6191, 0.2999] }] },
+      "paint": { "figure": true },
       "note": "Onlookers, near row, faces turned up to the statue (toward the `look-at` point).",
-      "placeholder": { "kind": "study" }
+      "painted": true
     },
     {
       "id": "ascent/stone",
@@ -127,7 +178,7 @@
       "tile": true,
       "repeat": [1, 10],
       "note": "Minaret stone, tileable: where the morph starts.",
-      "placeholder": { "kind": "stone" }
+      "painted": true
     },
     {
       "id": "ascent/bark",
@@ -142,7 +193,7 @@
       "tile": true,
       "repeat": [1, 10],
       "note": "Bark, tileable: where the morph ends (the trunk).",
-      "placeholder": { "kind": "bark" }
+      "painted": true
     },
     {
       "id": "ascent/morph-mask",
@@ -170,7 +221,7 @@
       "height": 1.5,
       "sway": 0.6,
       "note": "Branch splitting off the trunk to the left, young leaves.",
-      "placeholder": { "kind": "branch", "direction": "left", "leaves": 14, "seed": "a1" }
+      "painted": true
     },
     {
       "id": "ascent/branch-2",
@@ -184,7 +235,7 @@
       "height": 1.4,
       "sway": 0.6,
       "note": "Branch splitting off to the right.",
-      "placeholder": { "kind": "branch", "direction": "right", "leaves": 12, "seed": "a2" }
+      "painted": true
     },
     {
       "id": "ascent/branch-3",
@@ -198,7 +249,7 @@
       "height": 1.6,
       "sway": 0.4,
       "note": "The single leafy branch the camera settles on; the graft happens on it.",
-      "placeholder": { "kind": "branch", "direction": "left", "leaves": 18, "seed": "a3" }
+      "painted": true
     },
     {
       "id": "ascent/leaf",
@@ -211,7 +262,7 @@
       "position": [2.6, 7.6],
       "height": 0.32,
       "note": "Leaf, stem at the bottom: unfurls along the new branches.",
-      "placeholder": { "kind": "leaf" }
+      "painted": true
     },
     {
       "id": "graft/branch",
@@ -224,7 +275,7 @@
       "position": [2.1, 8.25],
       "height": 2.9,
       "note": "Branch close-up with a cleft cut for the graft, leaves toward the ends.",
-      "placeholder": { "kind": "branch-closeup" }
+      "painted": true
     },
     {
       "id": "graft/hand-left",
@@ -236,9 +287,10 @@
       "anchor": [0.72, 0.3],
       "position": [1.55, 8.2],
       "height": 1.9,
+      "paint": { "figure": true },
       "points": { "grip": [0.72, 0.3] },
       "note": "Left hand in a robe sleeve, entering from the lower left.",
-      "placeholder": { "kind": "study" }
+      "painted": true
     },
     {
       "id": "graft/hand-right",
@@ -250,9 +302,10 @@
       "anchor": [0.28, 0.3],
       "position": [2.55, 8.2],
       "height": 1.9,
+      "paint": { "figure": true },
       "points": { "grip": [0.28, 0.3] },
       "note": "Right hand in a robe sleeve, entering from the lower right.",
-      "placeholder": { "kind": "study" }
+      "painted": true
     },
     {
       "id": "graft/cutting",
@@ -265,7 +318,7 @@
       "position": [2.05, 8.42],
       "height": 0.75,
       "note": "The cutting: a short twig with two leaves, its base cut to a wedge.",
-      "placeholder": { "kind": "cutting" }
+      "painted": true
     },
     {
       "id": "graft/twine",
@@ -278,7 +331,7 @@
       "position": [2.05, 8.4],
       "height": 0.16,
       "note": "Twine wrapped around the joint.",
-      "placeholder": { "kind": "twine" }
+      "painted": true
     },
     {
       "id": "graft/knot-1",
@@ -292,7 +345,7 @@
       "height": 0.26,
       "frame": 0,
       "note": "Knot, step 1 of 3: the twine crossed.",
-      "placeholder": { "kind": "knot", "step": 1 }
+      "painted": true
     },
     {
       "id": "graft/knot-2",
@@ -306,7 +359,7 @@
       "height": 0.26,
       "frame": 1,
       "note": "Knot, step 2 of 3: looped.",
-      "placeholder": { "kind": "knot", "step": 2 }
+      "painted": true
     },
     {
       "id": "graft/knot-3",
@@ -320,7 +373,7 @@
       "height": 0.26,
       "frame": 2,
       "note": "Knot, step 3 of 3: pulled tight into a neat knot.",
-      "placeholder": { "kind": "knot", "step": 3 }
+      "painted": true
     },
     {
       "id": "pluck/foliage-far",
@@ -334,7 +387,7 @@
       "height": 20,
       "sway": 0.5,
       "note": "Far foliage with oranges, hazy.",
-      "placeholder": { "kind": "foliage", "seed": "far", "leaves": 420, "oranges": 40, "size": 0.05, "haze": 0.35 }
+      "painted": true
     },
     {
       "id": "pluck/foliage-mid",
@@ -348,7 +401,7 @@
       "height": 13,
       "sway": 0.9,
       "note": "Middle foliage with oranges.",
-      "placeholder": { "kind": "foliage", "seed": "mid", "leaves": 300, "oranges": 26, "size": 0.06, "haze": 0.12 }
+      "painted": true
     },
     {
       "id": "pluck/foliage-near",
@@ -362,7 +415,7 @@
       "height": 10,
       "sway": 1.3,
       "note": "Near foliage framing the edges (clear in the middle); the camera dollies down past it.",
-      "placeholder": { "kind": "foliage", "seed": "near", "leaves": 200, "oranges": 12, "size": 0.08, "hole": true }
+      "painted": true
     },
     {
       "id": "pluck/hero-orange",
@@ -376,7 +429,7 @@
       "height": 0.5,
       "sway": 0.8,
       "note": "The one special orange the hand picks.",
-      "placeholder": { "kind": "orange" }
+      "painted": true
     },
     {
       "id": "pluck/hand",
@@ -388,9 +441,10 @@
       "anchor": [0.5, 0.04],
       "position": [1.6, 10.35],
       "height": 4.2,
+      "paint": { "figure": true },
       "points": { "fingertips": [0.5, 0.04] },
       "note": "A hand rising from the bottom center, robe sleeve below.",
-      "placeholder": { "kind": "study" }
+      "painted": true
     },
     {
       "id": "pluck/harvester-body",
@@ -402,8 +456,10 @@
       "anchor": [0.5, 1],
       "position": [3.05, 0.2],
       "height": 6.4,
+      "rig": { "chest": [0.2974, 0.0694, 0.7808, 0.2626], "hem": [0.1615, 0.488, 0.88, 0.6426], "pivot": [0.2297, 0.9961], "neck": [0.507, 0.0308] },
+      "paint": { "figure": true },
       "note": "The harvester, a young man in an ivory tunic and a saffron mantle: body (right of center, clear of the text on the left).",
-      "placeholder": { "kind": "study" }
+      "painted": true
     },
     {
       "id": "pluck/harvester-arm",
@@ -416,8 +472,10 @@
       "position": [2.43, 5.25],
       "height": 1.3,
       "points": { "orange": [0.172308, 0.696923] },
+      "rig": { "pivot": [0.88, 0.12] },
+      "paint": { "figure": true },
       "note": "His right arm from the shoulder (the anchor), holding the orange out in front of him (its centre is the `orange` point).",
-      "placeholder": { "kind": "study" }
+      "painted": true
     },
     {
       "id": "pluck/harvester-head",
@@ -429,8 +487,10 @@
       "anchor": [0.5, 0.95],
       "position": [3.05, 5.45],
       "height": 0.85,
+      "rig": { "pivot": [0.5, 0.95] },
+      "paint": { "figure": true },
       "note": "His head (linen headband, chestnut hair), looking at the orange in his hand.",
-      "placeholder": { "kind": "study" }
+      "painted": true
     },
     {
       "id": "share/arm-open",
@@ -443,8 +503,10 @@
       "position": [2.43, 5.25],
       "height": 1.3,
       "points": { "orange": [0.172308, 0.696923] },
+      "rig": { "pivot": [0.88, 0.12] },
+      "paint": { "figure": true },
       "note": "His right arm exactly as `pluck/harvester-arm` but holding nothing: the scene draws the whole orange, and then its halves, in his hand.",
-      "placeholder": { "kind": "study" }
+      "painted": true
     },
     {
       "id": "share/knife-hand",
@@ -453,12 +515,13 @@
       "src": "/art/share/knife-hand.webp",
       "size": [1024, 512],
       "depth": 0.3,
-      "anchor": [0.26, 0.5],
+      "anchor": [0.05078125, 0.400390625],
       "position": [1.5, 4.62],
       "height": 0.7,
-      "points": { "knife-tip": [0.26, 0.5] },
+      "paint": { "figure": true },
+      "points": { "knife-tip": [0.05078125, 0.400390625] },
       "note": "His left hand with a knife (the blade tip is the anchor; the blade points left), cutting through the orange in his right. In front of the orange. The scene turns it so the blade points down and plunges.",
-      "placeholder": { "kind": "study" }
+      "painted": true
     },
     {
       "id": "share/peel-left",
@@ -472,7 +535,7 @@
       "height": 0.42,
       "points": { "cut-edge": [0.62, 0.5] },
       "note": "The left half: outer peel.",
-      "placeholder": { "kind": "half", "side": "left", "part": "peel" }
+      "painted": true
     },
     {
       "id": "share/face-left",
@@ -486,7 +549,7 @@
       "height": 0.42,
       "points": { "cut-edge": [0.62, 0.5] },
       "note": "The left half: cut face with its segments.",
-      "placeholder": { "kind": "half", "side": "left", "part": "face" }
+      "painted": true
     },
     {
       "id": "share/peel-right",
@@ -500,7 +563,7 @@
       "height": 0.42,
       "points": { "cut-edge": [0.38, 0.5] },
       "note": "The right half: outer peel.",
-      "placeholder": { "kind": "half", "side": "right", "part": "peel" }
+      "painted": true
     },
     {
       "id": "share/face-right",
@@ -514,7 +577,7 @@
       "height": 0.42,
       "points": { "cut-edge": [0.38, 0.5] },
       "note": "The right half: cut face with its segments.",
-      "placeholder": { "kind": "half", "side": "right", "part": "face" }
+      "painted": true
     },
     {
       "id": "share/second-hand",
@@ -526,9 +589,10 @@
       "anchor": [0.88, 0.5],
       "position": [1.3, 4.38],
       "height": 0.6,
+      "paint": { "figure": true },
       "points": { "fingertips": [0.88, 0.5] },
       "note": "A second person's hand reaching in from center left to take one half.",
-      "placeholder": { "kind": "study" }
+      "painted": true
     },
     {
       "id": "work/cloud-1",
@@ -540,8 +604,9 @@
       "anchor": [0.5, 0.5],
       "position": [-5.5, 2.5],
       "height": 3,
-      "note": "Cloud with halftone shading, 1 of 6.",
-      "placeholder": { "kind": "cloud", "halftone": true, "seed": "work1" }
+      "paint": { "halftone": "cloud" },
+      "note": "Soft painted cloud (the stage draws it as halftone), 1 of 6.",
+      "painted": true
     },
     {
       "id": "work/cloud-2",
@@ -553,8 +618,9 @@
       "anchor": [0.5, 0.5],
       "position": [4.5, -1.5],
       "height": 2.6,
-      "note": "Cloud with halftone shading, 2 of 6.",
-      "placeholder": { "kind": "cloud", "halftone": true, "seed": "work2" }
+      "paint": { "halftone": "cloud" },
+      "note": "Soft painted cloud (the stage draws it as halftone), 2 of 6.",
+      "painted": true
     },
     {
       "id": "work/cloud-3",
@@ -566,8 +632,9 @@
       "anchor": [0.5, 0.5],
       "position": [-2, 5.5],
       "height": 3.6,
-      "note": "Cloud with halftone shading, 3 of 6.",
-      "placeholder": { "kind": "cloud", "halftone": true, "seed": "work3" }
+      "paint": { "halftone": "cloud" },
+      "note": "Soft painted cloud (the stage draws it as halftone), 3 of 6.",
+      "painted": true
     },
     {
       "id": "work/cloud-4",
@@ -579,8 +646,9 @@
       "anchor": [0.5, 0.5],
       "position": [6, 6.5],
       "height": 3,
-      "note": "Cloud with halftone shading, 4 of 6.",
-      "placeholder": { "kind": "cloud", "halftone": true, "seed": "work4" }
+      "paint": { "halftone": "cloud" },
+      "note": "Soft painted cloud (the stage draws it as halftone), 4 of 6.",
+      "painted": true
     },
     {
       "id": "work/cloud-5",
@@ -592,8 +660,9 @@
       "anchor": [0.5, 0.5],
       "position": [-6.5, 9.5],
       "height": 2.4,
-      "note": "Cloud with halftone shading, 5 of 6.",
-      "placeholder": { "kind": "cloud", "halftone": true, "seed": "work5" }
+      "paint": { "halftone": "cloud" },
+      "note": "Soft painted cloud (the stage draws it as halftone), 5 of 6.",
+      "painted": true
     },
     {
       "id": "work/cloud-6",
@@ -605,8 +674,9 @@
       "anchor": [0.5, 0.5],
       "position": [3, 11.5],
       "height": 3.4,
-      "note": "Cloud with halftone shading, 6 of 6.",
-      "placeholder": { "kind": "cloud", "halftone": true, "seed": "work6" }
+      "paint": { "halftone": "cloud" },
+      "note": "Soft painted cloud (the stage draws it as halftone), 6 of 6.",
+      "painted": true
     },
     {
       "id": "work/giant-orange",
@@ -619,7 +689,7 @@
       "position": [-3.6, 9.2],
       "height": 8,
       "note": "A very large orange on top of a minaret; it rises into view during the third card.",
-      "placeholder": { "kind": "giant-orange" }
+      "painted": true
     },
     {
       "id": "work/builder",
@@ -631,8 +701,10 @@
       "anchor": [0.5, 1],
       "position": [-1.7, 8],
       "height": 1.9,
+      "rig": { "chest": [0.2295, 0.2079, 0.7412, 0.3919], "hem": [0.2689, 0.8284, 0.8808, 0.9756], "head": [0.2218, 0.0607, 0.6232, 0.2171], "pivot": [0.7611, 0.9961], "neck": [0.4209, 0.2171] },
+      "paint": { "figure": true },
       "note": "The builder (rust tunic, leather apron, short black beard) at work with mallet and chisel, on the giant orange.",
-      "placeholder": { "kind": "study" }
+      "painted": true
     },
     {
       "id": "blueprint/scaffold",
@@ -645,7 +717,7 @@
       "position": [0, 2],
       "height": 13,
       "note": "The minaret under construction, wrapped in timber scaffolding with platforms.",
-      "placeholder": { "kind": "scaffold" }
+      "painted": true
     },
     {
       "id": "blueprint/builder",
@@ -657,8 +729,10 @@
       "anchor": [0.5, 1],
       "position": [-1.9, 10.6],
       "height": 1.7,
+      "rig": { "chest": [0.1943, 0.2675, 0.6592, 0.4514], "hem": [0.1771, 0.6302, 0.6823, 0.7773], "head": [0.2061, 0.1203, 0.534, 0.2767], "pivot": [0.4639, 0.998], "neck": [0.4085, 0.2767] },
+      "paint": { "figure": true, "contact": 0.42 },
       "note": "The builder at work on a scaffold platform.",
-      "placeholder": { "kind": "study" }
+      "painted": true
     },
     {
       "id": "blueprint/architect",
@@ -671,8 +745,10 @@
       "position": [1.5, 7.9],
       "height": 2,
       "points": { "plan": [0.25, 0.29] },
+      "rig": { "chest": [0.2979, 0.1665, 0.7158, 0.3596], "hem": [0.1628, 0.8308, 0.8128, 0.9854], "head": [0.3459, 0.0119, 0.6756, 0.1761], "pivot": [0.5342, 0.9961], "neck": [0.4897, 0.1761] },
+      "paint": { "figure": true, "contact": 0.46 },
       "note": "Architect in an ivory linen veil and open robe over an indigo underdress, her hands held as if holding the folded drawing (the drawing is its own plates, at the `plan` point).",
-      "placeholder": { "kind": "study" }
+      "painted": true
     },
     {
       "id": "blueprint/plan-1",
@@ -685,7 +761,7 @@
       "position": [-0.75, 9.6],
       "height": 0.75,
       "note": "Drawing of the minaret, fold panel 1 of 4.",
-      "placeholder": { "kind": "plan", "panel": 1 }
+      "painted": true
     },
     {
       "id": "blueprint/plan-2",
@@ -698,7 +774,7 @@
       "position": [-0.25, 9.6],
       "height": 0.75,
       "note": "Drawing of the minaret, fold panel 2 of 4.",
-      "placeholder": { "kind": "plan", "panel": 2 }
+      "painted": true
     },
     {
       "id": "blueprint/plan-3",
@@ -711,7 +787,7 @@
       "position": [0.25, 9.6],
       "height": 0.75,
       "note": "Drawing of the minaret, fold panel 3 of 4.",
-      "placeholder": { "kind": "plan", "panel": 3 }
+      "painted": true
     },
     {
       "id": "blueprint/plan-4",
@@ -724,7 +800,7 @@
       "position": [0.75, 9.6],
       "height": 0.75,
       "note": "Drawing of the minaret, fold panel 4 of 4.",
-      "placeholder": { "kind": "plan", "panel": 4 }
+      "painted": true
     },
     {
       "id": "site/sea",
@@ -737,7 +813,7 @@
       "position": [0, 1.2],
       "height": 21.25,
       "note": "Seaside: sky, a narrow band of sea, and the level ground in front of it, which runs to the bottom edge (horizon at 49.6% from the top, shore about 6% below it).",
-      "placeholder": { "kind": "sea", "horizon": 0.496, "band": 0.06 }
+      "painted": true
     },
     {
       "id": "site/platform",
@@ -750,7 +826,7 @@
       "position": [0, 0],
       "height": 0.8,
       "note": "Low marble platform.",
-      "placeholder": { "kind": "platform" }
+      "painted": true
     },
     {
       "id": "site/orange",
@@ -763,7 +839,7 @@
       "position": [0, 0.75],
       "height": 3,
       "note": "The large orange under construction: part fruit, part timber framework.",
-      "placeholder": { "kind": "orange-build" }
+      "painted": true
     },
     {
       "id": "site/stage",
@@ -776,7 +852,7 @@
       "position": [0, 0],
       "height": 2,
       "note": "Timber stage on both sides of the orange, with a short flight of steps down to the ground.",
-      "placeholder": { "kind": "stage" }
+      "painted": true
     },
     {
       "id": "site/builder-left",
@@ -788,8 +864,10 @@
       "anchor": [0.5, 1],
       "position": [-1.9, 0.9],
       "height": 1.7,
+      "rig": { "chest": [0.1807, 0.2763, 0.6572, 0.4602], "hem": [0.1753, 0.6399, 0.678, 0.7871], "head": [0.2648, 0.1291, 0.5223, 0.2854], "pivot": [0.4353, 0.998], "neck": [0.4019, 0.2854] },
+      "paint": { "figure": true, "contact": 0.42 },
       "note": "Builder on the stage to the left of the orange.",
-      "placeholder": { "kind": "study" }
+      "painted": true
     },
     {
       "id": "site/builder-right",
@@ -801,8 +879,10 @@
       "anchor": [0.5, 1],
       "position": [1.9, 0.9],
       "height": 1.7,
+      "rig": { "chest": [0.2168, 0.2753, 0.7656, 0.4593], "hem": [0.2915, 0.6389, 0.8374, 0.7861], "head": [0.4074, 0.1281, 0.7274, 0.2845], "pivot": [0.5136, 0.998], "neck": [0.5335, 0.2845] },
+      "paint": { "figure": true, "contact": 0.42 },
       "note": "Builder on the stage to the right of the orange.",
-      "placeholder": { "kind": "study" }
+      "painted": true
     },
     {
       "id": "site/builder-seated",
@@ -814,8 +894,10 @@
       "anchor": [0.5, 1],
       "position": [1.1, 0.9],
       "height": 1.15,
+      "rig": { "chest": [0.4263, 0.1757, 0.8569, 0.3671], "head": [0.4407, 0.0225, 0.7226, 0.1852], "pivot": [0.5856, 0.9974], "neck": [0.5647, 0.1852] },
+      "paint": { "figure": true, "contact": 0.46 },
       "note": "Builder seated on a stool on the stage, holding the plan.",
-      "placeholder": { "kind": "study" }
+      "painted": true
     },
     {
       "id": "site/top-down",
@@ -829,7 +911,7 @@
       "height": 9,
       "rotation": [-90, 0, 0],
       "note": "The same set from straight above: the orange's crown, the marble, the timber stage, the builders' heads. Lies flat on the ground.",
-      "placeholder": { "kind": "topdown" }
+      "painted": true
     },
     {
       "id": "site/ground",
@@ -859,7 +941,7 @@
       "tile": true,
       "repeat": [16, 16],
       "note": "Tiled ground pattern, tileable: grows into a large field of tiles around the scaffold.",
-      "placeholder": { "kind": "tiles" }
+      "painted": true
     },
     {
       "id": "site/leaf-shadow",
@@ -885,7 +967,7 @@
       "position": [0, -0.7],
       "height": 8,
       "note": "Minaret-like marble column, capital at the top.",
-      "placeholder": { "kind": "column" }
+      "painted": true
     },
     {
       "id": "prune/urn",
@@ -898,7 +980,7 @@
       "position": [-0.25, -0.7],
       "height": 1,
       "note": "White marble urn on top of the column.",
-      "placeholder": { "kind": "urn" }
+      "painted": true
     },
     {
       "id": "prune/tree",
@@ -912,7 +994,7 @@
       "height": 2.6,
       "sway": 0.4,
       "note": "Young orange tree in the urn with a few small oranges (two branches are separate layers).",
-      "placeholder": { "kind": "tree", "young": true, "oranges": 4, "seed": "young" }
+      "painted": true
     },
     {
       "id": "prune/branch-left",
@@ -926,7 +1008,7 @@
       "height": 0.6,
       "sway": 0.8,
       "note": "A side branch on the left, its own layer.",
-      "placeholder": { "kind": "branch", "direction": "left", "leaves": 6, "seed": "pl" }
+      "painted": true
     },
     {
       "id": "prune/branch-right",
@@ -941,7 +1023,7 @@
       "sway": 0.8,
       "points": { "fruit": [0.8625, 0.565] },
       "note": "The branch that is cut and falls, with an orange on it.",
-      "placeholder": { "kind": "branch", "direction": "right", "leaves": 6, "oranges": 1, "seed": "pr" }
+      "painted": true
     },
     {
       "id": "prune/gardener",
@@ -953,8 +1035,10 @@
       "anchor": [0.5, 1],
       "position": [0.75, -0.7],
       "height": 2.9,
+      "rig": { "chest": [0.2939, 0.1665, 0.7471, 0.3596], "hem": [0.1759, 0.7869, 0.8056, 0.9414], "head": [0.2294, 0.0119, 0.6544, 0.1761], "pivot": [0.5781, 0.9961], "neck": [0.4419, 0.1761] },
+      "paint": { "figure": true, "contact": 0.6 },
       "note": "The gardener (straw hat, silver-streaked beard, olive apron over a sand tunic): body (his arms with the shears are separate layers).",
-      "placeholder": { "kind": "study" }
+      "painted": true
     },
     {
       "id": "prune/gardener-arms-1",
@@ -968,8 +1052,10 @@
       "height": 0.911,
       "frame": 0,
       "points": { "shears-tip": [0.1, 0.42] },
+      "rig": { "pivot": [0.88, 0.38] },
+      "paint": { "figure": true },
       "note": "His arms with the shears, frame 1 of 2 (open).",
-      "placeholder": { "kind": "study" }
+      "painted": true
     },
     {
       "id": "prune/gardener-arms-2",
@@ -983,8 +1069,10 @@
       "height": 0.911,
       "frame": 1,
       "points": { "shears-tip": [0.1, 0.42] },
+      "rig": { "pivot": [0.88, 0.38] },
+      "paint": { "figure": true },
       "note": "His arms with the shears, frame 2 of 2 (closed).",
-      "placeholder": { "kind": "study" }
+      "painted": true
     },
     {
       "id": "fall/falling-orange",
@@ -997,7 +1085,7 @@
       "position": [0.3, -3],
       "height": 0.55,
       "note": "The orange that falls from the cut branch.",
-      "placeholder": { "kind": "orange" }
+      "painted": true
     },
     {
       "id": "fall/branch-cut",
@@ -1010,7 +1098,7 @@
       "position": [0.05, 1.9],
       "height": 0.6,
       "note": "The cut branch of the prune scene without its orange (same drawing as prune/branch-right, fruit gone): it drops from the tree while the orange falls on its own.",
-      "placeholder": { "kind": "branch", "direction": "right", "leaves": 6, "oranges": 0, "seed": "pr" }
+      "painted": true
     },
     {
       "id": "fall/trees-left-far",
@@ -1023,7 +1111,7 @@
       "position": [-5.2, 2.5],
       "height": 18,
       "note": "Row of orange trees heavy with fruit, left, far.",
-      "placeholder": { "kind": "trees-row", "side": "left", "seed": "left-far", "haze": 0.3 }
+      "painted": true
     },
     {
       "id": "fall/trees-left-near",
@@ -1037,7 +1125,7 @@
       "height": 15,
       "points": { "question-1": [0.718, 0.346], "question-3": [0.741, 0.628], "question-5": [0.718, 0.158] },
       "note": "Row of orange trees heavy with fruit, left, near. In the questions, the connector lines of cards 1, 3 and 5 are fixed on the oranges at its points (keep an orange at each point, or move the point).",
-      "placeholder": { "kind": "trees-row", "side": "left", "seed": "left-near" }
+      "painted": true
     },
     {
       "id": "fall/trees-right-far",
@@ -1050,7 +1138,7 @@
       "position": [5.2, 2.5],
       "height": 18,
       "note": "Row of orange trees heavy with fruit, right, far.",
-      "placeholder": { "kind": "trees-row", "side": "right", "seed": "right-far", "haze": 0.3 }
+      "painted": true
     },
     {
       "id": "fall/trees-right-near",
@@ -1064,7 +1152,7 @@
       "height": 15,
       "points": { "question-2": [0.259, 0.675], "question-4": [0.282, 0.206] },
       "note": "Row of orange trees heavy with fruit, right, near. In the questions, the connector lines of cards 2 and 4 are fixed on the oranges at its points (keep an orange at each point, or move the point).",
-      "placeholder": { "kind": "trees-row", "side": "right", "seed": "right-near" }
+      "painted": true
     },
     {
       "id": "fall/ring-mask",
@@ -1104,7 +1192,7 @@
       "position": [0, 0],
       "height": 8,
       "note": "Sky like soft fabric, with folds (the fabric sky into the stargazer).",
-      "placeholder": { "kind": "fabric" }
+      "painted": true
     },
     {
       "id": "stars/cloud",
@@ -1116,8 +1204,9 @@
       "anchor": [0.5, 0.5],
       "position": [2.6, 4.3],
       "height": 2.4,
+      "paint": { "halftone": "cloud" },
       "note": "Billowing cloud; it fills the screen in the fabric sky, then keeps the bottom right in the stargazer.",
-      "placeholder": { "kind": "cloud", "seed": "billow" }
+      "painted": true
     },
     {
       "id": "stars/platform",
@@ -1130,7 +1219,7 @@
       "position": [-2.5, 6],
       "height": 4.6,
       "note": "Marble platform with stairs descending toward the viewer.",
-      "placeholder": { "kind": "stairs" }
+      "painted": true
     },
     {
       "id": "stars/astronomer",
@@ -1143,8 +1232,10 @@
       "position": [-2.6, 6.05],
       "height": 2.5,
       "points": { "fingertip": [0.84, 0.07] },
+      "rig": { "chest": [0.1226, 0.2185, 0.6821, 0.405], "hem": [0.0077, 0.8332, 0.7161, 0.9824], "head": [0.1786, 0.0692, 0.5415, 0.2278], "pivot": [0.3962, 0.9961], "neck": [0.3363, 0.2278], "arm": [0.5982, 0.0234, 0.9333, 0.1998], "shoulder": [0.5982, 0.2464] },
+      "paint": { "figure": true, "contact": 0.66 },
       "note": "Astronomer in a deep indigo cloak pointing at the sky with his right hand, fingertip clear (the `fingertip` point).",
-      "placeholder": { "kind": "study" }
+      "painted": true
     },
     {
       "id": "stars/star",
@@ -1171,7 +1262,7 @@
       "height": 5.4,
       "sway": 0.25,
       "note": "The orange tree that rises from the bottom center, branches filling the frame.",
-      "placeholder": { "kind": "tree", "oranges": 18, "seed": "finale" }
+      "painted": true
     },
     {
       "id": "finale/woman-body",
@@ -1183,8 +1274,10 @@
       "anchor": [0.5, 1],
       "position": [-2.5, 3.85],
       "height": 3.5,
+      "rig": { "chest": [0.3389, 0.1665, 0.6768, 0.3596], "hem": [0.3029, 0.8289, 0.8056, 0.9834], "head": [0.3947, 0.0119, 0.7263, 0.1761], "pivot": [0.4752, 0.9961], "neck": [0.5556, 0.1761] },
+      "paint": { "figure": true },
       "note": "Woman in an ivory peplos with a saffron-orange sash: body (the arm with the jug is its own plate).",
-      "placeholder": { "kind": "study" }
+      "painted": true
     },
     {
       "id": "finale/woman-arm",
@@ -1197,8 +1290,10 @@
       "position": [-2.35, 6.5],
       "height": 1.1,
       "points": { "spout": [0.938182, 0.586364] },
+      "rig": { "pivot": [0.12, 0.45] },
+      "paint": { "figure": true },
       "note": "Her arm with a terracotta jug, pouring (the water leaves the spout at the `spout` point).",
-      "placeholder": { "kind": "study" }
+      "painted": true
     },
     {
       "id": "finale/water-1",
@@ -1211,8 +1306,9 @@
       "position": [-1.45, 6.35],
       "height": 1.3,
       "frame": 0,
+      "paint": { "halftone": "water" },
       "note": "Water stream from the can, frame 1 of 3.",
-      "placeholder": { "kind": "stream", "frame": 0 }
+      "painted": true
     },
     {
       "id": "finale/water-2",
@@ -1225,8 +1321,9 @@
       "position": [-1.45, 6.35],
       "height": 1.3,
       "frame": 1,
+      "paint": { "halftone": "water" },
       "note": "Water stream from the can, frame 2 of 3.",
-      "placeholder": { "kind": "stream", "frame": 1 }
+      "painted": true
     },
     {
       "id": "finale/water-3",
@@ -1239,8 +1336,9 @@
       "position": [-1.45, 6.35],
       "height": 1.3,
       "frame": 2,
+      "paint": { "halftone": "water" },
       "note": "Water stream from the can, frame 3 of 3.",
-      "placeholder": { "kind": "stream", "frame": 2 }
+      "painted": true
     },
     {
       "id": "finale/man-body",
@@ -1252,8 +1350,10 @@
       "anchor": [0.5, 1],
       "position": [2.5, 3.85],
       "height": 3.5,
+      "rig": { "chest": [0.2676, 0.1674, 0.6758, 0.3606], "hem": [0.1495, 0.5213, 0.8782, 0.6758], "head": [0.3303, 0.0129, 0.6131, 0.1771], "pivot": [0.2422, 0.9961], "neck": [0.4744, 0.1771] },
+      "paint": { "figure": true },
       "note": "Man in a slate-blue mantle over an ivory tunic: body (his arms with the shears are separate plates).",
-      "placeholder": { "kind": "study" }
+      "painted": true
     },
     {
       "id": "finale/man-arms-1",
@@ -1267,8 +1367,10 @@
       "height": 1.1,
       "frame": 0,
       "points": { "shears-tip": [0.08, 0.543636] },
+      "rig": { "pivot": [0.88, 0.38] },
+      "paint": { "figure": true },
       "note": "His arms with the shears, frame 1 of 2 (open).",
-      "placeholder": { "kind": "study" }
+      "painted": true
     },
     {
       "id": "finale/man-arms-2",
@@ -1282,8 +1384,10 @@
       "height": 1.1,
       "frame": 1,
       "points": { "shears-tip": [0.08, 0.543636] },
+      "rig": { "pivot": [0.88, 0.38] },
+      "paint": { "figure": true },
       "note": "His arms with the shears, frame 2 of 2 (closed).",
-      "placeholder": { "kind": "study" }
+      "painted": true
     },
     {
       "id": "finale/falling-orange",
@@ -1296,7 +1400,7 @@
       "position": [0.8, 7],
       "height": 0.3,
       "note": "An orange that drops now and then in the loop.",
-      "placeholder": { "kind": "orange", "leaf": false }
+      "painted": true
     },
     {
       "id": "finale/cloud-1",
@@ -1308,8 +1412,9 @@
       "anchor": [0.5, 0.5],
       "position": [-3, 8.3],
       "height": 1.6,
+      "paint": { "halftone": "cloud" },
       "note": "Cloud drifting left to right, 1 of 3.",
-      "placeholder": { "kind": "cloud", "seed": "finale1" }
+      "painted": true
     },
     {
       "id": "finale/cloud-2",
@@ -1321,8 +1426,9 @@
       "anchor": [0.5, 0.5],
       "position": [1.8, 8.8],
       "height": 2,
+      "paint": { "halftone": "cloud" },
       "note": "Cloud drifting left to right, 2 of 3.",
-      "placeholder": { "kind": "cloud", "seed": "finale2" }
+      "painted": true
     },
     {
       "id": "finale/cloud-3",
@@ -1334,8 +1440,9 @@
       "anchor": [0.5, 0.5],
       "position": [4.8, 7.6],
       "height": 1.4,
+      "paint": { "halftone": "cloud" },
       "note": "Cloud drifting left to right, 3 of 3.",
-      "placeholder": { "kind": "cloud", "seed": "finale3" }
+      "painted": true
     }
   ]
 }

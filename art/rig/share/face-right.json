@@ -1,0 +1,12 @@
+{
+  "fit": "canvas",
+  "points": {
+    "cut-edge": [
+      0.38,
+      0.5
+    ]
+  },
+  "matte": {
+    "defringe": 0
+  }
+}

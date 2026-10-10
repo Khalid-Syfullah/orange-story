@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { compose, cutOut, edgeReport, formatManifest, keyExcess, paintedEntry, planFit, remapPoint, remapRig, trimBox } from "./import-core.mjs";
+import { compose, cutOut, edgeReport, formatManifest, guessRig, keyExcess, paintedEntry, planFit, remapPoint, remapRig, trimBox } from "./import-core.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -138,6 +138,9 @@ describe("points", () => {
   it("remaps rig regions and the pivot the same way", () => {
     const fit = { scale: 1, x: 0, y: 0 };
     expect(remapRig({ head: [0.1, 0.1, 0.3, 0.2], pivot: [0.5, 0.9] }, fit, [100, 100], [100, 100])).toEqual({ head: [0.1, 0.1, 0.3, 0.2], pivot: [0.5, 0.9] });
+    // Several people: each one remapped.
+    const half = { scale: 0.5, x: 0, y: 0 };
+    expect(remapRig({ figures: [{ pivot: [0.5, 1] }, { neck: [1, 0.5] }] }, half, [100, 100], [100, 100])).toEqual({ figures: [{ pivot: [0.25, 0.5] }, { neck: [0.5, 0.25] }] });
   });
 
   it("keeps the placeholder-era point when the painting's fit maps it back to itself", () => {
@@ -161,5 +164,79 @@ describe("the manifest after an import", () => {
     expect(next.points).toEqual({ keep: [0.1, 0.1], move: [0.3, 0.4] });
     expect(next.rig).toEqual({ pivot: [0.5, 0.5] });
     expect(Object.keys(next)).toEqual(["id", "size", "points", "rig", "note", "painted"]);
+  });
+
+  it("keeps the entry's own rig and paint when the sidecar brings no rig", () => {
+    const entry = { id: "a/b", size: [10, 10], rig: { pivot: [0.5, 1] }, paint: { figure: true }, note: "n", placeholder: { kind: "study" } };
+    const next = paintedEntry(entry, { points: {}, rig: undefined });
+    expect(next.rig).toEqual({ pivot: [0.5, 1] });
+    expect(next.paint).toEqual({ figure: true });
+    expect(Object.keys(next)).toEqual(["id", "size", "rig", "paint", "note", "painted"]);
+  });
+});
+
+/** A standing person painted on a transparent W x H image: a head, a torso, a robe, two feet; `x` is their middle (px). */
+function paintPerson(px, W, H, x, { top = 0.05, raise = false } = {}) {
+  const h = H * (0.98 - top);
+  const y0 = H * top;
+  const fill = (x0, y0_, x1, y1) => {
+    for (let y = Math.max(0, Math.floor(y0_)); y < Math.min(H, Math.ceil(y1)); y++)
+      for (let xx = Math.max(0, Math.floor(x0)); xx < Math.min(W, Math.ceil(x1)); xx++) px.set([200, 150, 120, 255], (y * W + xx) * 4);
+  };
+  // Head (an ellipse), neck, torso, a robe to the ankles, feet.
+  for (let y = 0; y < H; y++)
+    for (let xx = 0; xx < W; xx++) if (((xx + 0.5 - x) / (0.06 * h)) ** 2 + ((y + 0.5 - (y0 + 0.07 * h)) / (0.07 * h)) ** 2 <= 1) px.set([200, 150, 120, 255], (y * W + xx) * 4);
+  fill(x - 0.03 * h, y0 + 0.13 * h, x + 0.03 * h, y0 + 0.17 * h);
+  fill(x - 0.12 * h, y0 + 0.16 * h, x + 0.12 * h, y0 + 0.45 * h);
+  fill(x - 0.15 * h, y0 + 0.45 * h, x + 0.15 * h, y0 + 0.93 * h);
+  fill(x - 0.08 * h, y0 + 0.93 * h, x + 0.08 * h, y0 + h);
+  // A raised arm off to the right, higher than the head (a pointing astronomer, a mallet).
+  if (raise) fill(x + 0.14 * h, y0 - 0.04 * h, x + 0.17 * h, y0 + 0.2 * h);
+}
+
+describe("a first rig from the cut-out", () => {
+  it("finds one person's head, neck, chest, hem and feet", () => {
+    const W = 256;
+    const H = 512;
+    const px = new Uint8ClampedArray(W * H * 4);
+    paintPerson(px, W, H, 128, { top: 0.08, raise: true });
+    const rig = guessRig(px, W, H, { kind: "body" });
+    const h = 0.9;
+    // The head is around the painted head (not the raised arm above it).
+    expect(rig.head[0]).toBeLessThan(0.5);
+    expect(rig.head[2]).toBeGreaterThan(0.5);
+    expect(rig.head[1]).toBeCloseTo(0.08, 1);
+    expect(rig.neck[1]).toBeGreaterThan(rig.head[1]);
+    expect(rig.chest[1]).toBeGreaterThanOrEqual(rig.head[3] - 0.02);
+    // The robe runs to the feet; the feet are at the bottom, in the middle.
+    expect(rig.hem[3]).toBeGreaterThan(0.08 + 0.8 * h);
+    expect(rig.pivot[0]).toBeCloseTo(0.5, 2);
+    expect(rig.pivot[1]).toBeCloseTo(0.98, 2);
+  });
+
+  it("leaves the head off a body whose head is its own plate, and the hem off a seated one", () => {
+    const W = 128;
+    const H = 256;
+    const px = new Uint8ClampedArray(W * H * 4);
+    paintPerson(px, W, H, 64);
+    const rig = guessRig(px, W, H, { kind: "body", head: false, hem: false });
+    expect(rig.head).toBeUndefined();
+    expect(rig.hem).toBeUndefined();
+    expect(rig.chest).toBeDefined();
+  });
+
+  it("finds each person of a crowd, left to right, and a part's joint", () => {
+    const W = 768;
+    const H = 256;
+    const px = new Uint8ClampedArray(W * H * 4);
+    for (const [x, top] of [[150, 0.06], [390, 0.12], [610, 0.08]]) paintPerson(px, W, H, x, { top });
+    const rig = guessRig(px, W, H, { kind: "crowd" });
+    expect(rig.figures.length).toBe(3);
+    const centres = rig.figures.map((f) => (f.head[0] + f.head[2]) / 2);
+    expect(centres[0]).toBeCloseTo(150 / W, 1);
+    expect(centres[1]).toBeCloseTo(390 / W, 1);
+    expect(centres[2]).toBeCloseTo(610 / W, 1);
+    expect(guessRig(px, W, H, { kind: "part", anchor: [0.88, 0.12] })).toEqual({ pivot: [0.88, 0.12] });
+    expect(guessRig(px, W, H, { kind: null })).toBeUndefined();
   });
 });

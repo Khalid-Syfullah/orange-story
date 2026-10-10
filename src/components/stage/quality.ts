@@ -38,7 +38,7 @@ export const TEXTURE_CAP = 2048;
 export const TEXTURE_CAP_LOW = 1024;
 
 /** True on devices that should get the smaller texture budget. Browser only. */
-function lowEndDevice(): boolean {
+export function lowEndDevice(): boolean {
   if (typeof navigator === "undefined" || typeof window === "undefined") return false;
   const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
   if (memory !== undefined && memory <= 4) return true;
@@ -105,6 +105,40 @@ export interface FrameBudget {
 }
 
 export const newFrameBudget = (): FrameBudget => ({ average: 1 / 60, slow: 0, quick: 0, ceiling: Infinity });
+
+/* ------------------------------------------------------------------ */
+/* Quality tiers                                                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * What the stage paints, by tier (the shaders read the tier from one shared uniform):
+ * - 2 (high): everything: the canvas grain and craquelure, the figures' rim and bounce, the halftone
+ *   layer.
+ * - 1 (medium): the same without the canvas (two texture reads a pixel over the whole screen): a
+ *   low-memory device, or one whose pixel ratio had to come down below 1 to keep up.
+ * - 0 (lowest): plain soft paint: no canvas, no rim or bounce, the halftone falls back to the soft
+ *   painted version. A device that is still slow at the lowest pixel ratio.
+ * The figures' colour grade and idle life cost next to nothing and stay on every tier.
+ */
+export type QualityTier = 0 | 1 | 2;
+
+export const TIER_NAMES: Readonly<Record<string, QualityTier>> = { low: 0, medium: 1, high: 2 };
+
+/** The tier for the stage's current (adapted) pixel ratio, its layout's cap, and the device. */
+export function qualityTier(dpr: number, max: number, lowEnd: boolean): QualityTier {
+  if (dpr <= ADAPTIVE.floor + 1e-6 && max > ADAPTIVE.floor) return 0;
+  if (lowEnd || dpr < Math.min(1, max) - 1e-6) return 1;
+  return 2;
+}
+
+/**
+ * A tier forced from the page's address (`?quality=low`, `medium` or `high`), to look at a tier on
+ * any device; null when none is asked for.
+ */
+export function qualityOverride(search: string): QualityTier | null {
+  const value = new URLSearchParams(search).get("quality");
+  return value && value in TIER_NAMES ? TIER_NAMES[value] : null;
+}
 
 /**
  * Feeds one frame (seconds since the previous one) to the budget and returns the pixel ratio to use

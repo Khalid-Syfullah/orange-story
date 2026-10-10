@@ -1003,6 +1003,60 @@ export function buildFigure({ person, pose, view, show, seed, into = null }) {
 }
 
 /**
+ * The rig of a built figure (for the living stage, `src/components/stage/rig.ts`): rectangles for
+ * its hem, chest and head, and a raised arm when the pose points (the astronomer), with the pivots
+ * they turn on, as fractions of the plate from its left and top. Read from the figure's own frame,
+ * so the stand-in's rig is where its painted body is; a painting brings its own in its sidecar.
+ * `show` says what the plate draws: a body gets its chest, hem and feet; a head its head and neck.
+ */
+export function figureRig(fig, pose, person, show) {
+  const F = fig.frame;
+  const { W, H } = fig.view;
+  const k = F.k;
+  const hu = F.hu;
+  const r6 = (v) => Math.round(Math.min(1, Math.max(0, v)) * 1e4) / 1e4;
+  const frac = ([x, y]) => [r6(x / W), r6(y / H)];
+  const box = (pts, padX = 0, padY = 0) => {
+    const xs = pts.map((p) => p[0]);
+    const ys = pts.map((p) => p[1]);
+    return [r6((Math.min(...xs) - padX) / W), r6((Math.min(...ys) - padY) / H), r6((Math.max(...xs) + padX) / W), r6((Math.max(...ys) + padY) / H)];
+  };
+  const has = (c) => show.includes(c);
+  const rig = {};
+  if (has("body")) {
+    // Chest and shoulders: the torso from below the breast to the collar, a little wider than the shoulders.
+    rig.chest = box([-1.25, 1.25].flatMap((x) => [F.P(x, 4.7 * k), F.P(x, 6.25 * k)]));
+    // The hem of the main garment, where the cloth hangs free (not on a seated figure).
+    if (!pose.seated) {
+      const garments = person.garments ?? [];
+      const main = garments.find((g) => ["tunic", "peplos", "robe", "underdress"].includes(g.kind));
+      const bottom = LENGTHS[main?.length ?? "floor"] ?? 0.14;
+      rig.hem = box([-1.6, 1.6].flatMap((x) => [F.P(x, (bottom + 1.1) * k), F.P(x, bottom * k)]), 0, 0.12 * hu);
+    }
+    rig.pivot = frac(F.base);
+  }
+  if (has("head")) {
+    const hp = pose.head ?? {};
+    const hs = hp.scale ?? 1;
+    const neckTop = F.P(0, 6.55 * k, -0.02);
+    const c = [neckTop[0] + (hp.offset?.[0] ?? 0) * hu, neckTop[1] - 0.45 * hu * hs - (hp.offset?.[1] ?? 0) * hu];
+    rig.head = box([c, neckTop], 0.72 * hu * hs, 0.62 * hu * hs);
+    rig.neck = frac(F.P(0, 6.1 * k));
+  } else if (has("neck") && has("body")) {
+    rig.neck = frac(F.P(0, 6.1 * k));
+  }
+  // A raised arm that points (the astronomer's): it settles on its shoulder.
+  for (const side of ["right", "left"]) {
+    const arm = fig.arms?.[side];
+    if (!arm || !has(`arm-${side}`) || !arm.spec.tip || !has("body")) continue;
+    const tip = fig.view.toPx(arm.spec.tip);
+    rig.arm = box([arm.shoulder, tip], 0.45 * hu, 0.45 * hu);
+    rig.shoulder = frac(arm.shoulder);
+  }
+  return rig;
+}
+
+/**
  * A hand on its own (close-ups): a forearm from `elbow` (world, usually outside the plate) to the
  * wrist, then the hand, placed so that its grip centre (`target: "grip"`), its index fingertip
  * ("tip") or its middle fingertip ("tips") lands on `at` (world). `scale` is the head unit in world

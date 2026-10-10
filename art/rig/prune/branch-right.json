@@ -1,0 +1,12 @@
+{
+  "fit": "canvas",
+  "points": {
+    "fruit": [
+      0.8625,
+      0.565
+    ]
+  },
+  "matte": {
+    "defringe": 0
+  }
+}

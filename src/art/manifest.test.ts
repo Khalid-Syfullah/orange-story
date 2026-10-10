@@ -12,7 +12,9 @@ import { HALF_EDGE } from "@/components/stage/share-cut";
 import { SCENES } from "@/scroll/script";
 import type { SceneId } from "@/scroll/types";
 
-import { drawnPlates, MANIFEST, plateEntry, platePoint, plateWorldSize, PLATES, preloadPlates, scenePlates, type PlateRole } from "./manifest";
+import { rigFigures, rigProblems } from "@/components/stage/rig";
+
+import { drawnPlates, MANIFEST, plateEntry, platePaint, platePoint, plateWorldSize, PLATES, preloadPlates, rigMoves, scenePlates, type PlateRole } from "./manifest";
 
 const ROOT = path.resolve(__dirname, "../..");
 const SCENE_IDS = SCENES.map((s) => s.id);
@@ -66,7 +68,10 @@ describe("the art manifest", () => {
       if (plate.placeholder) expect(typeof plate.placeholder.kind, `${name} placeholder kind`).toBe("string");
       // Every file comes from somewhere: the generator (a placeholder spec) or a painting (painted).
       expect(Boolean(plate.placeholder) !== Boolean(plate.painted), `${name} has a placeholder spec or is painted, not both`).toBe(true);
-      for (const [region, box] of Object.entries(plate.rig ?? {})) expect((box as readonly number[]).every(inUnit), `${name} rig ${region}`).toBe(true);
+      expect(rigProblems(plate.rig), `${name} rig`).toEqual([]);
+      for (const key of Object.keys(plate.paint ?? {})) expect(["figure", "grain", "craquelure", "halftone", "contact", "life"], `${name} paint.${key}`).toContain(key);
+      if (plate.paint?.halftone) expect(["cloud", "water"], `${name} paint.halftone`).toContain(plate.paint.halftone);
+      if (plate.paint?.contact !== undefined) expect(plate.paint.contact > 0 && plate.paint.figure, `${name} contact is for a standing figure`).toBe(true);
     }
   });
 
@@ -159,6 +164,48 @@ describe("the art manifest", () => {
     expect(plateEntry("share/arm-open").points).toEqual(plateEntry("pluck/harvester-arm").points);
     expect(plateEntry("share/face-left").points).toEqual(plateEntry("share/peel-left").points);
     expect(plateEntry("share/face-right").points).toEqual(plateEntry("share/peel-right").points);
+  });
+
+  it("paints the canvas on stand-ins and backdrops, never over a finished painting", () => {
+    for (const plate of PLATES) {
+      const paint = platePaint(plate);
+      if (plate.painted) {
+        expect(paint.grain, `${plate.id} is painted: no grain of the stage's`).toBe(false);
+        expect(paint.craquelure, `${plate.id} is painted: it carries its own craquelure`).toBe(plate.paint?.craquelure ?? 0);
+      }
+      if (paint.halftone) expect(paint.grain || paint.craquelure > 0, `${plate.id} is the graphic layer, not canvas`).toBe(false);
+    }
+    expect(platePaint(plateEntry("hero/sky")).grain).toBe(plateEntry("hero/sky").painted !== true);
+    // The shared canvas: one small tileable data texture each, for every scene.
+    for (const id of ["hero/canvas-grain", "hero/craquelure"]) {
+      const entry = plateEntry(id);
+      expect(entry.role).toBe("texture");
+      expect(entry.tile && entry.linear, `${id} tiles and is data`).toBe(true);
+      expect(entry.scenes.length).toBe(SCENE_IDS.length);
+      expect(Math.max(...entry.size)).toBeLessThanOrEqual(512);
+    }
+  });
+
+  it("draws the clouds and the water as halftone", () => {
+    for (const id of ["work/cloud-1", "work/cloud-6", "finale/cloud-1", "stars/cloud"]) expect(platePaint(plateEntry(id)).halftone, id).toBe("cloud");
+    for (const id of ["finale/water-1", "finale/water-2", "finale/water-3"]) expect(platePaint(plateEntry(id)).halftone, id).toBe("water");
+  });
+
+  it("gives every living figure a rig, and every standing figure its feet", () => {
+    // The bodies the scenes bring to life, and the crowds (one person per head).
+    const bodies = ["pluck/harvester-body", "work/builder", "blueprint/builder", "blueprint/architect", "site/builder-left", "site/builder-right", "site/builder-seated", "prune/gardener", "stars/astronomer", "finale/woman-body", "finale/man-body"];
+    for (const id of bodies) {
+      const entry = plateEntry(id);
+      expect(platePaint(entry).figure, `${id} is a figure`).toBe(true);
+      expect(rigMoves(entry.rig), `${id} has a rig that moves`).toBe(true);
+      expect(platePaint(entry).life, `${id} lives`).toBe(true);
+    }
+    for (const id of ["hero/crowd-far", "hero/crowd-mid", "hero/crowd-near"]) expect(rigFigures(plateEntry(id).rig).length, `${id} people`).toBeGreaterThanOrEqual(2);
+    // The marble statue keeps still; the parts carry their joint.
+    expect(platePaint(plateEntry("hero/statue")).life).toBe(false);
+    for (const id of ["pluck/harvester-head", "pluck/harvester-arm", "share/arm-open", "prune/gardener-arms-1", "prune/gardener-arms-2", "finale/woman-arm", "finale/man-arms-1", "finale/man-arms-2"]) expect(plateEntry(id).rig?.pivot, `${id} pivot`).toBeDefined();
+    for (const plate of PLATES) if ((plate.paint?.contact ?? 0) > 0) expect(rigFigures(plate.rig)[0]?.pivot, `${plate.id} stands on its feet`).toBeDefined();
+    expect(plateEntry("hero/contact-shadow").role).toBe("sprite");
   });
 
   it("turns every onlooker toward the statue: each crowd's look-at point is below her", () => {

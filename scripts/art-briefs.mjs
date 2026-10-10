@@ -48,6 +48,30 @@ const ANCHORS = {
   "finale/man-arms-2": "his near shoulder joint",
 };
 
+/**
+ * Parts of a figure that turn on a joint (a head on its neck, an arm on its shoulder): the plate each
+ * meets and what must overlap there, so no gap shows when the part turns. The stage turns parts by a
+ * few degrees (`docs/ART-PLATES.md`, "Rig"); paint past the joint on both sides.
+ */
+const JOINTS = {
+  "pluck/harvester-head": { meets: "pluck/harvester-body", part: "paint the neck on down past the anchor, about a quarter of a head into the collar" },
+  "pluck/harvester-arm": { meets: "pluck/harvester-body", part: "paint the sleeve on past the shoulder joint, about a quarter of a head into the body's sleeve cap" },
+  "share/arm-open": { meets: "pluck/harvester-body", part: "paint the sleeve on past the shoulder joint, about a quarter of a head into the body's sleeve cap" },
+  "prune/gardener-arms-1": { meets: "prune/gardener", part: "paint both sleeves on past the shoulders, about a quarter of a head into the body's sleeve caps" },
+  "prune/gardener-arms-2": { meets: "prune/gardener", part: "paint both sleeves on past the shoulders, about a quarter of a head into the body's sleeve caps" },
+  "finale/woman-arm": { meets: "finale/woman-body", part: "paint the sleeve on past the shoulder joint, about a quarter of a head into the body" },
+  "finale/man-arms-1": { meets: "finale/man-body", part: "paint both sleeves on past the shoulders, about a quarter of a head into the body's sleeve caps" },
+  "finale/man-arms-2": { meets: "finale/man-body", part: "paint both sleeves on past the shoulders, about a quarter of a head into the body's sleeve caps" },
+};
+
+/** Bodies whose parts turn on them: what to paint under each joint. */
+const BODY_JOINTS = {
+  "pluck/harvester-body": "a neck stub up into where the head plate starts, and sleeve caps under the shoulders the arm plate covers",
+  "prune/gardener": "the shoulders and sleeve caps under where the arm plates start",
+  "finale/woman-body": "the shoulder and sleeve under where her arm plate starts",
+  "finale/man-body": "the shoulders and sleeve caps under where his arm plates start",
+};
+
 /** Sets of frames generated from one pose sequence. */
 const SEQUENCES = [
   ["prune/gardener-arms-1", "prune/gardener-arms-2"],
@@ -145,7 +169,8 @@ async function main() {
   for (const s of sheets) out.push(`   - \`${s.name}\`: ${s.chars.map((c) => c.name).join(" and ")}`);
   out.push("2. **Then the plates**, character by character in the order below, attaching the character's sheet as the image or character reference each time.");
   out.push(`3. **Sets of frames come from one pose sequence**: generate the first frame, then edit it (same seed, same image) for the next, changing only what the brief says: ${SEQUENCES.map((s) => s.map((id) => `\`${id}\``).join(" then ")).join("; ")}.`);
-  out.push("4. Save each painting at `art/source/<scene>/<name>.png` (not committed), write its sidecar at `art/rig/<scene>/<name>.json` (committed), run `npm run art:import`, and calibrate the points in the plate lab (`/design`, points mode) if they are off.");
+  out.push("4. **Parts overlap at their joints.** A head and an arm are their own plates and the stage turns them a few degrees on their joint (the head bows, the arm settles, the body leans with a snip): paint each part on past its joint, about a quarter of a head into the body plate, and paint the body under it (the neck stub, the shoulder under the sleeve), so no gap ever shows when a part turns.");
+  out.push("5. Save each painting at `art/source/<scene>/<name>.png` (not committed), write its sidecar at `art/rig/<scene>/<name>.json` (committed) with its points and its rig (the chest, hem and head rectangles and the pivots the stage moves it by; see `docs/ART-PLATES.md`), run `npm run art:import`, and calibrate the points in the plate lab (`/design`, points mode) if they are off.");
   out.push("");
   out.push("## Reference sheets");
   out.push("");
@@ -183,6 +208,8 @@ async function main() {
       out.push(`- **Key colour** ${keyName(key)} \`${keyHex(key)}\`${key === "cyan" ? " (skin, red or terracotta dominate this plate)" : ""}.`);
       out.push(`- **Placement** ${standing ? "the figure stands on the bottom edge (the importer stands it there)" : `the sidecar's \`anchor\` point, ${ANCHORS[id] ?? "the anchor"}, lands on the manifest anchor`}.`);
       if (points.length) out.push(`- **Points** (the story ties things to them): ${points.map(([name, at]) => `\`${name}\`: ${plate.points?.[name] ?? "see the note"} (stand-in at [${at.join(", ")}])`).join("; ")}.`);
+      if (JOINTS[id]) out.push(`- **Joint** (it turns here, on \`${JOINTS[id].meets}\`): ${JOINTS[id].part}, so no gap shows when it turns.`);
+      if (BODY_JOINTS[id]) out.push(`- **Joints** (parts turn on this body): paint ${BODY_JOINTS[id]}, so no gap shows when a part turns.`);
       out.push("");
       out.push("Prompt:");
       out.push("");
@@ -205,11 +232,18 @@ async function main() {
       if (consistency.length) out.push(`Consistency: ${consistency.join("; ")}.`);
       out.push("");
       const sidecar = { key: keyName(key), points: Object.fromEntries([...(standing ? [] : [["anchor", "[u, v]"]]), ...points.map(([name]) => [name, "[u, v]"])]) };
-      out.push(`Sidecar (fractions of your painting, from its left and top; the plate lab can place them for you): \`${JSON.stringify(sidecar).replace(/"\[u, v\]"/g, "[u, v]")}\``);
+      const rig = entry.rig;
+      if (rig) {
+        const box = (name) => (rig[name] ? [[name, "[l, t, r, b]"]] : []);
+        const point = (name) => (rig[name] ? [[name, "[u, v]"]] : []);
+        sidecar.rig = rig.figures ? { figures: "[{ chest, hem, head, pivot, neck } for each person, left to right]" } : Object.fromEntries([...box("chest"), ...box("hem"), ...box("head"), ...box("arm"), ...point("pivot"), ...point("neck"), ...point("shoulder")]);
+      }
+      out.push(`Sidecar (fractions of your painting, from its left and top; the plate lab can place the points for you): \`${JSON.stringify(sidecar).replace(/"\[u, v\]"/g, "[u, v]").replace(/"\[l, t, r, b\]"/g, "[l, t, r, b]")}\``);
       out.push("");
       out.push("Check afterwards:");
       out.push("");
-      for (const check of [...plate.check, "five fingers on every hand, believable wrists and necks", "no outline, no ground shadow, the background one flat key colour", "nothing touches the edge of the image"]) out.push(`- [ ] ${check}`);
+      const joint = JOINTS[id] ? ["the part runs on past its joint, overlapping the body plate"] : BODY_JOINTS[id] ? ["the body is painted under each part's joint (no hole where a part meets it)"] : [];
+      for (const check of [...plate.check, ...joint, "five fingers on every hand, believable wrists and necks", "no outline, no ground shadow, the background one flat key colour", "nothing touches the edge of the image"]) out.push(`- [ ] ${check}`);
       out.push("");
     }
   }

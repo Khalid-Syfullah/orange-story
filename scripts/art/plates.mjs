@@ -20,7 +20,7 @@ import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 
 import { paintProp } from "./paint.mjs";
-import { renderStudy } from "./study.mjs";
+import { renderStudy, studyRig } from "./study.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -211,10 +211,6 @@ function branch({ x1, y1, x2, y2, width, leaves, oranges = 0, seed, size, color:
 /* ------------------------------------------------------------------ */
 
 const KINDS = {
-  // Deep at the top, a little softer toward the horizon, but never lighter than a 42% mix toward
-  // sky-soft: text on the sky is white or milk, and milk keeps 4.5:1 (WCAG AA) down to the bottom.
-  sky: (W, H) => `<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${C.sky}"/><stop offset="0.7" stop-color="${mix(C.sky, C.skySoft, 0.3)}"/><stop offset="1" stop-color="${mix(C.sky, C.skySoft, 0.42)}"/></linearGradient></defs>${rect(0, 0, W, H, "url(#g)")}`,
-
   glow: (W, H, s) =>
     `<defs><radialGradient id="g"><stop offset="0" stop-color="${C.white}" stop-opacity="1"/><stop offset="0.35" stop-color="${color(s.color, C.white)}" stop-opacity="0.75"/><stop offset="1" stop-color="${mix(C.white, C.orange, 0.4)}" stop-opacity="0"/></radialGradient></defs>${ellipse(W / 2, H / 2, W / 2, H / 2, "url(#g)")}`,
 
@@ -331,22 +327,6 @@ const KINDS = {
       return out;
     }
     return pathEl(arc(r), C.orange) + pathEl(arc(r * 0.82), shade(C.orange, 0.12), { opacity: 0.35 }) + ellipse(left ? cx - r * 0.55 : cx + r * 0.55, cy - r * 0.45, r * 0.16, r * 0.1, C.white, { opacity: 0.35 });
-  },
-
-  cloud: (W, H, s) => {
-    const rand = seeded(s.seed ?? "cloud");
-    const puffs = [];
-    // Puffs rise toward the middle; the tallest still clears the top of the image (no flat crown).
-    for (let i = 0; i < 7; i++) {
-      const t = i / 6;
-      puffs.push([W * (0.14 + t * 0.72), H * (0.6 - Math.sin(t * Math.PI) * (0.12 + rand() * 0.06)), H * (0.17 + Math.sin(t * Math.PI) * 0.13 + rand() * 0.05)]);
-    }
-    const shape = puffs.map(([x, y, r]) => circle(x, y, r)).join("") + rect(W * 0.12, H * 0.5, W * 0.76, H * 0.22, "#000", { rx: H * 0.11 });
-    let out = `<defs><clipPath id="c">${shape}</clipPath>`;
-    if (s.halftone) out += `<pattern id="p" width="${n(W / 48)}" height="${n(W / 48)}" patternUnits="userSpaceOnUse">${circle(W / 96, W / 96, W / 190, C.skySoft)}</pattern>`;
-    out += `<linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${C.white}"/><stop offset="1" stop-color="${C.milk}"/></linearGradient></defs>`;
-    out += group("", rect(0, 0, W, H, "url(#g)") + rect(0, H * 0.58, W, H * 0.42, mix(C.milk, C.skySoft, 0.45), { opacity: 0.55 }) + (s.halftone ? rect(0, H * 0.48, W, H * 0.52, "url(#p)", { opacity: 0.85 }) : ""), { "clip-path": "url(#c)" });
-    return out;
   },
 
   "giant-orange": (W, H) => {
@@ -572,15 +552,6 @@ const KINDS = {
     return `<defs><radialGradient id="g"><stop offset="0" stop-color="${C.white}" stop-opacity="0.75"/><stop offset="0.5" stop-color="${mix(C.white, C.orange, 0.3)}" stop-opacity="0.2"/><stop offset="1" stop-color="${C.white}" stop-opacity="0"/></radialGradient></defs>${circle(c, c, r * 0.8, "url(#g)")}${pathEl(`M${n(c)} ${n(c - r)} Q${n(c + k * 0.3)} ${n(c - k * 0.3)} ${n(c + r)} ${n(c)} Q${n(c + k * 0.3)} ${n(c + k * 0.3)} ${n(c)} ${n(c + r)} Q${n(c - k * 0.3)} ${n(c + k * 0.3)} ${n(c - r)} ${n(c)} Q${n(c - k * 0.3)} ${n(c - k * 0.3)} ${n(c)} ${n(c - r)}Z`, C.white)}`;
   },
 
-  stream: (W, H, s) => {
-    const frame = s.frame ?? 0;
-    const rand = seeded(`stream${frame}`);
-    const reach = 0.7 + frame * 0.12;
-    let out = pathEl(`M${n(W * 0.1)} ${n(H * 0.05)} Q${n(W * (0.6 + frame * 0.1))} ${n(H * 0.1)} ${n(W * 0.7)} ${n(H * reach)}`, "none", { stroke: C.white, "stroke-width": W * 0.05, opacity: 0.7, "stroke-linecap": "round" });
-    out += pathEl(`M${n(W * 0.1)} ${n(H * 0.05)} Q${n(W * (0.6 + frame * 0.1))} ${n(H * 0.1)} ${n(W * 0.7)} ${n(H * reach)}`, "none", { stroke: C.skySoft, "stroke-width": W * 0.02, opacity: 0.8, "stroke-linecap": "round" });
-    for (let i = 0; i < 8; i++) out += circle(W * (0.55 + rand() * 0.3), H * (reach - 0.1 + rand() * 0.25), W * (0.015 + rand() * 0.02), C.white, { opacity: 0.75 });
-    return out;
-  },
 };
 
 /* ------------------------------------------------------------------ */
@@ -604,7 +575,307 @@ function valueNoise(seed, period) {
   };
 }
 
+/** Tileable smooth value noise on [0, 1)^2: a `period` x `period` lattice that wraps, so the tile repeats seamlessly. */
+function tileNoise(seed, period) {
+  const rand = seeded(seed);
+  const grid = Float32Array.from({ length: period * period }, () => rand());
+  const at = (i, j) => grid[(((j % period) + period) % period) * period + (((i % period) + period) % period)];
+  const smooth = (t) => t * t * (3 - 2 * t);
+  return (u, v) => {
+    const x = u * period;
+    const y = v * period;
+    const i = Math.floor(x);
+    const j = Math.floor(y);
+    const a = smooth(x - i);
+    const b = smooth(y - j);
+    const top = at(i, j) + (at(i + 1, j) - at(i, j)) * a;
+    const bottom = at(i, j + 1) + (at(i + 1, j + 1) - at(i, j + 1)) * a;
+    return top + (bottom - top) * b;
+  };
+}
+
+/** Plain (not tileable) fractal value noise in about [0, 1]: octaves of `valueNoise`, each twice as fine. */
+function fbm2(seed, octaves, period = 64) {
+  const layers = Array.from({ length: octaves }, (_, k) => valueNoise(`${seed}:${k}`, period));
+  let norm = 0;
+  for (let k = 0; k < octaves; k++) norm += 0.5 ** k;
+  return (x, y) => {
+    let sum = 0;
+    for (let k = 0; k < octaves; k++) sum += layers[k](x * 2 ** k + k * 3.7, y * 2 ** k - k * 1.9) * 0.5 ** k;
+    return sum / norm;
+  };
+}
+
+const rgb01 = (hex) => hexToRgb(hex).map((v) => v / 255);
+const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
+const smoothstep = (a, b, v) => {
+  const t = clamp01((v - a) / (b - a));
+  return t * t * (3 - 2 * t);
+};
+const lerp = (a, b, t) => a + (b - a) * t;
+
+/** Writes an sRGB colour (0..1 channels) and alpha into an RGBA buffer, dithered by `d` (in 1/255 steps) so soft ramps never band. */
+function put(out, i, r, g, b, a, d) {
+  out[i] = Math.round(clamp01(r) * 255 + d);
+  out[i + 1] = Math.round(clamp01(g) * 255 + d);
+  out[i + 2] = Math.round(clamp01(b) * 255 + d);
+  out[i + 3] = Math.round(clamp01(a) * 255);
+}
+
+/** A 4x4 ordered-dither matrix. */
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+
+/**
+ * Colour kinds: computed pixel by pixel into straight-alpha RGBA (0..255), for soft painted
+ * surfaces an SVG cannot give (mottling, brushing, soft edges, no banding).
+ */
+const PIXEL_KINDS = {
+  /**
+   * The sky as a painted cobalt: deep overhead, a soft value shift toward the horizon, large soft
+   * mottling and cloudy brushing with a few faint directional strokes, dithered so it never bands.
+   * Mixed in the display's colour space, as the contrast rule is measured: nowhere lighter than a
+   * 40% mix toward sky-soft (text on the sky needs the bottom no lighter than the 42% mix), and the
+   * mottling calmer where the left column of text stands.
+   */
+  sky: (W, H) => {
+    const sky = rgb01(C.sky);
+    const soft = rgb01(C.skySoft);
+    const deep = rgb01(mix(C.sky, C.ink, 0.22));
+    const out = new Uint8ClampedArray(W * H * 4);
+    // The image is stretched over a screen about 1.6 times as wide as tall: shapes are drawn in screen proportions.
+    const SX = 1.6;
+    const mottle = fbm2("sky-mottle", 3);
+    const brush = fbm2("sky-brush", 3);
+    const fine = fbm2("sky-fine", 2);
+    // A few long, faint strokes along the wind (about 15 degrees down to the right on screen).
+    const strokeRand = seeded("sky-strokes");
+    const strokes = Array.from({ length: 11 }, () => {
+      const x = strokeRand() * SX;
+      const y = 0.05 + strokeRand() * 0.85;
+      const len = 0.25 + strokeRand() * 0.45;
+      const angle = (-12 - strokeRand() * 10) * (Math.PI / 180);
+      return { x, y, dx: Math.cos(angle), dy: -Math.sin(angle), len, width: 0.014 + strokeRand() * 0.024, value: (strokeRand() - 0.45) * 0.08, seed: strokeRand() * 100 };
+    });
+    for (let py = 0; py < H; py++) {
+      const v = (py + 0.5) / H;
+      // The soft value shift, deep at the top, softer toward the horizon.
+      const base = v < 0.7 ? lerp(0, 0.3, smoothstep(0, 0.7, v) ** 0.9) : lerp(0.3, 0.39, smoothstep(0.7, 1, v));
+      for (let px = 0; px < W; px++) {
+        const u = (px + 0.5) / W;
+        const sx = u * SX;
+        // Calmer behind the left column of text.
+        const calm = lerp(0.6, 1, smoothstep(0.5, 0.75, u));
+        // Large soft mottling, and cloudy brushing stretched along the wind.
+        const m = (mottle(sx * 2.2, v * 2.2) - 0.5) * 2;
+        const ra = sx * 0.97 + v * 0.26;
+        const rb = -sx * 0.26 + v * 0.97;
+        const br = (brush(ra * 1.1, rb * 7) - 0.5) * 2;
+        const f = (fine(sx * 14, v * 14) - 0.5) * 2;
+        let t = base + calm * (0.055 * m + 0.042 * br) + 0.01 * f;
+        let dark = calm * 0.32 * Math.max(0, -m) * (1 - v * 0.5);
+        for (const s of strokes) {
+          const qx = sx - s.x;
+          const qy = v - s.y;
+          const along = qx * s.dx + qy * s.dy;
+          if (along < 0 || along > s.len) continue;
+          const across = -qx * s.dy + qy * s.dx;
+          const taper = Math.sin((Math.PI * along) / s.len);
+          const w = s.width * (0.5 + 0.5 * taper);
+          const k = Math.exp(-((across / w) ** 2)) * taper;
+          // Bristles: the stroke breaks up along its length.
+          const bristle = 0.6 + 0.4 * Math.sin(across * 900 + s.seed) * Math.sin(along * 40 + s.seed);
+          t += calm * s.value * k * bristle;
+        }
+        t = Math.min(0.4, t);
+        if (t < 0) {
+          dark += -t * 1.2;
+          t = 0;
+        }
+        const r = lerp(lerp(sky[0], soft[0], t), deep[0], Math.min(0.6, dark));
+        const g = lerp(lerp(sky[1], soft[1], t), deep[1], Math.min(0.6, dark));
+        const b = lerp(lerp(sky[2], soft[2], t), deep[2], Math.min(0.6, dark));
+        // An ordered (Bayer) dither: it breaks the soft ramps into steps too fine to see, and compresses.
+        put(out, (py * W + px) * 4, r, g, b, 1, BAYER[(py & 3) * 4 + (px & 3)] / 16 - 0.47);
+      }
+    }
+    return out;
+  },
+
+  /**
+   * A cloud as soft painted luminance (the stage turns it into halftone dots): soft-edged puffs that
+   * rise toward the middle, lit from the upper left, shading into a cool blue-grey underneath and on
+   * the right, with soft mottling. A clear margin on every side.
+   */
+  cloud: (W, H, s) => {
+    const rand = seeded(s.seed ?? "cloud");
+    const puffs = [];
+    for (let i = 0; i < 7; i++) {
+      const t = i / 6;
+      puffs.push([W * (0.14 + t * 0.72), H * (0.6 - Math.sin(t * Math.PI) * (0.12 + rand() * 0.06)), H * (0.17 + Math.sin(t * Math.PI) * 0.13 + rand() * 0.05)]);
+    }
+    const lit = rgb01(mix(C.white, C.milk, 0.35));
+    const shade = rgb01(mix(C.milk, C.skySoft, 0.78));
+    const mottle = fbm2(`${s.seed ?? "cloud"}-mottle`, 3);
+    const dither = seeded(`${s.seed ?? "cloud"}-dither`);
+    const soft = H * 0.035;
+    const k = H * 0.022;
+    const out = new Uint8ClampedArray(W * H * 4);
+    for (let py = 0; py < H; py++) {
+      for (let px = 0; px < W; px++) {
+        const x = px + 0.5;
+        const y = py + 0.5;
+        // A smooth union of the puffs and the flat base (signed distance, softened).
+        let d = Infinity;
+        let lightSum = 0;
+        let weightSum = 0;
+        for (const [cx, cy, r] of puffs) {
+          const dd = Math.hypot(x - cx, y - cy) - r;
+          d = -Math.log(Math.exp(-d / k) + Math.exp(-dd / k)) * k;
+          // Each puff is round: lit toward the upper left.
+          const w = Math.exp(-Math.max(0, dd) / (H * 0.08));
+          const nx = (x - cx) / r;
+          const ny = (y - cy) / r;
+          lightSum += w * clamp01(0.55 - 0.56 * nx - 0.64 * ny);
+          weightSum += w;
+        }
+        const bx = Math.max(W * 0.12 - x, x - W * 0.88, 0);
+        const by = Math.max(H * 0.5 - y, y - H * 0.72, 0);
+        d = Math.min(d, Math.hypot(bx, by) - H * 0.02);
+        const a = 1 - smoothstep(-soft, soft * 0.6, d);
+        if (a <= 0) continue;
+        const puffLight = weightSum > 0 ? lightSum / weightSum : 0.5;
+        const below = smoothstep(H * 0.42, H * 0.72, y);
+        const m = (mottle((x / W) * 5, (y / H) * 2.5) - 0.5) * 2;
+        const tone = clamp01(0.7 * below + 0.55 * (1 - puffLight) - 0.18 + 0.14 * m);
+        put(out, (py * W + px) * 4, lerp(lit[0], shade[0], tone), lerp(lit[1], shade[1], tone), lerp(lit[2], shade[2], tone), a, dither() - 0.5);
+      }
+    }
+    return out;
+  },
+
+  /**
+   * Water poured from the jug, as soft painted luminance (the stage draws it as halftone dots): a
+   * curved band from the spout, widening as it falls, streaked along the flow, breaking into drops.
+   */
+  stream: (W, H, s) => {
+    const frame = s.frame ?? 0;
+    const rand = seeded(`stream${frame}`);
+    const reach = 0.7 + frame * 0.12;
+    const p0 = [W * 0.1, H * 0.05];
+    const p1 = [W * (0.6 + frame * 0.1), H * 0.1];
+    const p2 = [W * 0.7, H * reach];
+    const at = (t) => [(1 - t) ** 2 * p0[0] + 2 * (1 - t) * t * p1[0] + t * t * p2[0], (1 - t) ** 2 * p0[1] + 2 * (1 - t) * t * p1[1] + t * t * p2[1]];
+    const path = Array.from({ length: 64 }, (_, i) => at(i / 63));
+    const drops = Array.from({ length: 9 }, () => [W * (0.55 + rand() * 0.3), H * (reach - 0.06 + rand() * 0.22), W * (0.025 + rand() * 0.03)]);
+    const light = rgb01(C.white);
+    const cool = rgb01(mix(C.white, C.skySoft, 0.55));
+    const streaks = fbm2(`stream-streaks-${frame}`, 2);
+    const out = new Uint8ClampedArray(W * H * 4);
+    for (let py = 0; py < H; py++) {
+      for (let px = 0; px < W; px++) {
+        const x = px + 0.5;
+        const y = py + 0.5;
+        let best = Infinity;
+        let bt = 0;
+        for (let i = 0; i < path.length; i++) {
+          const d = Math.hypot(x - path[i][0], y - path[i][1]);
+          if (d < best) {
+            best = d;
+            bt = i / (path.length - 1);
+          }
+        }
+        const width = W * lerp(0.05, 0.14, bt);
+        let a = Math.exp(-((best / width) ** 2)) * smoothstep(0, 0.06, bt) * (1 - smoothstep(0.9, 1, bt) * 0.6);
+        for (const [cx, cy, r] of drops) a = Math.max(a, Math.exp(-((Math.hypot(x - cx, y - cy) / r) ** 2)) * 0.9);
+        if (a < 0.01) continue;
+        const k = streaks((x / W) * 3, (y / H) * 9);
+        put(out, (py * W + px) * 4, lerp(cool[0], light[0], k), lerp(cool[1], light[1], k), lerp(cool[2], light[2], k), a * 0.85, 0);
+      }
+    }
+    return out;
+  },
+
+  /** The soft contact shadow under a standing figure: a cool, soft ellipse, darker at its core. */
+  contact: (W, H) => {
+    const c = rgb01(mix(C.ink, C.sky, 0.3));
+    const out = new Uint8ClampedArray(W * H * 4);
+    for (let py = 0; py < H; py++) {
+      for (let px = 0; px < W; px++) {
+        const x = ((px + 0.5) / W - 0.5) * 2;
+        const y = ((py + 0.5) / H - 0.5) * 2;
+        const r = Math.hypot(x / 0.92, y / 0.8);
+        const a = Math.exp(-((r / 0.55) ** 2)) * (1 - smoothstep(0.85, 1, r)) * 0.8 + Math.exp(-((r / 0.22) ** 2)) * 0.2;
+        put(out, (py * W + px) * 4, c[0], c[1], c[2], a, 0);
+      }
+    }
+    return out;
+  },
+};
+
 const DATA_KINDS = {
+  /**
+   * The canvas grain (tileable, grey around mid-grey): a plain weave of fine threads (64 to the tile,
+   * as a relief lit from the upper left) and the paint's tooth (soft and fine noise over it).
+   */
+  grain: (W, H) => {
+    const period = W / 64;
+    const tooth = tileNoise("grain-tooth", 32);
+    const fine = tileNoise("grain-fine", 128);
+    const pixels = Buffer.alloc(W * H);
+    const weave = (x, y) => {
+      const u = (x / period) * Math.PI * 2;
+      const v = (y / period) * Math.PI * 2;
+      const warp = Math.sin(u) * (0.6 + 0.4 * Math.sin(v * 0.5));
+      const weft = Math.sin(v) * (0.6 + 0.4 * Math.cos(u * 0.5));
+      return 0.5 * (warp + weft);
+    };
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        // The weave's relief, lit from the upper left: the slope toward the light.
+        const relief = weave(x, y) - weave(x - 1, y - 1);
+        const value = 0.5 + 0.3 * relief + 0.22 * (tooth(x / W, y / H) - 0.5) + 0.18 * (fine(x / W, y / H) - 0.5);
+        pixels[y * W + x] = Math.round(clamp01(value) * 255);
+      }
+    }
+    return pixels;
+  },
+
+  /** The craquelure (tileable, white cracks on black): the edges of a jittered Voronoi tiling of about ten cells across, some fainter than others. */
+  craquelure: (W, H) => {
+    const N = 10;
+    const rand = seeded("craquelure");
+    const sites = Array.from({ length: N * N }, (_, k) => [(k % N) + 0.15 + 0.7 * rand(), Math.floor(k / N) + 0.15 + 0.7 * rand(), 0.45 + 0.55 * rand()]);
+    const wobble = tileNoise("craquelure-wobble", 16);
+    const pixels = Buffer.alloc(W * H);
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        // A little wobble so the cracks are not straight lines.
+        const gx = ((x + 0.5) / W) * N + (wobble(x / W, y / H) - 0.5) * 0.35;
+        const gy = ((y + 0.5) / H) * N + (wobble((x / W + 0.37) % 1, (y / H + 0.61) % 1) - 0.5) * 0.35;
+        let d1 = Infinity;
+        let d2 = Infinity;
+        let s1 = 1;
+        const ci = Math.floor(gx);
+        const cj = Math.floor(gy);
+        for (let j = cj - 1; j <= cj + 1; j++)
+          for (let i = ci - 1; i <= ci + 1; i++) {
+            const wi = ((i % N) + N) % N;
+            const wj = ((j % N) + N) % N;
+            const [sx, sy, strength] = sites[wj * N + wi];
+            const d = Math.hypot(gx - (sx + (i - wi)), gy - (sy + (j - wj)));
+            if (d < d1) {
+              d2 = d1;
+              d1 = d;
+              s1 = strength;
+            } else if (d < d2) d2 = d;
+          }
+        const line = 1 - smoothstep(0.0, 0.035, d2 - d1);
+        pixels[y * W + x] = Math.round(clamp01(line * s1) * 255);
+      }
+    }
+    return pixels;
+  },
+
   /** Morph mask: a bottom-to-top ramp (dark turns first) broken up by soft noise, so the edge wanders. */
   mask: (W, H) => {
     const octaves = [valueNoise("mask-a", 4), valueNoise("mask-b", 8), valueNoise("mask-c", 16)];
@@ -665,14 +936,28 @@ export function encodePlate(rgba, W, H, { quality = 82 } = {}) {
     .toBuffer();
 }
 
+/** The rig a stand-in gives its plate (character plates only; see `studyRig`), or null. */
+export function plateRig(entry, manifest) {
+  return entry.placeholder?.kind === "study" ? studyRig(entry, manifest) : null;
+}
+
 /** The placeholder image of a manifest entry, as a WebP buffer. */
 export async function renderPlate(entry, manifest) {
   const [W, H] = entry.size;
   const spec = entry.placeholder;
   if (spec.kind === "study") return encodePlate(renderStudy(entry, manifest), W, H, { quality: entry.size[0] * entry.size[1] > 1.5e6 ? 74 : 80 });
+  const pixels = PIXEL_KINDS[spec.kind];
+  if (pixels) {
+    const rgba = pixels(W, H, spec);
+    // The sky is kept exactly, so its dither survives and its soft ramps never band.
+    if (spec.kind === "sky") return sharp(Buffer.from(rgba.buffer, rgba.byteOffset, rgba.byteLength), { raw: { width: W, height: H, channels: 4 } }).removeAlpha().webp({ lossless: true, effort: 6 }).toBuffer();
+    return encodePlate(rgba, W, H, { quality: 88 });
+  }
   const data = DATA_KINDS[spec.kind];
   if (data) {
     const image = sharp(data(W, H), { raw: { width: W, height: H, channels: 1 } }).toColourspace("srgb");
+    // Fine data (the canvas's grain and cracks) is kept exactly: lossy compression would smear it.
+    if (spec.kind === "grain" || spec.kind === "craquelure") return image.removeAlpha().webp({ lossless: true, effort: 6 }).toBuffer();
     return (entry.linear ? image.removeAlpha().webp({ quality: 92 }) : image.webp({ quality: 88 })).toBuffer();
   }
   const image = sharp(Buffer.from(svgFor(entry))).resize(W, H, { fit: "fill" });

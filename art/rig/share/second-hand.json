@@ -1,0 +1,12 @@
+{
+  "fit": "canvas",
+  "points": {
+    "fingertips": [
+      0.88,
+      0.5
+    ]
+  },
+  "matte": {
+    "defringe": 0
+  }
+}

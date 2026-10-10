@@ -13,7 +13,8 @@ An **academic neoclassical oil painting**, in the spirit of the salon painting o
 - **Cloth.** Heavy wool and velvet mantles with deep, weighty folds and a soft sheen; light linen with fine pleats, crisp creases and translucent thin edges; embroidered or gold-leaf trim; metal with warm specular glints. Folds hang from points of tension: shoulders, a belt, a knee, a hand.
 - **Light.** One light for the whole story (below).
 - **Ground.** Figures are painted against a flat, saturated cobalt sky with painted mottling and canvas tooth, or a pale stone-cream paper ground. For the plates, each painting is isolated on a plain flat key colour so it can be cut out (magenta `#ff00ff`, or cyan `#00ffff` where skin, red or terracotta dominate); no ground shadow.
-- **Graphic layer on top of the painting** (the living stage, next phase; never painted in): halftone-dot clouds, water and ripple rings; a thin chromatic smear; hairlines and mono labels.
+- **Graphic layer on top of the painting** (drawn by the stage, never painted in): halftone-dot clouds, water and ripple rings; hairlines and mono labels. Paint clouds and water as soft luminance; the stage turns them into dots.
+- **The canvas** (drawn by the stage over the stand-ins and the sky, never over a finished painting): a fine weave and paint tooth, a faint craquelure.
 
 ## One light
 

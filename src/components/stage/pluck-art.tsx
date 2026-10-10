@@ -3,7 +3,11 @@
 import * as React from "react";
 import { useMotionValue, useTransform } from "motion/react";
 
-import { foliageAt, handAt, harvesterAt, heroOrangeAt } from "./pluck-harvest";
+import { plateEntry } from "@/art/manifest";
+
+import { harvesterHeadAt } from "./acting";
+import { useFigureLife, useHeldRide, type FigureHold, type FigureLife, type FigurePart } from "./figure-life";
+import { carryAt, foliageAt, HELD, handAt, harvesterAt, heroOrangeAt } from "./pluck-harvest";
 import { Plate } from "./plate";
 import type { SceneArtProps } from "./scene-layers";
 import { useStageProgress } from "./stage-context";
@@ -11,6 +15,28 @@ import { useTextHaze } from "./use-text-haze";
 
 /** The beats over the foliage (and, on a phone, over the harvester's robe): what runs behind their words recedes into the sky's haze. */
 const OVER_FOLIAGE = ["found", "harvest"] as const;
+
+/** The harvester's head and arm ride his body; the fruit in his hand moves with the arm. */
+const PLUCK_PARTS: readonly FigurePart[] = [{ id: "pluck/harvester-head", head: true }, { id: "pluck/harvester-arm" }];
+const PLUCK_HOLDS: readonly FigureHold[] = [{ at: HELD, on: "pluck/harvester-arm" }];
+
+/** He is large in the frame: his idle life a little quieter than the rest of the cast's. */
+export const HARVESTER_LIFE = 0.6;
+
+/**
+ * The harvester's life in the pluck: breathing, small shifts, his head turning to the orange as he
+ * takes it (`harvesterHeadAt`, scrubbed), his head and arm riding his body.
+ */
+export function useHarvesterLife(): FigureLife {
+  return useFigureLife(plateEntry("pluck/harvester-body"), {
+    strength: HARVESTER_LIFE,
+    parts: PLUCK_PARTS,
+    holds: PLUCK_HOLDS,
+    acting: (p, _t, _i, out) => {
+      out.head = harvesterHeadAt(p);
+    },
+  });
+}
 
 /**
  * Scene 4, the pluck and the harvester. Everything is a function of the story progress
@@ -55,6 +81,9 @@ export function PluckArt({ scene }: SceneArtProps) {
   // His robe is behind the text only on a phone (a wide screen keeps him to the right of it).
   const robeHaze = useTextHaze(OVER_FOLIAGE, { strength: 0.8, stackedOnly: true });
 
+  const life = useHarvesterLife();
+  // The fruit rides the hand only once it has reached it (the carry has landed).
+  const heldRide = useHeldRide(life, 0, progress, (p) => carryAt(p));
   const harvester = useTransform(progress, harvesterAt);
   const harvesterO = useTransform(harvester, (h) => h.opacity);
   const harvesterY = useTransform(harvester, (h) => h.rise);
@@ -65,10 +94,10 @@ export function PluckArt({ scene }: SceneArtProps) {
       <Plate id="hero/sky" />
       <Plate id="pluck/foliage-far" clearing={haze} />
       <Plate id="pluck/foliage-mid" opacity={midOpacity} clearing={haze} />
-      <Plate id="pluck/harvester-body" y={harvesterY} opacity={harvesterO} clearing={robeHaze} />
-      <Plate id="pluck/harvester-head" y={harvesterY} opacity={harvesterO} />
-      <Plate id="pluck/harvester-arm" y={harvesterY} opacity={armO} />
-      <Plate id="pluck/hero-orange" x={orangeX} y={orangeY} rotate={orangeR} scale={orangeS} opacity={orangeO} />
+      <Plate id="pluck/harvester-body" y={harvesterY} opacity={harvesterO} clearing={robeHaze} life={life} />
+      <Plate id="pluck/harvester-head" y={harvesterY} opacity={harvesterO} ride={life.ride("pluck/harvester-head")} />
+      <Plate id="pluck/harvester-arm" y={harvesterY} opacity={armO} ride={life.ride("pluck/harvester-arm")} />
+      <Plate id="pluck/hero-orange" x={orangeX} y={orangeY} rotate={orangeR} scale={orangeS} opacity={orangeO} ride={heldRide} />
       <Plate id="pluck/hand" x={handX} y={handY} scaleX={handSX} scaleY={handSY} rotate={handR} opacity={handO} />
       <Plate id="pluck/foliage-near" opacity={nearOpacity} scale={nearScale} clearing={haze} />
     </>

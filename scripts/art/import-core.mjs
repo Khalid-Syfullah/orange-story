@@ -222,12 +222,16 @@ export function remapPoint([u, v], fit, srcSize, size) {
   return [round6((fit.x + u * srcSize[0] * fit.scale) / size[0]), round6((fit.y + v * srcSize[1] * fit.scale) / size[1])];
 }
 
-/** A sidecar's rig (rectangles [l, t, r, b] and a pivot, in source fractions) to the canvas's fractions. */
+/**
+ * A sidecar's rig (rectangles [l, t, r, b] and points, in source fractions; several people under
+ * `figures`) to the canvas's fractions.
+ */
 export function remapRig(rig, fit, srcSize, size) {
   if (!rig) return undefined;
   const out = {};
   for (const [name, value] of Object.entries(rig)) {
-    if (value.length === 4) {
+    if (name === "figures") out.figures = value.map((f) => remapRig(f, fit, srcSize, size));
+    else if (value.length === 4) {
       const [l, t] = remapPoint([value[0], value[1]], fit, srcSize, size);
       const [r, b] = remapPoint([value[2], value[3]], fit, srcSize, size);
       out[name] = [l, t, r, b];
@@ -313,6 +317,203 @@ export function edgeReport(rgba, W, H, key = "magenta") {
 }
 
 /* ------------------------------------------------------------------ */
+/* A first rig, from the cut-out                                       */
+/* ------------------------------------------------------------------ */
+
+const r4 = (v) => Math.round(clamp(v) * 1e4) / 1e4;
+
+/** The opaque runs of row `y` between columns `x0` and `x1`: [start, end) pairs. */
+function runsOf(solid, W, y, x0, x1) {
+  const runs = [];
+  let start = -1;
+  for (let x = x0; x <= x1; x++) {
+    const on = x < x1 && solid[y * W + x];
+    if (on && start < 0) start = x;
+    else if (!on && start >= 0) {
+      runs.push([start, x]);
+      start = -1;
+    }
+  }
+  return runs;
+}
+
+/** The run of a row nearest to column `c` (or containing it), or null. */
+function runNear(runs, c, reach) {
+  let best = null;
+  let bestD = Infinity;
+  for (const [a, b] of runs) {
+    const d = c < a ? a - c : c >= b ? c - b + 1 : 0;
+    if (d < bestD) {
+      bestD = d;
+      best = [a, b];
+    }
+  }
+  return bestD <= reach ? best : null;
+}
+
+const median = (values) => {
+  if (!values.length) return 0;
+  const s = [...values].sort((a, b) => a - b);
+  return s[Math.floor(s.length / 2)];
+};
+
+/**
+ * One standing person between columns `x0` and `x1` of a silhouette: their feet, head, neck, chest
+ * and hem, in pixels (the figure's own height sets every proportion: a head is about a seventh).
+ */
+function guessPerson(solid, W, H, x0, x1, fingertip, { head: withHead = true, hem: withHem = true } = {}) {
+  let y0 = -1;
+  let y1 = -1;
+  for (let y = 0; y < H && y0 < 0; y++) for (let x = x0; x < x1; x++) if (solid[y * W + x]) {
+    y0 = y;
+    break;
+  }
+  for (let y = H - 1; y >= 0 && y1 < 0; y--) for (let x = x0; x < x1; x++) if (solid[y * W + x]) {
+    y1 = y;
+    break;
+  }
+  if (y0 < 0) return null;
+  const h = y1 - y0 + 1;
+  const row = (t) => Math.min(y1, Math.max(y0, Math.round(y0 + t * h)));
+  // The body's axis: the middle of the opaque paint over the torso and the robe.
+  let sum = 0;
+  let count = 0;
+  for (let y = row(0.45); y <= row(0.85); y++) for (let x = x0; x < x1; x++) if (solid[y * W + x]) {
+    sum += x;
+    count++;
+  }
+  const axis = count ? sum / count : (x0 + x1) / 2;
+  // The feet: the middle of the paint along the bottom.
+  sum = 0;
+  count = 0;
+  for (let y = row(0.97); y <= y1; y++) for (let x = x0; x < x1; x++) if (solid[y * W + x]) {
+    sum += x;
+    count++;
+  }
+  const foot = count ? sum / count : axis;
+  // The head: the first paint from the top near the axis (a raised arm stands off to one side).
+  const reach = 0.12 * h;
+  let top = -1;
+  for (let y = y0; y <= row(0.45) && top < 0; y++) {
+    const run = runNear(runsOf(solid, W, y, x0, x1), axis, reach);
+    if (run && run[1] - run[0] >= Math.max(2, 0.02 * h)) top = y;
+  }
+  if (top < 0) top = y0;
+  const chin = top + 0.14 * h;
+  let left = Infinity;
+  let right = -Infinity;
+  let centre = 0;
+  let n = 0;
+  for (let y = top; y <= Math.min(y1, Math.round(chin)); y++) {
+    const run = runNear(runsOf(solid, W, y, x0, x1), axis, reach);
+    if (!run) continue;
+    left = Math.min(left, run[0]);
+    right = Math.max(right, run[1]);
+    centre += (run[0] + run[1]) / 2;
+    n++;
+  }
+  const hc = n ? centre / n : axis;
+  const half = 0.1 * h;
+  const head = [Math.max(left, hc - half) - 0.01 * h, top - 0.02 * h, Math.min(right, hc + half) + 0.01 * h, chin + 0.01 * h];
+  // Chest and shoulders: below the chin, as wide as the body there (arms held out are left out).
+  const widths = [];
+  const centres = [];
+  for (let y = Math.round(chin); y <= Math.round(chin + 0.2 * h) && y <= y1; y++) {
+    const run = runNear(runsOf(solid, W, y, x0, x1), axis, reach);
+    if (!run) continue;
+    widths.push(run[1] - run[0]);
+    centres.push((run[0] + run[1]) / 2);
+  }
+  const cw = Math.min(0.3 * h, median(widths) || 0.22 * h);
+  const cc = median(centres) || axis;
+  const chest = [cc - cw / 2, chin, cc + cw / 2, chin + 0.2 * h];
+  // The hem: where the robe ends (its width falls away to the legs below), or the foot of a long robe.
+  const robe = [];
+  for (let y = row(0.5); y <= row(0.62); y++) {
+    const run = runNear(runsOf(solid, W, y, x0, x1), axis, reach);
+    if (run) robe.push(run[1] - run[0]);
+  }
+  const rw = median(robe) || 0.2 * h;
+  let bottom = row(0.5);
+  for (let y = row(0.5); y <= y1; y++) {
+    const run = runNear(runsOf(solid, W, y, x0, x1), axis, reach);
+    if (run && run[1] - run[0] >= 0.55 * rw) bottom = y;
+  }
+  const hem = [axis - rw * 0.65, bottom - 0.16 * h, axis + rw * 0.65, bottom];
+  const person = { chest, hem, head, pivot: [foot, y1 + 1], neck: [hc, chin + 0.01 * h] };
+  if (!withHem) delete person.hem;
+  if (!withHead) {
+    // A body whose head is its own plate: no head region; its chest starts at the top of its neck.
+    delete person.head;
+    person.neck = [hc, top];
+    person.chest = [cc - cw / 2, top + 0.04 * h, cc + cw / 2, top + 0.24 * h];
+  }
+  // A raised arm that points (the astronomer's, to his `fingertip`): from the shoulder on the
+  // pointing side to the fingertip, kept off the head.
+  if (fingertip) {
+    const fx = fingertip[0] * W;
+    const fy = fingertip[1] * H;
+    const side = fx >= hc ? 1 : -1;
+    const shoulder = [cc + side * cw * 0.35, chin + 0.03 * h];
+    const near = side > 0 ? Math.max(shoulder[0], head[2] + 0.01 * h) : Math.min(shoulder[0], head[0] - 0.01 * h);
+    const pad = 0.05 * h;
+    person.arm = side > 0 ? [near, Math.min(fy, shoulder[1]) - pad, Math.max(fx, near) + pad, Math.max(fy, chin - 0.02 * h)] : [Math.min(fx, near) - pad, Math.min(fy, shoulder[1]) - pad, near, Math.max(fy, chin - 0.02 * h)];
+    person.shoulder = shoulder;
+  }
+  return person;
+}
+
+/**
+ * A first rig for a painted figure from its cut-out (RGBA, W x H), for a plate whose sidecar brings
+ * none: `kind` `body` (one person), `crowd` (each person found by the highest points of the
+ * silhouette, their heads) or `part` (its joint, the plate's `anchor`). Rectangles and points are
+ * fractions of the image, as a sidecar's are. A guess from the silhouette: write the sidecar's own
+ * `rig` to calibrate it.
+ */
+export function guessRig(rgba, W, H, { kind, anchor = [0.5, 1], points = {}, head = true, hem = true }) {
+  if (!kind) return undefined;
+  if (kind === "part") return { pivot: [r4(anchor[0]), r4(anchor[1])] };
+  const solid = new Uint8Array(W * H);
+  for (let i = 0; i < W * H; i++) solid[i] = rgba[i * 4 + 3] > 128 ? 1 : 0;
+  const toFractions = (p) => {
+    const out = {};
+    for (const [k, v] of Object.entries(p)) out[k] = v.length === 4 ? [r4(v[0] / W), r4(v[1] / H), r4(v[2] / W), r4(v[3] / H)] : [r4(v[0] / W), r4(v[1] / H)];
+    return out;
+  };
+  if (kind === "body") {
+    const person = guessPerson(solid, W, H, 0, W, points.fingertip ?? null, { head, hem });
+    return person ? toFractions(person) : undefined;
+  }
+  // A crowd: one person under each head. A head is the top of something head-wide: per column, the
+  // highest row where the paint there is at least a head across (a staff, a raised hand or a hat's
+  // brim is narrower), then the highest of those, a person's width apart.
+  const headWidth = Math.max(3, Math.round(0.07 * H));
+  const top = new Float32Array(W).fill(H);
+  for (let y = 0; y < H; y++) {
+    for (const [a, b] of runsOf(solid, W, y, 0, W)) {
+      if (b - a < headWidth) continue;
+      for (let x = a; x < b; x++) if (top[x] === H) top[x] = y;
+    }
+  }
+  const gap = Math.max(4, Math.round(0.22 * H));
+  const heads = [];
+  const order = [...top.keys()].filter((x) => top[x] < H * 0.7).sort((a, b) => top[a] - top[b] || a - b);
+  for (const x of order) {
+    if (heads.length >= 4) break;
+    if (heads.every((hx) => Math.abs(hx - x) >= gap)) heads.push(x);
+  }
+  heads.sort((a, b) => a - b);
+  const figures = [];
+  heads.forEach((hx, i) => {
+    const x0 = i === 0 ? 0 : Math.round((heads[i - 1] + hx) / 2);
+    const x1 = i === heads.length - 1 ? W : Math.round((hx + heads[i + 1]) / 2);
+    const person = guessPerson(solid, W, H, x0, x1, null);
+    if (person) figures.push(toFractions(person));
+  });
+  return figures.length ? { figures: figures.slice(0, 4) } : undefined;
+}
+
+/* ------------------------------------------------------------------ */
 /* The manifest, in its own layout                                     */
 /* ------------------------------------------------------------------ */
 
@@ -351,18 +552,21 @@ export function formatManifest(manifest) {
 
 /**
  * The manifest entry after an import: the placeholder spec gone, `painted: true`, the sidecar's
- * points (remapped) over the entry's own, and the rig. Keys stay in the manifest's order.
+ * points (remapped) over the entry's own, and the sidecar's rig (or, without one, the entry's own,
+ * kept until the sidecar has its own). Keys stay in the manifest's order: points, rig and paint
+ * just before the note.
  */
 export function paintedEntry(entry, { points, rig }) {
   const next = {};
   for (const [k, v] of Object.entries(entry)) {
-    if (k === "placeholder" || k === "painted" || k === "rig") continue;
+    if (k === "placeholder" || k === "painted" || k === "rig" || k === "points" || k === "paint") continue;
     if (k === "note") {
       const merged = { ...(entry.points ?? {}), ...(points ?? {}) };
       if (Object.keys(merged).length) next.points = merged;
-      if (rig) next.rig = rig;
+      const kept = rig ?? entry.rig;
+      if (kept) next.rig = kept;
+      if (entry.paint) next.paint = entry.paint;
     }
-    if (k === "points") continue;
     next[k] = v;
   }
   next.painted = true;

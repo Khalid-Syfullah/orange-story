@@ -11,7 +11,7 @@
  * plate into a neighbouring one.
  */
 
-import { builder, buildFigure, objects } from "./figure.mjs";
+import { builder, buildFigure, figureRig, objects } from "./figure.mjs";
 import { rng } from "./raster.mjs";
 
 const { shearsGroups, knifeGroups, malletGroups, planGroups, jugGroups, orangeGroup, capsuleGroup } = objects;
@@ -338,11 +338,16 @@ function paintCrowd({ entry, view, ctx, person: group, seed }) {
   const b = builder(view, seed);
   b.seed = seed;
   let hu = 0;
+  const show = ["body", "head", "arm-right", "arm-left"];
+  // Every onlooker's rig, so each one moves on their own on the stage (left to right).
+  const rigs = [];
   for (const fig of crowdFigures(ctx, entry.id, people, seed)) {
-    const built = buildFigure({ person: fig.person, pose: fig.pose, view, show: ["body", "head", "arm-right", "arm-left"], seed: `${seed}:${fig.person.id}`, into: b });
+    const built = buildFigure({ person: fig.person, pose: fig.pose, view, show, seed: `${seed}:${fig.person.id}`, into: b });
     hu = Math.max(hu, built.hu);
+    rigs.push(figureRig({ ...built, view }, fig.pose, fig.person, show));
   }
-  return { ...b, hu };
+  rigs.sort((a, c) => a.pivot[0] - c.pivot[0]);
+  return { ...b, hu, rigs };
 }
 
 function twine(b, from, to, hu) {

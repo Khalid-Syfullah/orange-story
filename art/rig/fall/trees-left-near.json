@@ -1,0 +1,20 @@
+{
+  "fit": "canvas",
+  "points": {
+    "question-1": [
+      0.718,
+      0.346
+    ],
+    "question-3": [
+      0.741,
+      0.628
+    ],
+    "question-5": [
+      0.718,
+      0.158
+    ]
+  },
+  "matte": {
+    "defringe": 0
+  }
+}

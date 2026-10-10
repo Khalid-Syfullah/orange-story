@@ -20,6 +20,7 @@ The whole story is data in `src/scroll/script.ts`: chapters, scenes, text beats,
 | Art receding behind text (`useTextHaze`, `SLOT_AREAS`) | `src/components/stage/text-haze.ts`, `src/components/stage/use-text-haze.ts` |
 | Transitions: choreography, shaders, the transition canvas | `src/components/transitions/` |
 | Smoke-out for text | `src/components/motion/smoke-out.tsx` |
+| The living, painted stage: the canvas, the figure treatment, the halftone layer (`paint.ts`), rigs (`rig.ts`), idle life (`life.ts`), scrubbed acting (`acting.ts`, ranges in `ACTING`), figures and their parts (`figure-life.ts`), the shared uniforms and textures (`materials.ts`, `stage-surface.tsx`) | `src/components/stage/` |
 
 ## The final numbers
 
@@ -372,7 +373,38 @@ The ruler's progress line has one segment per stretch between `RULER_STOPS`: eve
 - no console errors and no WebGL warnings on the way;
 - the three fonts only, no layout shift while they load (cumulative shift under 0.02), and the calm reduced-motion page.
 
-Last run: 6 tests passed in 2.6 minutes (desktop and phone).
+Last run: 6 tests passed in 2.7 minutes (desktop and phone).
+
+## The living stage
+
+The stage is one oil painting on canvas with a graphic layer over it (`DESIGN.md`, "The living, painted stage"). What moves, and on which clock:
+
+**Idle life** (`life.ts`), on the stage's idle clock, so it runs only while a figure is drawn and in view, and stops offscreen, in a hidden tab and with reduced motion (the clock freezes and never jumps on resume; `?idle=off` holds it still on purpose, to compare frames of the scrubbed story):
+
+| Motion | How much | How often |
+| --- | --- | --- |
+| Breathing: the chest and everything above it rise | 0.7% of the plate's height (`LIFE.breath.rise`) | about 0.2 Hz, a quicker breath in than out |
+| The hem ripples across the robe | up to 0.45% of the plate's height, in gusts | 0.31 Hz |
+| The head turns on the neck | up to 2 degrees | holds, then eases to a new angle every 3.4 to 6.2 s |
+| The weight shifts: the whole figure about its feet | up to 0.3 degrees | every 5.2 to 8.8 s |
+
+Each person has their own phase (`figurePhase`, from the plate and their place on it), so the onlookers never move in unison. The harvester, large in the frame, lives at 0.6 of that; the orchard keepers at 1.3 (and shift their weight with their loop: she leans into the pour, he into the cut). The marble statue keeps still.
+
+**How a figure is bent.** The manifest's rig (rectangles for the chest, the hem, the head and a raised arm, and the feet; `docs/ART-PLATES.md`) becomes a soft weight texture (`rigWeightData`, 64 texels on its long side, `linear`); the figure plate is drawn as a mesh of cells about a 64th of its long side, and the vertex shader bends it: the arm turns on the shoulder, the head on the neck, the chest rises, the hem swings, and the whole figure turns about its feet, all in the plate's own space, so nothing slides off the art. A head or an arm on its own plate rides its body (the same bend, worked out on the CPU at the joint, `deformQ`), and things held in a hand on their own plates move with it, so held objects stay in hand. Several people on one plate each take their own phase and pivots (`rigVertexData`), fading to stillness where two people meet.
+
+**Scrubbed acting** (`acting.ts`, ranges in `ACTING` in the script), a function of progress alone, so it plays backwards exactly; idle life runs on top:
+
+| Who | What | When (screens) |
+| --- | --- | --- |
+| The onlookers | tip their heads up further toward the statue, as the orange brightens (up to 4.3 degrees) | over the hero, 0.00 to 1.59 |
+| The harvester | turns his head from the descending fruit to the orange in his hand (7.4 degrees) | 8.99 to 9.34 |
+| The architect | leans in (`architectLean`) and bows her head toward the plan (4.9 degrees) as it opens | 19.10 to 20.54 |
+| The gardener | his body leans into each of the seven snips, and back between them | 25.84 to 28.82 |
+| The astronomer | his raised arm settles into the point (8.6 degrees), before the stars grow from his fingertip | 40.86 to 41.29 |
+
+**The canvas and the halftone** (`paint.ts`, `materials.ts`). The canvas grain (one tile per 1.6 world units on a plate, 5.5 tiles per screen height on the sky) and the craquelure (one tile per 2.6 world units, about ten cells) are read in each plate's own UV space with mipmaps: they move and scale with the art, so they never crawl or shimmer while the camera moves. The halftone's dots are cells of 0.12 world units on a cloud, 0.03 on the water and 0.11 in the hero's ripple rings, in plate space at 45 degrees; where a cell would be smaller than about 3 screen pixels it gives way to the plain soft version (no moire). The ripple rings run on the same ripple clock as the glow's droplets (`RINGS`, eight fronts), so the lift still quickens them without a jump and scrolling up slows them again.
+
+**Quality tiers** (`qualityTier` in `quality.ts`, one shared uniform): 2 everything; 1 (a low-memory device, or a pixel ratio that had to come below 1) without the canvas; 0 (still slow at the lowest pixel ratio) plain soft paint: no canvas, no rim or bounce, the halftone soft. The grade and idle life cost next to nothing and stay on. `?quality=low`, `medium` or `high` forces a tier (low also takes the lowest pixel ratio).
 
 ## Helpers
 
@@ -401,11 +433,23 @@ Measured on the production build in Chromium 156 (new headless, on the GPU: an A
 | Reading pace, CPU throttled 4 times | 16.7 / 16.8 / 16.8 ms | 0.3% | 1.5 |
 | No GPU (software rendering), fast | 16.7 / 66.7 / 116.7 ms | 43% | 0.75 (adapted down; the median was 83 ms before) |
 
-The slowest single frames (up to about 180 ms on the GPU) come when a scene mounts. What keeps it smooth:
+The living stage (phase 23: the painted canvas, the figures' life, the halftone layer), measured the same way, before and after, on the same machine, with the paintings then in the manifest:
+
+| Run | Before: p50 / p95 / p99, over 20 ms | After: p50 / p95 / p99, over 20 ms | Pixel ratio |
+| --- | --- | --- | --- |
+| Reading pace (about 108 s) | 16.7 / 16.7 / 16.8 ms, 0.06% | 16.7 / 16.7 / 16.8 ms, 0.15% | 1.5 |
+| Fast (about 46 s) | 16.7 / 16.8 / 16.8 ms, 0.18% | 16.7 / 16.8 / 16.8 ms, 0.39% | 1.5 |
+| Reading pace, CPU throttled 4 times | 16.7 / 16.8 / 16.8 ms, 0.31% | 16.7 / 16.7 / 16.8 ms, 0.33% | 1.5 |
+| Phone (Pixel 7, scripted scroll, 46 s) | 16.7 / 16.7 / 16.8 ms, 0.14% | 16.7 / 16.7 / 16.8 ms, 0.46% | 1.25 |
+| Lowest tier (`?quality=low`), fast | | 16.7 / 16.8 / 16.8 ms, 0.42% | 0.75 |
+| Lowest tier, phone | | 16.7 / 16.7 / 16.8 ms, 0.42% | 0.75 |
+
+The p99 holds at 16.8 ms. The share of frames over 20 ms is up (about a dozen more frames in a fast run): they fall where a scene mounts and its figures' rig meshes and the new shaders are first built (the slowest single frame on the GPU went from 183 to 217 ms). The slowest single frames come when a scene mounts. What keeps it smooth:
 
 - **Textures:** WebP with alpha (98 plates, 3.1 MB in all), capped at 2048 px on the longest side (1024 on low-memory and small touch devices), uploaded with premultiplied alpha and mipmaps. Only the current and the next scene are preloaded; a texture nobody holds leaves the GPU 4 s later.
 - **Drawing on demand:** the stage canvas draws once per progress change, plus every frame only while an idle effect is in view; both canvases stop in a hidden tab.
 - **Instancing:** the glow's droplets and every star or sparkle field are one instanced draw each, animated in the vertex shader.
+- **The living stage in the shaders:** one plate program for every plate (the canvas, the grade, the rim and the life are uniforms, not variants, so nothing compiles mid-story) and one halftone program (clouds, water and rings), both first compiled in the hero. The figures' life is computed once per figure per frame on the CPU (a few dozen numbers) and bends the mesh in the vertex shader; the rig meshes and weight textures are built once per plate and shared by reference count. The canvas is two shared textures every plate reads, loaded once.
 - **No allocations per frame** in the canvas frame loops: plates reuse scratch vectors, pairs and quaternions; the idle clock walks the scene graph without callbacks; the finale's loop writes into reused frame objects. Motion's derived values do allocate small objects (that is how Motion works).
 - **Pixel ratio:** 1 to 1.5 on the stage (1.25 on a phone), 1 to 1.25 on the transition canvas (1 on a phone), half the glow droplets on a phone.
 - **Adaptive quality** (`AdaptiveQuality` in `stage-canvas.tsx`, `adaptDpr` in `quality.ts`): after 1.2 s of frames slower than 45 fps the stage drops its pixel ratio by a fifth (down to 0.75), and after 4 s of frames quicker than 57 fps it raises it again, never back to a ratio that proved too slow. Only draws in consecutive animation frames count, so an on-demand canvas that simply had nothing to draw is never mistaken for a slow one. The adapted ratio goes through the canvas's own `dpr` prop (React Three Fiber re-applies that prop whenever the canvas re-renders).
@@ -433,7 +477,7 @@ Scene by scene against `docs/STORYBOARD.md`. Everything the storyboard asks for 
 
 TODO, outside the code:
 
-- **Art.** Every plate is a stand-in (the characters as procedurally painted oil studies); the paintings are briefed in `docs/ART-BRIEFS.md` and go in with `npm run art:import` at the paths in `public/art/manifest.json` (see `docs/ART-PLATES.md`). The places the scenes tie to the figures (the orange in a hand, the fingertip the stars grow from, the blade tip, the spout, the shears) are named points on the plates, so a painting moves them with its sidecar.
+- **Art.** A plate marked `painted: true` in `public/art/manifest.json` is a finished painting brought in with `npm run art:import`; the rest are stand-ins (the characters as procedurally painted oil studies), briefed in `docs/ART-BRIEFS.md` (see `docs/ART-PLATES.md`). The places the scenes tie to the figures (the orange in a hand, the fingertip the stars grow from, the blade tip, the spout, the shears) are named points on the plates, so a painting moves them with its sidecar; a painted figure's rig is a first guess from its cut-out until its sidecar brings a measured one.
 - **The contact email** "hello@orange.io" is marked "TODO: confirm the real address" in the storyboard; it lives in `src/content/copy.ts`.
 - **The application endpoint.** The form posts to `NEXT_PUBLIC_APPLY_ENDPOINT`; without it the form shows its success message but sends nothing (see the README).
 - **The architect's arms** (scene 7): with final art, arm frames for her unfolding the drawing.
@@ -458,4 +502,4 @@ Visitors who prefer reduced motion get no pinned stage, no smooth scrolling and 
 
 **Screen readers** (`story-outline.tsx`). The stage is decorative: its beats are `aria-hidden` (their buttons and links are out of the tab order), as are the art and canvases. A visually hidden outline is always on the page: the four chapters as landmarks with headings, every beat in script order, the questions as one list, and a link to the form.
 
-**Hidden tabs.** The canvases set their frame loop to `never` (`PauseWhenHidden`), the idle clock and the transition drift stop, and `html[data-tab-hidden]` pauses the CSS idle effects.
+**Hidden tabs.** The canvases set their frame loop to `never` (`PauseWhenHidden`), the idle clock (and with it the figures' breathing and shifts, the ripple, the clouds' drift) and the transition drift stop, and `html[data-tab-hidden]` pauses the CSS idle effects.

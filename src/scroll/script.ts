@@ -738,6 +738,58 @@ export const FALL = {
 } as const;
 
 /**
+ * Scrubbed acting of the painted figures (`src/components/stage/acting.ts`): small moves of a head, a
+ * body or an arm that follow the story, so they play backwards exactly. Their idle life (breathing,
+ * the hem in the breeze, small head and weight shifts) runs on idle time on top (`life.ts`).
+ */
+export const ACTING = {
+  /** The onlookers' heads tip up further as the orange brightens (the glow's lift over the hero). */
+  crowdLook: [at("hero", 0), at("hero", 1)] as ProgressRange,
+  /** The harvester's head turns to the orange as he takes it from the hand. */
+  harvesterHead: [PLUCK.reveal[1], PLUCK.handoff[1]] as ProgressRange,
+  /** The architect leans in, her head bowing toward the plan, as it opens panel by panel. */
+  architectLean: [BLUEPRINT.panels[0], BLUEPRINT.panels[1]] as ProgressRange,
+  /** The astronomer's raised arm settles into the point as the fabric sky clears, before the stars grow from his fingertip. */
+  astronomerArm: [at("stars", 0.06), STARS.grow[0]] as ProgressRange,
+} as const;
+
+/**
+ * The painted surface, per scene (`src/components/stage/paint.ts`): a tiny colour grade on the
+ * figure plates (warm highlights, cool shadows, a small saturation trim), so paintings made at
+ * different times still match each other and the sky, and how strongly the faint craquelure shows
+ * (strongest on the paper-cream scenes: the building site and the sheet unfolding into it).
+ */
+export interface ScenePaint {
+  /** Highlights pushed toward the sun's warm cream, 0 to about 0.1. */
+  warm: number;
+  /** Shadows pushed toward the cool sky, 0 to about 0.1. */
+  cool: number;
+  /** Saturation change: -0.1 trims a tenth, 0 leaves it. */
+  saturation: number;
+  /** Craquelure strength, 0 (none) to 1 (the paper-cream scenes). */
+  craquelure: number;
+}
+
+const SKY_PAINT: ScenePaint = { warm: 0.06, cool: 0.07, saturation: -0.06, craquelure: 0.45 };
+
+export const SCENE_PAINT: Readonly<Record<SceneId, ScenePaint>> = {
+  hero: { ...SKY_PAINT, cool: 0.08 },
+  ascent: SKY_PAINT,
+  graft: { ...SKY_PAINT, warm: 0.05 },
+  pluck: SKY_PAINT,
+  share: SKY_PAINT,
+  work: SKY_PAINT,
+  blueprint: { ...SKY_PAINT, craquelure: 0.6 },
+  site: { warm: 0.07, cool: 0.04, saturation: -0.05, craquelure: 1 },
+  prune: SKY_PAINT,
+  fall: SKY_PAINT,
+  faq: SKY_PAINT,
+  stars: { ...SKY_PAINT, cool: 0.09 },
+  apply: { ...SKY_PAINT, cool: 0.09 },
+  finale: { ...SKY_PAINT, warm: 0.07 },
+};
+
+/**
  * The questions' deck (`src/components/story/question-plan.ts`, drawn by `question-deck.tsx`). All
  * five cards live in one pinned container and move along one arc: the first zooms up from small in
  * the center, the others arrive from the right; each swings left along the arc as it leaves (the

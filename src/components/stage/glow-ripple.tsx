@@ -9,7 +9,8 @@ import { seeded } from "@/lib/progress";
 import { useStacked } from "@/lib/use-stacked";
 
 import { useIdleClock } from "./idle";
-import { RippleMaterial } from "./materials";
+import { HalftoneMaterial, RippleMaterial } from "./materials";
+import { HALFTONE } from "./paint";
 import { particleCount } from "./quality";
 import { read, useInvalidateOnChange, type Num } from "./plate";
 import { plateRenderOrder, useSceneLayer, useStageProgress } from "./stage-context";
@@ -96,10 +97,24 @@ export interface GlowRippleProps {
   count?: number;
   /** Stacking inside the scene. Negative draws behind the scene's plates (over its sky). */
   layer?: number;
+  /** World x where the rings of dots have calmed away (toward the words on the left), and where they are full. */
+  calm?: Pair;
   name?: string;
 }
 
-export function GlowRipple({ sprite, source, opacity, lift, offsetY, reach = 7, count: wanted = 320, layer = -2, name = "glow-ripple" }: GlowRippleProps) {
+/** World units the ring plane reaches past the droplets' reach, so no ring is ever cut by its edge. */
+const RING_MARGIN = 1.6;
+
+/** Where the rings calm away toward the hero's words on the left (world x): gone, then full. */
+const CALM: Pair = [-0.5, 1.6];
+
+/** The plane of the ripple rings (owned: never the plates' shared quad), centred on the source. */
+export function ringGeometry(reach: number): PlaneGeometry {
+  const size = 2 * (reach + RING_MARGIN);
+  return new PlaneGeometry(size, size);
+}
+
+export function GlowRipple({ sprite, source, opacity, lift, offsetY, reach = 7, count: wanted = 320, layer = -2, calm = CALM, name = "glow-ripple" }: GlowRippleProps) {
   // Half as many droplets on a phone.
   const count = particleCount(wanted, useStacked());
   const entry = plateEntry(sprite);
@@ -110,6 +125,18 @@ export function GlowRipple({ sprite, source, opacity, lift, offsetY, reach = 7, 
   const key = React.useMemo(() => ({}), []);
   const material = React.useMemo(() => new RippleMaterial(texture), [texture]);
   const geometry = React.useMemo(() => rippleGeometry(`${name}-drops`, count, entry.height, source, reach), [name, count, entry.height, source, reach]);
+  // The concentric rings, as rings of dots (the halftone layer), on the same ripple clock as the droplets.
+  const ringMaterial = React.useMemo(() => {
+    const m = new HalftoneMaterial(texture, "rings");
+    const size = 2 * (reach + RING_MARGIN);
+    (m.uniforms.ringSize.value as Vector2).set(size, size);
+    // The dot grid in world units: the same dot size on any screen.
+    (m.uniforms.cells.value as Vector2).set(size / HALFTONE.ringCell, size / HALFTONE.ringCell);
+    (m.uniforms.calm.value as Vector2).set(calm[0] - source[0], calm[1] - source[0]);
+    m.uniforms.reach.value = reach;
+    return m;
+  }, [texture, reach, calm, source]);
+  const rings = React.useMemo(() => ringGeometry(reach), [reach]);
 
   React.useEffect(
     () => () => {
@@ -118,18 +145,28 @@ export function GlowRipple({ sprite, source, opacity, lift, offsetY, reach = 7, 
     },
     [geometry, material],
   );
+  React.useEffect(
+    () => () => {
+      rings.dispose();
+      ringMaterial.dispose();
+    },
+    [rings, ringMaterial],
+  );
   React.useEffect(() => () => clock.drop(key), [clock, key]);
   useInvalidateOnChange([opacity, lift, offsetY]);
 
   const state = React.useRef(rippleClock(name));
   const ref = React.useRef<Mesh>(null);
+  const ringRef = React.useRef<Mesh>(null);
   useFrame(() => {
     const mesh = ref.current;
-    if (!mesh) return;
+    const ring = ringRef.current;
+    if (!mesh || !ring) return;
     const p = progress?.get() ?? 0;
     const alpha = read(opacity, 1) * (scene ? scene.presence(p) : 1);
     const shown = alpha > 0.001;
     mesh.visible = shown;
+    ring.visible = shown;
     if (shown && clock.inView(mesh)) clock.hold(key);
     else clock.drop(key);
     // Ripple time: idle time, run a little faster as the glow lifts.
@@ -140,12 +177,18 @@ export function GlowRipple({ sprite, source, opacity, lift, offsetY, reach = 7, 
       s.time += (now - s.last) * (1 + RIPPLE_SPEED_UP * level);
       s.last = now;
     }
+    const y = source[1] + read(offsetY, 0);
     const u = (mesh.material as RippleMaterial).uniforms;
     u.time.value = s.time;
     u.opacity.value = alpha;
     u.lift.value = level;
     u.reach.value = reach;
-    (u.source.value as Vector2).set(source[0], source[1] + read(offsetY, 0));
+    (u.source.value as Vector2).set(source[0], y);
+    const r = (ring.material as HalftoneMaterial).uniforms;
+    r.time.value = s.time;
+    r.opacity.value = alpha;
+    r.lift.value = level;
+    ring.position.set(source[0], y, -0.01);
   });
 
   // The droplets move in the shader, so the mesh's own bounds are meaningless: never cull it.
@@ -155,6 +198,16 @@ export function GlowRipple({ sprite, source, opacity, lift, offsetY, reach = 7, 
     mesh.name = name;
     return mesh;
   }, [geometry, material, name]);
+  const ringPlace = React.useMemo(() => {
+    const mesh = new Mesh(rings, ringMaterial);
+    mesh.name = `${name}-rings`;
+    return mesh;
+  }, [rings, ringMaterial, name]);
 
-  return <primitive ref={ref} object={place} renderOrder={plateRenderOrder(scene, layer)} />;
+  return (
+    <>
+      <primitive ref={ringRef} object={ringPlace} renderOrder={plateRenderOrder(scene, layer - 0.5)} />
+      <primitive ref={ref} object={place} renderOrder={plateRenderOrder(scene, layer)} />
+    </>
+  );
 }

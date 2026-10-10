@@ -3,10 +3,11 @@
 import * as React from "react";
 import type { Group, Mesh } from "three";
 
-import { plateEntry, type Pair, type PlateId } from "@/art/manifest";
+import { plateEntry, platePaint, type Pair, type PlateId } from "@/art/manifest";
 
 import { defaultMorphMask, MorphMaterial } from "./materials";
-import { read, setColorUniform, UNIT_PLANE, useInvalidateOnChange, usePlateFrame, usePlateRenderOrder, type Num, type PlateMotion, type PlatePlacement } from "./plate";
+import { configurePaint, read, setColorUniform, UNIT_PLANE, useInvalidateOnChange, usePlateFrame, usePlateRenderOrder, type Num, type PlateMotion, type PlatePlacement } from "./plate";
+import { useSceneLayer } from "./stage-context";
 import { useOptionalPlateTexture, usePlateTexture } from "./textures";
 
 /**
@@ -47,7 +48,13 @@ export function MorphPlate({ from, to, mask, place, progress, softness = 0.08, e
   const mapB = usePlateTexture(toEntry);
   const maskTexture = useOptionalPlateTexture(maskEntry) ?? defaultMorphMask();
 
-  const material = React.useMemo(() => new MorphMaterial(mapA, mapB, maskTexture), [mapA, mapB, maskTexture]);
+  const scene = useSceneLayer()?.scene.id ?? null;
+  const material = React.useMemo(() => {
+    const m = new MorphMaterial(mapA, mapB, maskTexture);
+    // The canvas of the plate it stands in for (the minaret's stone has the same grain as the hero's).
+    configurePaint(m, placeEntry, platePaint(placeEntry), scene);
+    return m;
+  }, [mapA, mapB, maskTexture, placeEntry, scene]);
   React.useEffect(() => () => material.dispose(), [material]);
   useInvalidateOnChange([progress, edgeAmount, maskOffset?.[0], maskOffset?.[1]]);
 

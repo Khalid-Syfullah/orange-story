@@ -3,15 +3,18 @@
 import * as React from "react";
 import { animate, useMotionValue, useTransform, type MotionValue } from "motion/react";
 
-import { platePoint } from "@/art/manifest";
+import { plateEntry, platePoint, plateWorldSize, type PlateId } from "@/art/manifest";
 import { ease } from "@/lib/progress";
 import { sceneProgress } from "@/scroll/helpers";
 
+import { crowdHeadAt } from "./acting";
+import { useFigureLife, type FigureLife } from "./figure-life";
 import { GlowRipple } from "./glow-ripple";
 import { finishHeroIntro, heroIntroElapsed, heroIntroFinished, INTRO, introAmount, startHeroIntro, type IntroSpan } from "./hero-intro";
 import { colors } from "@/styles/tokens";
 
 import { Plate } from "./plate";
+import { rigFigures } from "./rig";
 import { useStageProgress } from "./stage-context";
 import { Twinkle } from "./twinkle";
 import type { SceneArtProps } from "./scene-layers";
@@ -47,6 +50,34 @@ export const ORANGE_WHITENING = 0.45;
 
 /** The halo behind the orange: one big soft droplet that breathes. */
 export const HALO = [{ position: [ORANGE[0], ORANGE[1], 0], size: 2.6, phase: 0.6, speed: 0.16 }] as const;
+
+/**
+ * Which way each onlooker on a crowd plate turns to look up at the statue: +1 when she stands to
+ * their right (their `look-at` point), -1 when to their left.
+ */
+export function crowdFacing(id: PlateId): number[] {
+  const entry = plateEntry(id);
+  const look = platePoint(id, "look-at")[0];
+  const [w] = plateWorldSize(entry);
+  return rigFigures(entry.rig).map((f) => {
+    const u = f.head ? (f.head[0] + f.head[2]) / 2 : f.centre;
+    return Math.sign(look - (entry.position[0] + (u - entry.anchor[0]) * w)) || 1;
+  });
+}
+
+/**
+ * The onlookers' life on one crowd plate: each breathes and shifts on their own, and all tip their
+ * heads up further toward the statue as the orange brightens (`crowdHeadAt`, scrubbed). The hero and
+ * the ascent draw the same plates with the same life, so the crossfade between them never doubles a head.
+ */
+export function useCrowdLife(id: PlateId): FigureLife {
+  const facing = React.useMemo(() => crowdFacing(id), [id]);
+  return useFigureLife(plateEntry(id), {
+    acting: (p, _t, i, out) => {
+      out.head = crowdHeadAt(p, facing[i] ?? 1);
+    },
+  });
+}
 
 function useIntroClock(): MotionValue<number> {
   const clock = useMotionValue(heroIntroElapsed());
@@ -104,16 +135,19 @@ export function HeroArt({ scene }: SceneArtProps) {
   const lift = useTransform(progress ?? none, (p) => (progress ? ease(sceneProgress("hero", p)) : 0));
   const whitening = useTransform(lift, (l) => l * ORANGE_WHITENING);
   const halo = useTransform([glow, lift], ([g, l]: number[]) => g * (0.5 + 0.35 * l));
+  const far = useCrowdLife("hero/crowd-far");
+  const mid = useCrowdLife("hero/crowd-mid");
+  const near = useCrowdLife("hero/crowd-near");
 
   return (
     <>
       <Plate id="hero/sky" opacity={sky} />
       <GlowRipple sprite="hero/glow-droplet" source={ORANGE} opacity={glow} lift={lift} />
       <Twinkle sprite="hero/glow-droplet" points={HALO} opacity={halo} tint={colors.white} tintAmount={lift} additive layer={-1} name="hero-halo" />
-      <Plate id="hero/crowd-far" opacity={crowdFar} y={farY} />
-      <Plate id="hero/crowd-mid" opacity={crowdMid} y={midY} />
+      <Plate id="hero/crowd-far" opacity={crowdFar} y={farY} life={far} />
+      <Plate id="hero/crowd-mid" opacity={crowdMid} y={midY} life={mid} />
       <Plate id="hero/minaret" opacity={minaret} y={minaretY} blur={minaretBlur} />
-      <Plate id="hero/crowd-near" opacity={crowdNear} y={nearY} />
+      <Plate id="hero/crowd-near" opacity={crowdNear} y={nearY} life={near} />
       <Plate id="hero/statue" opacity={statue} y={statueY} blur={statueBlur} />
       <Plate id="hero/statue-orange" position={ORANGE} opacity={orange} y={orangeY} blur={orangeBlur} tint={colors.white} tintAmount={whitening} />
       <IntroDriver clock={clock} />

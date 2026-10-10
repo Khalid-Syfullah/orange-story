@@ -43,7 +43,9 @@ export function useIdleClock(): IdleClock {
 export function IdleClockProvider({ children }: { children: React.ReactNode }) {
   const invalidate = useThree((s) => s.invalidate);
   const canvas = useThree((s) => s.gl.domElement);
-  const reduced = usePrefersReducedMotion() === true;
+  // `?idle=off` holds idle time still, as reduced motion does (to compare frames of the scrubbed story).
+  const [held] = React.useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("idle") === "off");
+  const reduced = usePrefersReducedMotion() === true || held;
   const state = React.useRef({ time: 0, holders: new Set<object>(), onScreen: true, frustum: new Frustum(), matrix: new Matrix4() });
 
   React.useEffect(() => {

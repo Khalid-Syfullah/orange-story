@@ -5,15 +5,19 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { isMotionValue, type MotionValue } from "motion/react";
 import { PlaneGeometry, Vector2, Vector3, type Color, type Group, type Mesh, type PerspectiveCamera, type ShaderMaterial, type Vector4 } from "three";
 
-import { plateEntry, plateWorldSize, type Pair, type PlateEntry, type PlateId } from "@/art/manifest";
+import { hasPlate, plateEntry, platePaint, plateWorldSize, rigMoves, type Pair, type PlateEntry, type PlateId, type ResolvedPaint } from "@/art/manifest";
 import { revealCircle } from "@/components/transitions/choreography";
 import { transitionOf } from "@/scroll/helpers";
+import { SCENE_PAINT } from "@/scroll/script";
 import { colors } from "@/styles/tokens";
-import type { TransitionId } from "@/scroll/types";
+import type { SceneId, TransitionId } from "@/scroll/types";
 
+import { useFigureLife, useRigResources, type FigureLife, type PartRide, type RigResources } from "./figure-life";
 import { phaseOf, swayAngle, useIdleClock, type SwayOptions } from "./idle";
-import { PlateMaterial } from "./materials";
+import { HalftoneMaterial, PlateMaterial } from "./materials";
+import { backdropRepeat, CANVAS, canvasRepeat, FIGURE_LIGHT, figureLight, HALFTONE, SHADOW_SIDE } from "./paint";
 import { DEPTH_OF_FIELD, MIN_BLUR_PX } from "./quality";
+import { rigFigures } from "./rig";
 import { plateRenderOrder, useSceneLayer, useStageProgress } from "./stage-context";
 import { usePlateTexture } from "./textures";
 
@@ -113,6 +117,13 @@ export interface PlateMotion {
   reveal?: PlateReveal;
   /** Thin out of a soft rectangle of the stage. */
   clearing?: PlateClearing;
+  /**
+   * A part of a figure riding its body (`FigureLife.ride`): world offsets and a turn, updated every
+   * frame by the body's life, added to everything else.
+   */
+  ride?: PartRide;
+  /** A constant factor on the opacity (the contact shadow's strength). */
+  opacityScale?: number;
   name?: string;
 }
 
@@ -122,11 +133,21 @@ export interface PlateProps extends PlatePlacement, PlateMotion {
   tint?: string;
   /** How far toward `tint`, 0 to 1. Default 1 when a tint is given. */
   tintAmount?: Num;
+  /**
+   * A living figure's life (`useFigureLife`), when the scene drives it (acting, parts riding it).
+   * Default: a figure plate with a rig lives on its own; `false` keeps it still.
+   */
+  life?: FigureLife | false;
   children?: React.ReactNode;
 }
 
 /** The unit quad every plate scales (shared, never disposed). */
 export const UNIT_PLANE = new PlaneGeometry(1, 1);
+
+/** The soft contact shadow under a standing figure (a plate of its own). */
+const CONTACT_PLATE = "hero/contact-shadow";
+/** How far (world units) behind its figure the contact shadow stands: in front of the ground it stands on. */
+const CONTACT_BEHIND = 0.005;
 
 const DEG = Math.PI / 180;
 /** Backdrops sit this far in front of the camera, behind every plate. */
@@ -240,7 +261,7 @@ export function usePlateFrame(
     if (!g || !m) return;
     const p = progress?.get() ?? 0;
     const material = m.material as ShaderMaterial;
-    const opacity = read(props.opacity, 1) * (layer ? layer.presence(p) : 1);
+    const opacity = read(props.opacity, 1) * (props.opacityScale ?? 1) * (layer ? layer.presence(p) : 1);
     const shown = props.visible !== false && opacity > 0.001 && applyReveal(material, props.reveal, p, state.gl, state.size.width, state.size.height);
     g.visible = shown;
     if (!shown) {
@@ -273,8 +294,9 @@ export function usePlateFrame(
       if (sway && clock.inView(m)) clock.hold(key);
       else clock.drop(key);
       if (sway) angle = swayAngle(clock.time(), sway);
-      g.position.set(px + read(props.x, 0), py + read(props.y, 0), -(props.depth ?? entry.depth) + read(props.z, 0));
-      g.rotation.set(rx * DEG, ry * DEG, rz * DEG + read(props.rotate, 0) + angle);
+      const ride = props.ride;
+      g.position.set(px + read(props.x, 0) + (ride?.x ?? 0), py + read(props.y, 0) + (ride?.y ?? 0), -(props.depth ?? entry.depth) + read(props.z, 0));
+      g.rotation.set(rx * DEG, ry * DEG, rz * DEG + read(props.rotate, 0) + angle + (ride?.rotate ?? 0));
       const s = read(props.scale, 1);
       g.scale.set(s * read(props.scaleX, 1) * (props.flipX ? -1 : 1), s * read(props.scaleY, 1) * (props.flipY ? -1 : 1), 1);
       m.position.set((0.5 - ax) * w, (ay - 0.5) * h, 0);
@@ -302,8 +324,47 @@ export function usePlateFrame(
 
     u.opacity.value = opacity;
     u.uvTransform.value.set(repeat[0], repeat[1], read(props.uvOffset?.[0], 0), read(props.uvOffset?.[1], 0));
+    // The canvas lies in the plate's own UV space (it moves and scales with the art, never crawls):
+    // a world-size weave on a plate, a screen-size one on a backdrop (which stays put on the screen).
+    if (u.canvasRepeat) {
+      const r = backdrop ? backdropRepeat(camera.aspect, tmpCanvas) : canvasRepeat(w, h, tmpCanvas);
+      (u.canvasRepeat.value as Vector4).set(r[0], r[1], r[2], r[3]);
+    }
+    // The halftone's dot grid, in plate space: the same world size on any screen.
+    if (u.cells) (u.cells.value as Vector2).set(w / halftoneCell(u.mode.value as number), h / halftoneCell(u.mode.value as number));
     extra?.(material, p);
   });
+}
+
+const tmpCanvas: [number, number, number, number] = [1, 1, 1, 1];
+
+/** World size of a halftone cell for a material mode (0 cloud, 1 water, 2 rings). */
+const halftoneCell = (mode: number) => (mode < 0.5 ? HALFTONE.cloudCell : mode < 1.5 ? HALFTONE.waterCell : HALFTONE.ringCell);
+
+/**
+ * The paint of a plate in a scene, set once on its material: canvas grain and craquelure, and for a
+ * figure the scene's grade, the sky rim and the warm bounce (see `paint.ts`).
+ */
+export function configurePaint(material: ShaderMaterial, entry: PlateEntry, paint: ResolvedPaint, scene: SceneId | null): void {
+  const u = material.uniforms;
+  const scenePaint = scene ? SCENE_PAINT[scene] : null;
+  if (u.grainAmount) u.grainAmount.value = paint.grain ? (entry.role === "backdrop" ? CANVAS.grainAmount.backdrop : CANVAS.grainAmount.plate) : 0;
+  if (u.crackAmount) u.crackAmount.value = CANVAS.crackAmount * paint.craquelure * (scenePaint?.craquelure ?? 0.5);
+  if (!u.figureOn) return;
+  u.figureOn.value = paint.figure ? 1 : 0;
+  if (!paint.figure) return;
+  if (scenePaint) (u.grade.value as Vector3).set(scenePaint.warm, scenePaint.cool, scenePaint.saturation);
+  const light = figureLight(paint.painted);
+  const aspect = entry.size[0] / entry.size[1];
+  u.rimAmount.value = light.rim;
+  (u.rimStep.value as Vector2).set((SHADOW_SIDE[0] * FIGURE_LIGHT.rimReach) / aspect, SHADOW_SIDE[1] * FIGURE_LIGHT.rimReach);
+  // A part (a head, an arm: a rig with only its joint): no rim along the cut where it meets its body.
+  const part = entry.rig?.pivot && !rigMoves(entry.rig);
+  (u.rimJoint.value as Vector4).set(part ? entry.rig!.pivot![0] : 0, part ? 1 - entry.rig!.pivot![1] : 0, part ? FIGURE_LIGHT.jointClear : 0, aspect);
+  // The warm bounce: only on a standing body (its feet near the plate's foot), not on a head or an arm.
+  const feet = paint.life || paint.contact > 0 ? rigFigures(entry.rig)[0]?.pivot : undefined;
+  if (feet && feet[1] > 0.85) (u.bounce.value as Vector3).set(light.bounce, 1 - feet[1], FIGURE_LIGHT.bounceReach);
+  else (u.bounce.value as Vector3).set(0, 0, 1);
 }
 
 /** Sets a color uniform only when the color string changes (no parsing every frame). */
@@ -315,25 +376,86 @@ export function setColorUniform(material: ShaderMaterial, name: string, value: s
   (material.uniforms[name].value as Color).set(next);
 }
 
-export function Plate({ id, tint, tintAmount, children, ...props }: PlateProps) {
+export function Plate({ id, tint, tintAmount, life, children, ...props }: PlateProps) {
   const entry = plateEntry(id);
+  const paint = platePaint(entry);
+  const scene = useSceneLayer()?.scene.id ?? null;
   const texture = usePlateTexture(entry);
-  const material = React.useMemo(() => new PlateMaterial(texture), [texture]);
+  const halftone = paint.halftone;
+  const material = React.useMemo(() => {
+    const m = halftone ? new HalftoneMaterial(texture, halftone) : new PlateMaterial(texture);
+    configurePaint(m, entry, paint, scene);
+    return m;
+    // `paint` is derived from `entry`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [texture, halftone, entry, scene]);
   React.useEffect(() => () => material.dispose(), [material]);
   useInvalidateOnChange([tintAmount]);
+
+  // A figure lives on its own unless the scene drives it (or keeps it still).
+  const own = useFigureLife(entry, { enabled: life === undefined && paint.life && !halftone });
+  const living = life === false || halftone ? null : (life ?? (paint.life ? own : null));
+  const rig = useRigResources(entry, living !== null);
+  React.useEffect(() => offWithoutRig(material, rig), [material, rig]);
 
   const group = React.useRef<Group>(null);
   const mesh = React.useRef<Mesh>(null);
   const renderOrder = usePlateRenderOrder(entry, props);
   usePlateFrame(entry, props, group, mesh, (m) => {
-    setColorUniform(m, "tint", tint);
-    m.uniforms.tintAmount.value = tint ? read(tintAmount, 1) : 0;
+    if (m.uniforms.tint) {
+      setColorUniform(m, "tint", tint);
+      m.uniforms.tintAmount.value = tint ? read(tintAmount, 1) : 0;
+    }
+    if (living && rig) {
+      // The rig's weights are bound in the same frame as the life that reads them (never a frame without).
+      m.uniforms.rigMap.value = rig.weights;
+      living.attach(mesh.current);
+      living.apply(m);
+    }
   });
 
   return (
     <group ref={group} name={props.name ?? entry.id}>
-      <mesh ref={mesh} geometry={UNIT_PLANE} material={material} renderOrder={renderOrder} />
+      <mesh ref={mesh} geometry={rig?.geometry ?? UNIT_PLANE} material={material} renderOrder={renderOrder} />
+      {paint.contact > 0 && <ContactShadow entry={entry} paint={paint} {...props} />}
       {children}
     </group>
+  );
+}
+
+/** Turns a plate's life off when it has no rig (the frame loop binds the rig's weights when it has one). */
+function offWithoutRig(material: ShaderMaterial, rig: RigResources | null): void {
+  if (material instanceof PlateMaterial && !rig) material.uniforms.lifeOn.value = 0;
+}
+
+/**
+ * The soft contact shadow under a standing figure's feet (its rig pivot), so it stands on its
+ * platform instead of floating over it: a plate of its own, just behind the figure and in front of
+ * the ground, fading and moving with it.
+ */
+function ContactShadow({ entry, paint, opacity, opacityScale, layer, clearing, reveal, visible }: { entry: PlateEntry; paint: ResolvedPaint } & PlateMotion) {
+  if (!hasPlate(CONTACT_PLATE)) return null;
+  const feet = rigFigures(entry.rig)[0]?.pivot ?? [entry.anchor[0], 1];
+  const [w, h] = plateWorldSize(entry);
+  const shadow = plateEntry(CONTACT_PLATE);
+  const width = paint.contact;
+  const height = (width * shadow.size[1]) / shadow.size[0];
+  return (
+    <Plate
+      id={CONTACT_PLATE}
+      position={[(feet[0] - entry.anchor[0]) * w, (entry.anchor[1] - feet[1]) * h]}
+      depth={CONTACT_BEHIND}
+      height={height}
+      anchor={[0.5, 0.5]}
+      opacity={opacity}
+      opacityScale={(opacityScale ?? 1) * figureLight(paint.painted).contact}
+      layer={layer ?? entry.layer}
+      clearing={clearing}
+      reveal={reveal}
+      visible={visible}
+      sway={false}
+      focus={false}
+      name={`${entry.id}:contact`}
+    />
   );
 }

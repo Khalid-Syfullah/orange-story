@@ -16,7 +16,7 @@ import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 
 import { CAST } from "./cast.mjs";
-import { buildFigure, buildHand, plateView } from "./figure.mjs";
+import { buildFigure, buildHand, figureRig, plateView } from "./figure.mjs";
 import { paintFigure } from "./paint.mjs";
 import { POSES } from "./poses.mjs";
 
@@ -39,8 +39,8 @@ function personFor(spec, entry) {
   return cast;
 }
 
-/** Paints one character plate: an RGBA buffer of the entry's size. */
-export function renderStudy(entry, manifest) {
+/** Builds one character plate's figure (posed, not yet painted). */
+function buildStudy(entry, manifest) {
   const spec = POSES[entry.id];
   if (!spec) throw new Error(`${entry.id}: no pose in scripts/art/poses.mjs`);
   const byId = (id) => {
@@ -54,11 +54,36 @@ export function renderStudy(entry, manifest) {
   const person = personFor(spec, entry);
   const seed = `${person.seed}:${spec.seedFrom ?? entry.id}`;
   let fig;
+  let pose = null;
   if (spec.render === "custom") fig = spec.build({ entry, view, ctx, person, seed, W, H });
   else if (spec.render === "hand") fig = buildHand({ person, view, seed, ...spec.pose(ctx, view) });
-  else fig = buildFigure({ person, pose: spec.pose(ctx, view), view, show: spec.show, seed });
+  else {
+    pose = spec.pose(ctx, view);
+    fig = buildFigure({ person, pose, view, show: spec.show, seed });
+  }
+  return { spec, fig, pose, person, seed, W, H };
+}
+
+/** Paints one character plate: an RGBA buffer of the entry's size. */
+export function renderStudy(entry, manifest) {
+  const { spec, fig, seed, W, H } = buildStudy(entry, manifest);
   const { rgba } = paintFigure(fig, W, H, { seed, hu: fig.hu, edgeFade: spec.edgeFade, haze: spec.haze, density: spec.density, debug: renderStudy.debug });
   return rgba;
+}
+
+/**
+ * The rig of a character plate's stand-in (written to the manifest by `npm run art:placeholders`):
+ * a body's chest, hem, head and feet (`figureRig`), every onlooker of a crowd plate (`figures`), or,
+ * for a part on its own plate (an arm, a head), only the joint it turns on (its anchor). Hands and
+ * props have none.
+ */
+export function studyRig(entry, manifest) {
+  const { spec, fig, pose, person } = buildStudy(entry, manifest);
+  if (fig.rigs) return { figures: fig.rigs };
+  if (spec.render !== "figure") return null;
+  const body = spec.show.includes("body");
+  if (!body) return { pivot: [...entry.anchor] };
+  return figureRig(fig, pose, person, spec.show);
 }
 
 /** Writes the stages of a painting (form, relief, light, shadow) side by side, for tuning. */

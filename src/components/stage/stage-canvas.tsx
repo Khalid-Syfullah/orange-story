@@ -13,9 +13,10 @@ import { IdleClockProvider } from "./idle";
 import { useStacked } from "@/lib/use-stacked";
 
 import { PauseWhenHidden } from "./pause-when-hidden";
-import { adaptDpr, newFrameBudget, stageDpr } from "./quality";
+import { ADAPTIVE, adaptDpr, newFrameBudget, qualityOverride, stageDpr } from "./quality";
 import { SceneLayers } from "./scene-layers";
 import { StageProgressContext } from "./stage-context";
+import { StageSurface } from "./stage-surface";
 
 /**
  * The persistent WebGL canvas behind everything: the scenes' painted plates in depth, filmed by the
@@ -80,9 +81,12 @@ export default function StageCanvas({ progress }: { progress: MotionValue<number
   const stacked = useStacked();
   const range = React.useMemo(() => stageDpr(stacked), [stacked]);
   const [adapted, setAdapted] = React.useState<{ stacked: boolean; dpr: number } | null>(null);
+  // The lowest tier forced from the address (`?quality=low`) behaves as a device that could not keep up.
+  const [forcedLow] = React.useState(() => qualityOverride(window.location.search) === 0);
   // A change of layout starts over from the layout's own range.
-  const dpr = adapted && adapted.stacked === stacked ? adapted.dpr : range;
+  const dpr = forcedLow ? ADAPTIVE.floor : adapted && adapted.stacked === stacked ? adapted.dpr : range;
   const onAdapt = React.useCallback((next: number) => setAdapted({ stacked, dpr: next }), [stacked]);
+  const current = typeof dpr === "number" ? dpr : Math.min(window.devicePixelRatio || 1, dpr[1]);
   return (
     <Canvas
       frameloop="demand"
@@ -97,7 +101,8 @@ export default function StageCanvas({ progress }: { progress: MotionValue<number
       <color attach="background" args={[colors.sky]} />
       <StageProgressContext value={progress}>
         <SettleDerivedValues />
-        <AdaptiveQuality cap={range[1]} onChange={onAdapt} />
+        {!forcedLow && <AdaptiveQuality cap={range[1]} onChange={onAdapt} />}
+        <StageSurface dpr={current} max={range[1]} />
         <RenderOnProgress progress={progress} />
         <PauseWhenHidden />
         <CameraRig progress={progress} />

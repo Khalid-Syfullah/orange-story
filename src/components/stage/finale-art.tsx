@@ -7,12 +7,15 @@ import { motionValue, useMotionValue, useTransform, type MotionValue } from "mot
 import { plateEntry, type PlateId } from "@/art/manifest";
 import { useStacked } from "@/lib/use-stacked";
 
+import { canTip, keeperSway } from "./acting";
 import { sinkDepth } from "./apply-plan";
+import { useFigureLife, type FigureHold, type FigurePart, type PartRide } from "./figure-life";
 
 import {
   armBobAt,
   astronomerOffset,
   CAN_TIP,
+  CUT_POINT,
   cutFruitAt,
   SPOUT,
   DROP_COUNT,
@@ -35,6 +38,7 @@ import {
 } from "./finale-plan";
 import { useIdleClock } from "./idle";
 import { Plate, type PlateClearing } from "./plate";
+import { useAstronomerLife } from "./stars-art";
 import type { SceneArtProps } from "./scene-layers";
 import { StarEdges } from "./star-edges";
 import { useSceneLayer, useStageProgress } from "./stage-context";
@@ -66,6 +70,16 @@ const OVER_TREE = ["finale"] as const;
 
 /** Stacking inside the scene, back to front. */
 const LAYER = { sky: 0, cloud: 1, stars: 2, edges: 3, oldCloud: 4, platform: 5, astronomer: 6, tree: 7, body: 8, arm: 9, stream: 10, fruit: 11 } as const;
+
+/** The keepers' arms ride their bodies; the stream hangs from her jug's spout and the fruit he cuts from his shears, so they move with them. */
+const WATER = wateringAt(0);
+const WOMAN_PARTS: readonly FigurePart[] = [{ id: "finale/woman-arm" }];
+const WOMAN_HOLDS: readonly FigureHold[] = [{ at: SPOUT, on: "finale/woman-arm", turn: (p, t) => canTip(wateringAt(t, WATER), loopWeight(p)) }];
+const MAN_PARTS: readonly FigurePart[] = [{ id: "finale/man-arms-1" }, { id: "finale/man-arms-2" }];
+const MAN_HOLDS: readonly FigureHold[] = [{ at: CUT_POINT, on: "finale/man-arms-1" }];
+
+/** The keepers are livelier than the rest of the cast: they breathe and shift their weight through their loop. */
+const KEEPER_LIFE = 1.3;
 
 /** A cloud that drifts right on idle time, and a little further with the scroll. */
 function Cloud({ id, clearing }: { id: (typeof CLOUDS)[number]; clearing: PlateClearing }) {
@@ -106,8 +120,8 @@ function setFruit(m: FruitMotion, frame: FruitFrame, weight: number) {
   m.scale.set(frame.scale);
 }
 
-function Fruit({ motion, clearing }: { motion: FruitMotion; clearing: PlateClearing }) {
-  return <Plate id="finale/falling-orange" position={[0, 0]} x={motion.x} y={motion.y} rotate={motion.rotate} opacity={motion.opacity} scale={motion.scale} layer={LAYER.fruit} sway={false} clearing={clearing} />;
+function Fruit({ motion, clearing, ride }: { motion: FruitMotion; clearing: PlateClearing; ride?: PartRide }) {
+  return <Plate id="finale/falling-orange" position={[0, 0]} x={motion.x} y={motion.y} rotate={motion.rotate} opacity={motion.opacity} scale={motion.scale} layer={LAYER.fruit} sway={false} clearing={clearing} ride={ride} />;
 }
 
 /** The orchard keepers once they have settled: the idle-time loop (see `finale-plan.ts`). */
@@ -136,6 +150,25 @@ function Keepers({ clearing, fruitClearing }: { clearing: PlateClearing; fruitCl
 
   const armY = useTransform([manY, bob] as const, ([walking, working]: readonly number[]) => walking + working);
 
+  // Their life: breathing, small shifts, and the weight shifting with the loop (she leans into the pour, he into the cut).
+  const woman = useFigureLife(plateEntry("finale/woman-body"), {
+    strength: KEEPER_LIFE,
+    parts: WOMAN_PARTS,
+    holds: WOMAN_HOLDS,
+    acting: (p, t, _i, out) => {
+      out.sway = keeperSway("woman", t, wateringAt(t, WATER), loopWeight(p));
+    },
+  });
+  const man = useFigureLife(plateEntry("finale/man-body"), {
+    strength: KEEPER_LIFE,
+    parts: MAN_PARTS,
+    holds: MAN_HOLDS,
+    acting: (p, t, _i, out) => {
+      out.sway = keeperSway("man", t, WATER, loopWeight(p));
+    },
+  });
+  const stream = woman.held(0);
+
   React.useEffect(() => () => clock.drop(key), [clock, key]);
 
   // One frame object each, reused every frame (no allocation in the loop).
@@ -161,17 +194,17 @@ function Keepers({ clearing, fruitClearing }: { clearing: PlateClearing; fruitCl
 
   return (
     <>
-      <Plate id="finale/woman-body" x={womanX} y={womanY} layer={LAYER.body} clearing={clearing} />
-      <Plate id="finale/woman-arm" x={womanX} y={womanY} rotate={tip} layer={LAYER.arm} clearing={clearing} />
-      <Plate id="finale/water-1" position={SPOUT} x={womanX} y={womanY} opacity={streams[0]} layer={LAYER.stream} clearing={clearing} />
-      <Plate id="finale/water-2" position={SPOUT} x={womanX} y={womanY} opacity={streams[1]} layer={LAYER.stream} clearing={clearing} />
-      <Plate id="finale/water-3" position={SPOUT} x={womanX} y={womanY} opacity={streams[2]} layer={LAYER.stream} clearing={clearing} />
+      <Plate id="finale/woman-body" x={womanX} y={womanY} layer={LAYER.body} clearing={clearing} life={woman} />
+      <Plate id="finale/woman-arm" x={womanX} y={womanY} rotate={tip} layer={LAYER.arm} clearing={clearing} ride={woman.ride("finale/woman-arm")} />
+      <Plate id="finale/water-1" position={SPOUT} x={womanX} y={womanY} opacity={streams[0]} layer={LAYER.stream} clearing={clearing} ride={stream} />
+      <Plate id="finale/water-2" position={SPOUT} x={womanX} y={womanY} opacity={streams[1]} layer={LAYER.stream} clearing={clearing} ride={stream} />
+      <Plate id="finale/water-3" position={SPOUT} x={womanX} y={womanY} opacity={streams[2]} layer={LAYER.stream} clearing={clearing} ride={stream} />
 
-      <Plate id="finale/man-body" x={manX} y={manY} layer={LAYER.body} clearing={clearing} />
-      <Plate id="finale/man-arms-1" x={manX} y={armY} layer={LAYER.arm} clearing={clearing} />
-      <Plate id="finale/man-arms-2" x={manX} y={armY} opacity={closed} layer={LAYER.arm + 0.5} clearing={clearing} />
+      <Plate id="finale/man-body" x={manX} y={manY} layer={LAYER.body} clearing={clearing} life={man} />
+      <Plate id="finale/man-arms-1" x={manX} y={armY} layer={LAYER.arm} clearing={clearing} ride={man.ride("finale/man-arms-1")} />
+      <Plate id="finale/man-arms-2" x={manX} y={armY} opacity={closed} layer={LAYER.arm + 0.5} clearing={clearing} ride={man.ride("finale/man-arms-2")} />
 
-      <Fruit motion={cut} clearing={fruitClearing} />
+      <Fruit motion={cut} clearing={fruitClearing} ride={man.held(0)} />
       {drops.map((drop, i) => (
         <Fruit key={i} motion={drop} clearing={fruitClearing} />
       ))}
@@ -202,6 +235,7 @@ export function FinaleArt({ scene }: SceneArtProps) {
   const keepersHaze = useTextHaze(OVER_TREE, { strength: TREE_HAZE, stackedOnly: true });
   const treeBlur = useTransform(progress, (p) => treeHazeAt(p) * TREE_SOFT_BLUR);
   const { nodes } = React.useMemo(() => constellation(), []);
+  const astronomer = useAstronomerLife();
 
   return (
     <>
@@ -215,7 +249,7 @@ export function FinaleArt({ scene }: SceneArtProps) {
       <StarEdges layer={LAYER.edges} y={lift} opacity={starsAlpha} />
       <Plate id="stars/cloud" x={cloudX} opacity={cloudAlpha} layer={LAYER.oldCloud} sway={false} />
       <Plate id="stars/platform" y={sink} layer={LAYER.platform} />
-      <Plate id="stars/astronomer" y={sink} layer={LAYER.astronomer} />
+      <Plate id="stars/astronomer" y={sink} layer={LAYER.astronomer} life={astronomer} />
 
       <Plate id="finale/tree" y={treeY} scale={treeScale} blur={treeBlur} clearing={haze} layer={LAYER.tree} />
       <Keepers clearing={keepersHaze} fruitClearing={haze} />
