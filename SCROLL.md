@@ -242,6 +242,13 @@ The camera rig (`src/components/stage/camera-rig.tsx`) builds one paused GSAP ti
 
 Only the scene on stage and its two neighbours are mounted on the WebGL canvas, and only the current scene and the next one are preloaded. Each scene's art fades with its presence (`src/components/stage/presence.ts`): where a covering transition hands one scene to the next, the swap is a step at the boundary, under full cover; at a plain boundary the incoming scene fades in over the outgoing one across 0.2 screen to each side. Scenes without custom art (`SCENE_ART` in `scene-layers.tsx`) draw their manifest plates where the manifest places them.
 
+### The hero's art
+
+The hero has custom art (`src/components/stage/hero-art.tsx`, registered in `SCENE_ART`). It draws the manifest plates with two moves on top:
+
+- **The intro**, once per page view, on time (`hero-intro.ts`): the sky, then the minaret and statue (with the orange as its own layer), then the onlookers by depth, then the text. The canvas starts it when the hero's plates have loaded; the hero text (a `load` beat) waits for its `INTRO.text` mark, or arrives `INTRO.fallback` seconds after load if the canvas never starts. Once played it never plays again: scrolling back finds the finished frame.
+- **The glow**, on idle time and always on (`glow-ripple.tsx`): about 300 instanced droplets travel outward from the orange in slow rings ("rain in reverse"), with a halo breathing behind the orange. It runs before the first scroll. Over the hero scene the glow *lift* (0 to 1, from `sceneProgress("hero", p)`) brightens it toward white and speeds the ripple up a little; scrolling up reverses it exactly (the speed-up changes the rate of an accumulated clock, so the ripple never jumps).
+
 ## Hairlines, progress lines and tone
 
 The hairline grid moves on cues, each an envelope: it starts, reaches full strength, holds, releases and is gone. `exit` slides the lines out toward their edges (corner stars lock into the screen corners); `viewfinder` closes them into a square frame. At each chapter change the lines leave under the covering transition when there is one, otherwise in a short envelope around the chapter start. In the finale they slide out and then close into the viewfinder, and stay.

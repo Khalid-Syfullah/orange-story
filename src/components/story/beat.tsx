@@ -11,6 +11,8 @@ import { useBeatMounted, useStory } from "@/scroll/story-scroll";
 import type { BeatDef, BeatEnter, BeatId, BeatLeave } from "@/scroll/types";
 import { EASE } from "@/styles/tokens";
 
+import { useHeroTextReady } from "@/components/stage/hero-intro";
+
 import { BeatContent } from "./beat-content";
 import { SLOTS } from "./slots";
 
@@ -245,6 +247,8 @@ const LINE_TAGS = { div: motion.div, p: motion.p, span: motion.span } as const;
 export function BeatLine({ index, count, arrive = true, as = "div", className, children }: BeatLineProps) {
   const style = useBeatLine(index, count, { arrive });
   const context = useBeatContext();
+  // The hero text waits for the sky and the statue (see `hero-intro.ts`).
+  const ready = useHeroTextReady();
   const Tag = LINE_TAGS[as] as typeof motion.div;
 
   if (!style) {
@@ -269,7 +273,7 @@ export function BeatLine({ index, count, arrive = true, as = "div", className, c
       <Intro
         className={cn(as === "div" ? undefined : "block", className)}
         initial={{ opacity: 0, y: 14, filter: "blur(8px)" }}
-        animate={{ opacity: 1, y: 0, filter: "blur(0px)", transitionEnd: { filter: "none" } }}
+        animate={ready ? { opacity: 1, y: 0, filter: "blur(0px)", transitionEnd: { filter: "none" } } : { opacity: 0, y: 14, filter: "blur(8px)" }}
         transition={{ duration: 0.9, delay: 0.25 + index * 0.14, ease: EASE }}
       >
         {children}

@@ -235,13 +235,18 @@ function robedFigure({ cx, base, h, robe = C.marble, skin = SKIN, pose = "stand"
       out += restArm(near) + restArm(far);
   }
 
-  // Head
+  // Head. Onlookers ("lookup") tip the head back, chin up, toward the side they face.
   if (head) {
     out += rect(cx - r * 0.35, headY + r * 0.7, r * 0.7, r * 0.7, skin);
-    out += circle(cx, headY, r, skin);
-    out += ellipse(cx + dir * r * 0.9, headY + r * (pose === "lookup" ? -0.2 : 0.1), r * 0.22, r * 0.16, skin);
-    if (headCover) out += pathEl(`M${n(cx - r * 1.2)} ${n(headY + r * 1.4)} Q${n(cx - r * 1.3)} ${n(headY - r * 1.5)} ${n(cx)} ${n(headY - r * 1.25)} Q${n(cx + r * 1.3)} ${n(headY - r * 1.5)} ${n(cx + r * 1.2)} ${n(headY + r * 1.4)} L${n(cx + r * 0.75)} ${n(headY + r * 0.2)} Q${n(cx)} ${n(headY - r * 0.6)} ${n(cx - r * 0.75)} ${n(headY + r * 0.2)}Z`, C.white);
-    else if (hair) out += pathEl(`M${n(cx - r)} ${n(headY + r * 0.1)} Q${n(cx - r * 1.05)} ${n(headY - r * 1.15)} ${n(cx + r * 0.1)} ${n(headY - r * 1.05)} Q${n(cx + r * 0.9)} ${n(headY - r * 0.9)} ${n(cx - dir * r * 0.1 + dir * r * 0.4)} ${n(headY - r * 0.3)} Q${n(cx - dir * r * 0.6)} ${n(headY - r * 0.1)} ${n(cx - r)} ${n(headY + r * 0.1)}Z`, hair, { opacity: 0.85 });
+    let face = circle(cx, headY, r, skin);
+    face += ellipse(cx + dir * r * 0.9, headY + r * (pose === "lookup" ? -0.2 : 0.1), r * 0.22, r * 0.16, skin);
+    if (headCover) face += pathEl(`M${n(cx - r * 1.2)} ${n(headY + r * 1.4)} Q${n(cx - r * 1.3)} ${n(headY - r * 1.5)} ${n(cx)} ${n(headY - r * 1.25)} Q${n(cx + r * 1.3)} ${n(headY - r * 1.5)} ${n(cx + r * 1.2)} ${n(headY + r * 1.4)} L${n(cx + r * 0.75)} ${n(headY + r * 0.2)} Q${n(cx)} ${n(headY - r * 0.6)} ${n(cx - r * 0.75)} ${n(headY + r * 0.2)}Z`, C.white);
+    else if (hair) face += pathEl(`M${n(cx - r)} ${n(headY + r * 0.1)} Q${n(cx - r * 1.05)} ${n(headY - r * 1.15)} ${n(cx + r * 0.1)} ${n(headY - r * 1.05)} Q${n(cx + r * 0.9)} ${n(headY - r * 0.9)} ${n(cx - dir * r * 0.1 + dir * r * 0.4)} ${n(headY - r * 0.3)} Q${n(cx - dir * r * 0.6)} ${n(headY - r * 0.1)} ${n(cx - r)} ${n(headY + r * 0.1)}Z`, hair, { opacity: 0.85 });
+    if (pose === "lookup") {
+      // A closed eye and a raised brow on the facing side, so the upward look reads at a glance.
+      face += ellipse(cx + dir * r * 0.5, headY - r * 0.05, r * 0.11, r * 0.07, shade(skin, 0.55));
+      out += `<g transform="rotate(${n(-dir * 32)} ${n(cx)} ${n(headY + r * 1.1)})">${face}</g>`;
+    } else out += face;
   }
   return out;
 }
@@ -350,7 +355,10 @@ const KINDS = {
     for (let i = 0; i < count; i++) {
       const cx = W * ((i + 0.5) / count) + (rand() - 0.5) * (W / count) * 0.4;
       const h = H * (0.78 + rand() * 0.2);
-      out += robedFigure({ cx, base: H, h, robe: robes[Math.floor(rand() * robes.length)], skin: s.haze ? mix(SKIN, C.skySoft, s.haze) : SKIN, pose: "lookup", facing: rand() > 0.4 ? "right" : "left", headCover: rand() > 0.7 });
+      // Everyone turns toward the statue (`lookAt`, as a fraction of the plate width); without it, a random side.
+      const roll = rand();
+      const facing = s.lookAt === undefined ? (roll > 0.4 ? "right" : "left") : cx / W < s.lookAt ? "right" : "left";
+      out += robedFigure({ cx, base: H, h, robe: robes[Math.floor(rand() * robes.length)], skin: s.haze ? mix(SKIN, C.skySoft, s.haze) : SKIN, pose: "lookup", facing, headCover: rand() > 0.7 });
     }
     return out;
   },

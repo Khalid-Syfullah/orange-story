@@ -59,6 +59,8 @@ interface TimeProps extends BaseProps {
   /** Play only the first time it enters the viewport (default true). */
   once?: boolean;
   delay?: number;
+  /** Keep the line hidden until this turns false (a load intro that waits for the art). */
+  hold?: boolean;
   /** Seconds between letters (default 0.022). */
   stagger?: number;
 }
@@ -179,7 +181,7 @@ export function SplitReveal(props: SplitRevealProps) {
     );
   }
 
-  const { trigger = "inView", once = true, delay = 0, stagger = 0.022 } = props;
+  const { trigger = "inView", once = true, delay = 0, hold = false, stagger = 0.022 } = props;
   const parent: Variants = {
     hidden: {},
     shown: { transition: { staggerChildren: stagger, delayChildren: delay } },
@@ -203,7 +205,7 @@ export function SplitReveal(props: SplitRevealProps) {
       };
   const driver =
     trigger === "mount"
-      ? { initial: "hidden", animate: "shown" }
+      ? { initial: "hidden", animate: hold ? "hidden" : "shown" }
       : { initial: "hidden", whileInView: "shown", viewport: { once, amount: 0.6 } };
 
   return (

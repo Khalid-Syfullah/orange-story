@@ -7,6 +7,7 @@ import { finale as finaleCopy, type ArrowButton, type FormField } from "@/conten
 import { cn } from "@/lib/utils";
 import { SplitReveal } from "@/components/motion/split-reveal";
 import { Typewriter } from "@/components/motion/typewriter";
+import { useHeroTextReady } from "@/components/stage/hero-intro";
 import { Button } from "@/components/ui/button";
 import { Tag } from "@/components/ui/tag";
 import { copyAtUnchecked } from "@/scroll/copy-path";
@@ -79,6 +80,8 @@ export function Headline({ text, as = "h2", textClassName, index, count, classNa
   const context = useBeatContext();
   const beat = context?.beat;
   const Static = as;
+  // The hero title waits for the sky and the statue (see `hero-intro.ts`).
+  const ready = useHeroTextReady();
 
   if (!context || !beat) {
     return (
@@ -101,7 +104,7 @@ export function Headline({ text, as = "h2", textClassName, index, count, classNa
   if (beat.enter === "load" && context.intro) {
     return (
       <BeatLine index={index} count={count} arrive={false} className={className}>
-        <SplitReveal as={as} text={text} className={textClassName} trigger="mount" delay={0.15} />
+        <SplitReveal as={as} text={text} className={textClassName} trigger="mount" delay={0.15} hold={!ready} />
       </BeatLine>
     );
   }

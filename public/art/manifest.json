@@ -24,7 +24,7 @@
       "size": [128, 128],
       "depth": 0.3,
       "anchor": [0.5, 0.5],
-      "position": [3.675, 3.615],
+      "position": [3.695, 3.79],
       "height": 0.14,
       "note": "One soft drop of light; the hero ripple repeats it across the sky.",
       "placeholder": { "kind": "glow", "color": "orange" }
@@ -53,7 +53,7 @@
       "depth": 0,
       "anchor": [0.5, 1],
       "position": [3.45, 1.5],
-      "height": 2.25,
+      "height": 2.45,
       "note": "Marble statue of a woman on top of the minaret, right arm raised high (the orange is its own layer).",
       "placeholder": { "kind": "statue" }
     },
@@ -65,7 +65,7 @@
       "size": [256, 256],
       "depth": 0,
       "anchor": [0.5, 0.5],
-      "position": [3.675, 3.615],
+      "position": [3.695, 3.79],
       "height": 0.3,
       "layer": 1,
       "note": "The orange held up to the sky like a torch; its own layer so it can glow.",
@@ -79,10 +79,10 @@
       "size": [1536, 512],
       "depth": 1.6,
       "anchor": [0.5, 1],
-      "position": [4.8, -3.7],
-      "height": 1.2,
+      "position": [4.8, -3.35],
+      "height": 1,
       "note": "Robed onlookers, far row, faces turned up to the statue.",
-      "placeholder": { "kind": "crowd", "count": 7, "seed": "far", "haze": 0.3 }
+      "placeholder": { "kind": "crowd", "count": 7, "seed": "far", "haze": 0.3, "lookAt": 0.05 }
     },
     {
       "id": "hero/crowd-mid",
@@ -92,10 +92,10 @@
       "size": [1536, 512],
       "depth": 0.8,
       "anchor": [0.5, 1],
-      "position": [3.9, -4.15],
-      "height": 1.45,
+      "position": [3.9, -3.85],
+      "height": 1.2,
       "note": "Robed onlookers, middle row, faces turned up to the statue.",
-      "placeholder": { "kind": "crowd", "count": 6, "seed": "mid", "haze": 0.12 }
+      "placeholder": { "kind": "crowd", "count": 6, "seed": "mid", "haze": 0.12, "lookAt": 0.375 }
     },
     {
       "id": "hero/crowd-near",
@@ -105,10 +105,10 @@
       "size": [1536, 512],
       "depth": 0,
       "anchor": [0.5, 1],
-      "position": [4.4, -4.75],
-      "height": 1.8,
+      "position": [4.4, -4.45],
+      "height": 1.45,
       "note": "Robed onlookers, near row, faces turned up to the statue.",
-      "placeholder": { "kind": "crowd", "count": 5, "seed": "near" }
+      "placeholder": { "kind": "crowd", "count": 5, "seed": "near", "lookAt": 0.28 }
     },
     {
       "id": "ascent/stone",

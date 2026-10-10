@@ -25,6 +25,8 @@ import { seeded } from "@/lib/progress";
  *   into bark), with an optional glow along the edge.
  * - `TwinkleMaterial`: instanced sprites that pulse on idle time and appear as `reveal` passes
  *   each one's threshold (stars, sparkles).
+ * - `RippleMaterial`: instanced droplets of light that drift outward from a source, brightened by a
+ *   slow ring wave (the hero's glow). Their whole motion is computed in the vertex shader.
  *
  * Plates and morphs can also be cut to a screen-space circle (`revealMask`): the rainbow ring shows
  * the new scene inside it and the old one outside.
@@ -159,6 +161,52 @@ void main() {
 }
 `;
 
+const RIPPLE_VERTEX = /* glsl */ `
+attribute vec4 drop; // angle, ring (0 to 1), jitter (-1 to 1), size
+uniform float time;
+uniform vec2 source;
+uniform float reach;
+uniform float lift;
+varying vec2 vUv;
+varying float vAlpha;
+void main() {
+  vUv = uv;
+  // Droplets travel in rings: every droplet belongs to one of RINGS fronts, staggered in time, and
+  // each front spreads from the source in step (a little jitter keeps it from looking drawn). The
+  // droplets drift outward and a little upward ("rain in reverse") and are gone before the edge.
+  const float RINGS = 8.0;
+  float front = floor(drop.y * RINGS) / RINGS;
+  float life = fract(front + drop.z * 0.008 + time * 0.045);
+  float r = 0.45 + reach * pow(life, 0.62) + drop.z * 0.3;
+  vec2 center = source + vec2(cos(drop.x), sin(drop.x)) * r + vec2(0.0, 0.6 * life);
+  // A faint glimmer runs through each front as it spreads.
+  float wave = 0.5 + 0.5 * cos(6.2831853 * (drop.x * 3.0 + time * 0.12) + drop.y * 40.0);
+  float born = smoothstep(0.0, 0.1, life) * (1.0 - smoothstep(0.35, 1.0, life));
+  float sky = smoothstep(-1.2, 0.8, center.y);
+  // Keep the middle of the sky behind the title calmer.
+  float calm = mix(1.0, 0.4, smoothstep(0.5, -2.5, center.x));
+  vAlpha = born * sky * calm * (0.45 + 0.55 * wave);
+  float size = drop.w * (0.8 + 0.4 * wave) * (0.7 + 0.5 * sin(3.14159265 * life)) * (1.0 + 0.45 * lift);
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(center + position.xy * size, 0.0, 1.0);
+}
+`;
+
+const RIPPLE_FRAGMENT = /* glsl */ `
+uniform sampler2D map;
+uniform float opacity;
+uniform float lift;
+varying vec2 vUv;
+varying float vAlpha;
+${OUTPUT}
+void main() {
+  vec4 color = texture2D(map, vUv);
+  // The glow brightens toward white as the story starts to move.
+  color.rgb = mix(color.rgb, vec3(color.a), lift * 0.7);
+  gl_FragColor = toOutput(color, opacity * vAlpha);
+  if (gl_FragColor.a < 0.002) discard;
+}
+`;
+
 const PAINTER = {
   transparent: true,
   premultipliedAlpha: true,
@@ -233,6 +281,25 @@ export class TwinkleMaterial extends ShaderMaterial {
         opacity: { value: 1 },
         tint: { value: new Color("#ffffff") },
         tintAmount: { value: 0 },
+      },
+    });
+  }
+}
+
+export class RippleMaterial extends ShaderMaterial {
+  constructor(map: Texture) {
+    super({
+      ...PAINTER,
+      blending: AdditiveBlending,
+      vertexShader: RIPPLE_VERTEX,
+      fragmentShader: RIPPLE_FRAGMENT,
+      uniforms: {
+        map: { value: map },
+        time: { value: 0 },
+        source: { value: new Vector2(0, 0) },
+        reach: { value: 7 },
+        lift: { value: 0 },
+        opacity: { value: 1 },
       },
     });
   }

@@ -10,6 +10,7 @@ import { SCENES } from "@/scroll/script";
 import { useSceneIndex } from "@/scroll/story-scroll";
 import type { SceneDef, SceneId } from "@/scroll/types";
 
+import { HeroArt } from "./hero-art";
 import { Plate } from "./plate";
 import { mountedScenes, scenePresence } from "./presence";
 import { SceneLayerContext, type SceneLayer } from "./stage-context";
@@ -30,7 +31,9 @@ export interface SceneArtProps {
 }
 
 /** Custom art per scene, registered by the scene phases. Unlisted scenes draw their manifest plates. */
-export const SCENE_ART: Partial<Record<SceneId, React.ComponentType<SceneArtProps>>> = {};
+export const SCENE_ART: Partial<Record<SceneId, React.ComponentType<SceneArtProps>>> = {
+  hero: HeroArt,
+};
 
 const SCENE_IDS: readonly SceneId[] = SCENES.map((s) => s.id);
 
