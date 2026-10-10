@@ -1,0 +1,378 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/*
+ * orange.io design system. DESIGN.md explains every token below.
+ * Raw tokens live on :root as plain CSS variables (--sky, --milk, --grid-left, ...).
+ * The @theme blocks map them into Tailwind utilities (bg-sky, text-display-xl, left-grid-left, ...)
+ * and the shadcn semantic variables (--background, --primary, ...) map onto the same palette.
+ */
+
+/* `dark:` variants in shadcn components apply on sky (and press) surfaces. */
+@custom-variant dark (&:is(.dark *, .theme-sky *, .theme-press *));
+
+/* ------------------------------------------------------------------ */
+/* Raw tokens                                                          */
+/* ------------------------------------------------------------------ */
+
+:root {
+  /* Palette. Orange is the single accent: use it sparingly. */
+  --sky: #1f4e9c;
+  --sky-soft: #6f9bd6;
+  --milk: #f6f3ec;
+  --ink: #15130f;
+  --press: #0e0c0a;
+  --orange: #ff7a00;
+  --leaf: #476b35;
+  --marble: #ece7dd;
+  --white: #ffffff;
+
+  /* Hairlines: 1px at 20% of whatever the current text color is. */
+  --hairline-width: 1px;
+  --hairline: color-mix(in oklab, currentColor 20%, transparent);
+
+  /* The one easing curve. */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Layout grid. Horizontal values are fractions of the stage width; the top line is in vw. */
+  --grid-left: 5.3%; /* left hairline, the ruler sits on it */
+  --grid-right: 85.6%; /* right hairline */
+  --grid-top: 5.3vw; /* top hairline */
+  --col-a: 8%; /* text column A */
+  --col-b: 24%; /* text column B */
+
+  /* shadcn semantic theme: milk page, ink text. */
+  --radius: 0.375rem;
+  --background: var(--milk);
+  --foreground: var(--ink);
+  --card: var(--milk);
+  --card-foreground: var(--ink);
+  --popover: var(--milk);
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: var(--milk);
+  --secondary: var(--marble);
+  --secondary-foreground: var(--ink);
+  --muted: var(--marble);
+  --muted-foreground: color-mix(in oklab, var(--ink) 62%, var(--milk));
+  --accent: var(--marble);
+  --accent-foreground: var(--ink);
+  --destructive: #b3261e;
+  --border: color-mix(in oklab, var(--ink) 20%, transparent);
+  --input: color-mix(in oklab, var(--ink) 20%, transparent);
+  --ring: var(--sky);
+
+  color-scheme: light;
+}
+
+/* Sky surfaces: deep blue ground, text is white or milk. */
+.theme-sky,
+.dark {
+  --background: var(--sky);
+  --foreground: var(--white);
+  --card: color-mix(in oklab, var(--sky) 88%, var(--white));
+  --card-foreground: var(--white);
+  --popover: color-mix(in oklab, var(--sky) 70%, var(--press));
+  --popover-foreground: var(--milk);
+  --primary: var(--milk);
+  --primary-foreground: var(--ink);
+  --secondary: color-mix(in oklab, var(--white) 10%, transparent);
+  --secondary-foreground: var(--white);
+  --muted: color-mix(in oklab, var(--white) 10%, transparent);
+  --muted-foreground: color-mix(in oklab, var(--milk) 72%, var(--sky));
+  --accent: color-mix(in oklab, var(--white) 12%, transparent);
+  --accent-foreground: var(--white);
+  --destructive: #ffb4a8;
+  --border: color-mix(in oklab, var(--white) 20%, transparent);
+  --input: color-mix(in oklab, var(--white) 20%, transparent);
+  --ring: var(--milk);
+
+  color: var(--foreground);
+  color-scheme: dark;
+}
+
+/* Press surfaces: near-black ground for buttons and the rare dark panel. */
+.theme-press {
+  --background: var(--press);
+  --foreground: var(--milk);
+  --card: var(--ink);
+  --card-foreground: var(--milk);
+  --popover: var(--ink);
+  --popover-foreground: var(--milk);
+  --primary: var(--milk);
+  --primary-foreground: var(--press);
+  --secondary: color-mix(in oklab, var(--milk) 10%, transparent);
+  --secondary-foreground: var(--milk);
+  --muted: color-mix(in oklab, var(--milk) 10%, transparent);
+  --muted-foreground: color-mix(in oklab, var(--milk) 65%, var(--press));
+  --accent: color-mix(in oklab, var(--milk) 10%, transparent);
+  --accent-foreground: var(--milk);
+  --border: color-mix(in oklab, var(--milk) 20%, transparent);
+  --input: color-mix(in oklab, var(--milk) 20%, transparent);
+  --ring: var(--milk);
+
+  color: var(--foreground);
+  color-scheme: dark;
+}
+
+/* ------------------------------------------------------------------ */
+/* Tailwind theme                                                      */
+/* ------------------------------------------------------------------ */
+
+/* Font families. Emitted on :root, so --font-display, --font-text and --font-mono exist as variables. */
+@theme {
+  --font-display: var(--font-newsreader), Georgia, "Times New Roman", serif;
+  --font-text: var(--font-geist), system-ui, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-sans: var(--font-text);
+  --font-heading: var(--font-display);
+
+  /* Fluid type scale: text-display-xxl ... text-meta (size, leading, tracking, weight). */
+  --text-display-xxl: clamp(4rem, 2rem + 9vw, 11rem);
+  --text-display-xxl--line-height: 0.85;
+  --text-display-xxl--letter-spacing: -0.03em;
+  --text-display-xxl--font-weight: 600;
+
+  --text-display-xl: clamp(2.75rem, 1rem + 5.3vw, 5.5rem);
+  --text-display-xl--line-height: 0.9;
+  --text-display-xl--letter-spacing: -0.02em;
+  --text-display-xl--font-weight: 300;
+
+  --text-display-l: clamp(2rem, 1rem + 2.6vw, 3.25rem);
+  --text-display-l--line-height: 0.95;
+  --text-display-l--letter-spacing: -0.015em;
+  --text-display-l--font-weight: 300;
+
+  --text-title: 1.625rem;
+  --text-title--line-height: 1.1;
+  --text-title--letter-spacing: -0.01em;
+  --text-title--font-weight: 400;
+
+  --text-lead: 1.25rem;
+  --text-lead--line-height: 1.4;
+
+  --text-body: clamp(0.8125rem, 0.75rem + 0.25vw, 0.9375rem);
+  --text-body--line-height: 1.55;
+
+  --text-label: 0.6875rem;
+  --text-label--line-height: 1;
+  --text-label--letter-spacing: 0.18em;
+  --text-label--font-weight: 500;
+
+  --text-meta: 0.75rem;
+  --text-meta--line-height: 1.2;
+  --text-meta--letter-spacing: 0.04em;
+
+  --text-tag: clamp(0.5rem, 0.45rem + 0.15vw, 0.5625rem);
+  --text-tag--line-height: 1;
+  --text-tag--letter-spacing: 0.14em;
+
+  /* Shapes */
+  --radius-pill: 999px;
+  --radius-tag: 4px;
+
+  /* The one easing curve, also the default for every transition-* utility. */
+  --ease-story: cubic-bezier(0.22, 1, 0.36, 1);
+  --default-transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Palette, shadcn semantic colors, layout grid spacing. */
+@theme inline {
+  --color-sky: var(--sky);
+  --color-sky-soft: var(--sky-soft);
+  --color-milk: var(--milk);
+  --color-ink: var(--ink);
+  --color-press: var(--press);
+  --color-orange: var(--orange);
+  --color-leaf: var(--leaf);
+  --color-marble: var(--marble);
+  --color-hairline: var(--hairline);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* left-grid-left, pl-col-a, right-grid-right, top-grid-top, ... */
+  --spacing-grid-left: var(--grid-left);
+  --spacing-grid-right: var(--grid-right);
+  --spacing-grid-top: var(--grid-top);
+  --spacing-col-a: var(--col-a);
+  --spacing-col-b: var(--col-b);
+}
+
+/* ------------------------------------------------------------------ */
+/* Composite type styles: family + size + case in one class            */
+/* ------------------------------------------------------------------ */
+
+@utility type-display-xxl {
+  font-family: var(--font-display);
+  font-size: var(--text-display-xxl);
+  line-height: var(--text-display-xxl--line-height);
+  letter-spacing: var(--text-display-xxl--letter-spacing);
+  font-weight: var(--text-display-xxl--font-weight);
+}
+@utility type-display-xl {
+  font-family: var(--font-display);
+  font-size: var(--text-display-xl);
+  line-height: var(--text-display-xl--line-height);
+  letter-spacing: var(--text-display-xl--letter-spacing);
+  font-weight: var(--text-display-xl--font-weight);
+}
+@utility type-display-l {
+  font-family: var(--font-display);
+  font-size: var(--text-display-l);
+  line-height: var(--text-display-l--line-height);
+  letter-spacing: var(--text-display-l--letter-spacing);
+  font-weight: var(--text-display-l--font-weight);
+}
+@utility type-title {
+  font-family: var(--font-display);
+  font-size: var(--text-title);
+  line-height: var(--text-title--line-height);
+  letter-spacing: var(--text-title--letter-spacing);
+  font-weight: var(--text-title--font-weight);
+}
+@utility type-lead {
+  font-family: var(--font-text);
+  font-size: var(--text-lead);
+  line-height: var(--text-lead--line-height);
+  font-weight: 400;
+}
+@utility type-body {
+  font-family: var(--font-text);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+  font-weight: 400;
+}
+@utility type-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-label);
+  line-height: var(--text-label--line-height);
+  letter-spacing: var(--text-label--letter-spacing);
+  font-weight: var(--text-label--font-weight);
+  text-transform: uppercase;
+}
+@utility type-meta {
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  line-height: var(--text-meta--line-height);
+  letter-spacing: var(--text-meta--letter-spacing);
+  font-weight: 400;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------ */
+/* Shapes                                                              */
+/* ------------------------------------------------------------------ */
+
+/* Pill button surface: fully round, 1px hairline border, inset top highlight, mono label. */
+@utility pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.875rem;
+  height: 2.5rem;
+  padding-inline: 1.125rem 0.3125rem;
+  border-radius: var(--radius-pill);
+  border: var(--hairline-width) solid var(--hairline);
+  box-shadow: inset 0 1px 0 color-mix(in oklab, currentColor 22%, transparent);
+  font-family: var(--font-mono);
+  font-size: var(--text-label);
+  line-height: 1;
+  letter-spacing: var(--text-label--letter-spacing);
+  font-weight: var(--text-label--font-weight);
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition-property: background-color, border-color, color, transform;
+  transition-duration: 300ms;
+  transition-timing-function: var(--ease);
+}
+
+/* The small square chip holding the arrow at the end of a pill. */
+@utility pill-chip {
+  display: inline-grid;
+  place-items: center;
+  width: 1.875rem;
+  height: 1.875rem;
+  flex: none;
+  border-radius: var(--radius-pill);
+  background: color-mix(in oklab, currentColor 12%, transparent);
+  transition: transform 300ms var(--ease);
+}
+
+/* Tag: decorative chip. Not a control; render as a span and never make it focusable. */
+@utility tag {
+  display: inline-flex;
+  align-items: center;
+  height: 1.25rem;
+  padding-inline: 0.4375rem;
+  border-radius: var(--radius-tag);
+  background: color-mix(in oklab, currentColor 10%, transparent);
+  font-family: var(--font-mono);
+  font-size: var(--text-tag);
+  line-height: 1;
+  letter-spacing: var(--text-tag--letter-spacing);
+  font-weight: 500;
+  text-transform: uppercase;
+  white-space: nowrap;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Hairlines: 1px at 20% of the current text color. */
+@utility hairline-x {
+  height: var(--hairline-width);
+  background: var(--hairline);
+}
+@utility hairline-y {
+  width: var(--hairline-width);
+  background: var(--hairline);
+}
+
+/* ------------------------------------------------------------------ */
+/* Base                                                                */
+/* ------------------------------------------------------------------ */
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    font-family: var(--font-text);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--orange) 35%, transparent);
+  }
+}
