@@ -20,6 +20,7 @@ The whole story is data in `src/scroll/script.ts`: chapters, scenes, text beats,
 | Art receding behind text (`useTextHaze`, `SLOT_AREAS`) | `src/components/stage/text-haze.ts`, `src/components/stage/use-text-haze.ts` |
 | Transitions: choreography, shaders, the transition canvas | `src/components/transitions/` |
 | Smoke-out for text | `src/components/motion/smoke-out.tsx` |
+| Framing: the world scale's figures framed by targets, worked out into camera keys (`FRAMING`, `framedKey`, `phonePan`); the fit to a tall screen (`camera-fit.ts`); the report (`npm run framing`) | `src/scroll/framing.ts`, `src/scroll/camera-fit.ts`, `scripts/framing-report.mjs`, `scripts/framing/core.mjs` |
 | The living, painted stage: the canvas, the figure treatment, the halftone layer (`paint.ts`), rigs (`rig.ts`), idle life (`life.ts`), scrubbed acting (`acting.ts`, ranges in `ACTING`), figures and their parts (`figure-life.ts`), the shared uniforms and textures (`materials.ts`, `stage-surface.tsx`) | `src/components/stage/` |
 
 ## The final numbers
@@ -37,6 +38,7 @@ What phase 21 tuned, in one place (all of it lives in `src/scroll/script.ts`):
 | Question cards | 1.3 screens each, end to end; 0.35 to arrive, 0.6 held, 0.35 to leave | The reference beat; the camera climbs during each arrival and holds while the card is read. |
 | Paper unfold | covers over 0.51 screen, opens over 0.73 | Was 0.39 and 0.39: the sheet flipped open too fast. |
 | Camera | a monotone cubic through the keys (see Camera) | The story curve front-loaded every move: 76% of it in the first quarter and 96% by half way, so long moves lurched and then sat still. |
+| Framing | the figure scenes' keys are worked out from targets (`src/scroll/framing.ts`, see Framing) | Phase 24: the figures stood full length in the middle of wide shots (the statue 26% of the height, each onlooker 15%); now they fill the frame and are cropped by it. |
 | Stage pixel ratio | 1 to 1.5 (1.25 on a phone), stepping down to 0.75 on a device that cannot keep up | `quality.ts` |
 
 ## The stage
@@ -85,38 +87,38 @@ The ruler shows four chapters. The Model starts at 0.012, but it is also the cha
 
 Positions are in screens of scrolling from the top of the stage (0 to 53).
 
-**1. Hero, 0.00 to 1.59.** The camera is wide and still. The hero copy is already on screen when the page opens: the title, subtitle and "Start a partnership" button center left, and the "What we do" tag and paragraph bottom left. They play a short timed intro once per page load, hold for a quarter screen (the bottom copy for 0.4), then blur and drift left, title first, and are gone by 1.00. Scrolling back up brings them back the same way, with no second intro.
+**1. Hero, 0.00 to 1.59.** The camera is still, close on the statue: she fills 62% of the height on the right third, the orange at the top, and the onlookers stand nearer the camera in front of her, a band of heads and shoulders along the bottom third, cropped by the bottom edge (on a phone she stands right of the button, 55% of the height, and the onlookers recede into the haze behind "What we do"). The hero copy is already on screen when the page opens: the title, subtitle and "Start a partnership" button center left, and the "What we do" tag and paragraph bottom left. They play a short timed intro once per page load, hold for a quarter screen (the bottom copy for 0.4), then blur and drift left, title first, and are gone by 1.00. Scrolling back up brings them back the same way, with no second intro.
 
-**2. Ascent, 1.59 to 4.24.** No text (the hero copy has already drifted away). The camera pushes in on the statue from 1.59 (second leg at 2.33), glides into a pan along the rising trunk at 3.05, dollies up from 3.84 and settles on a single branch at 4.24, without stopping at the keys in between. Its timings are the `ASCENT` object in the script, played by `src/components/stage/ascent-art.tsx` through the pure functions in `ascent-tree.ts`:
+**2. Ascent, 1.59 to 4.24.** No text (the hero copy has already drifted away). The camera pushes in on the statue from 1.59 (at 2.33 she fills 80% of the height), glides into a pan down the rising trunk as she rises out of the top of the frame (3.05), dollies up from 3.84 and settles at 4.24 on the first branch, where the graft is made, without stopping at the keys in between. Its timings are the `ASCENT` object in the script, played by `src/components/stage/ascent-art.tsx` through the pure functions in `ascent-tree.ts`:
 
 - The statue, its orange and the top of the minaret rise together, slowly at first, then faster, to 10 world units by the end. The shaft is one tiling plate that grows from a fixed bottom (more tiles, never stretched).
 - The stone turns to bark through the morph mask along a front that climbs the shaft: it enters the frame as the camera pushes in (`ASCENT.front`, world heights) and has closed on the top of the trunk by 3.07 (`ASCENT.barked`).
 - Three branches scale out from the trunk once it is tall enough (from 3.18, 3.45 and 3.71), and their leaves unfurl with them.
 - The glow keeps the hero's full brightness and rides up with the orange (the ripple clock is shared with the hero's, so the two scenes' glows trade places without adding up); the statue, the orange and the glow fade once above the frame (3.82 to 4.16).
 
-**3. Graft, 4.24 to 6.89.** No text. The camera holds on the branch while the hands come in (4.29 to 4.66), fit the cutting (to 4.98), wrap the twine (to 5.25), tie the knot in three steps (to 5.72) and leave (to 5.94); it then dollies up and pulls out to the fruiting tree (5.88 to 6.89) while the tree fills with oranges (5.94 to 6.78).
+**3. Graft, 4.24 to 6.89.** No text. The camera holds on the branch, the hands and their work half the width of the frame, while the hands come in (4.29 to 4.66), fit the cutting (to 4.98), wrap the twine (to 5.25), tie the knot in three steps (to 5.72) and leave (to 5.94); it then dollies up and pulls out to the fruiting tree (5.88 to 6.89) while the tree fills with oranges (5.94 to 6.78).
 
-**4. Pluck, 6.89 to 10.07.** The camera holds on the tree while the hand rises from the bottom center to the one special orange (6.95 to 7.65) and closes on it (7.59 to 7.84). As the hand closes (7.75) "We get you found." arrives center left, slightly low; a thin progress line draws along the top hairline from 7.75 to 8.35 and erases as the beat leaves (8.75 to 9.05). From 8.00 the camera dollies down through the branches to the harvester and lands on him at 9.24. The hand tugs the fruit free (7.94 to 8.26) and carries it down with the camera (`carryAt` reads the camera's own travel), so the orange stays framed while the foliage rushes up past it; the near foliage falls away first (8.03 to 8.48), then the middle layer (8.29 to 8.93). The harvester (white robe) enters the frame from below and appears from 8.29 to 8.99; the hand lets go and drops away (9.15 to 9.43) as his right arm, holding the orange, takes the fruit over (9.15 to 9.34). Once he is revealed (9.48), "We split the harvest." arrives bottom left with the "Revenue share" tag under it; the line to the right of the tag types itself out during the beat. While each beat is up, the foliage behind its words recedes into the sky's haze (on a phone his robe does too). The timings are the `PLUCK` object in the script, played by `src/components/stage/pluck-art.tsx` through the pure functions in `pluck-harvest.ts`.
+**4. Pluck, 6.89 to 10.07.** The camera holds on the tree while the hand rises from the bottom center to the one special orange (6.95 to 7.65) and closes on it (7.59 to 7.84). As the hand closes (7.75) "We get you found." arrives center left, slightly low; a thin progress line draws along the top hairline from 7.75 to 8.35 and erases as the beat leaves (8.75 to 9.05). From 8.00 the camera dollies down through the branches to the harvester and lands on him at 9.24, waist up, 88% of the height, cropped by the bottom and right edges, the orange in his hand large above the bottom-left words. The hand tugs the fruit free (7.94 to 8.26) and carries it down with the camera (`carryAt` reads the camera's own travel), so the orange stays framed while the foliage rushes up past it; the near foliage falls away first (8.03 to 8.48), then the middle layer (8.29 to 8.93). The harvester (white robe) enters the frame from below and appears from 8.29 to 8.99; the hand lets go and drops away (9.15 to 9.43) as his right arm, holding the orange, takes the fruit over (9.15 to 9.34). Once he is revealed (9.48), "We split the harvest." arrives bottom left with the "Revenue share" tag under it; the line to the right of the tag types itself out during the beat. While each beat is up, the foliage behind its words recedes into the sky's haze (on a phone his robe does too). The timings are the `PLUCK` object in the script, played by `src/components/stage/pluck-art.tsx` through the pure functions in `pluck-harvest.ts`.
 
-**5. Share, 10.07 to 12.30.** His left hand comes in above the orange with a knife (10.11 to 10.31) and plunges the blade down through it (10.31 to 10.52); under the blade the whole orange gives way to its two peels (10.33 to 10.35), and the knife withdraws (10.52 to 10.72). The halves part and their cut faces are revealed (10.49 to 10.76). A second hand reaches in from center left to the left half (10.67 to 10.92), takes it and draws it a little away (10.92 to 11.09), and both hands bring the halves together (11.09 to 11.36) and hold them: the harvest, shared. The timings are the `SHARE` object, played by `src/components/stage/share-art.tsx` through `share-cut.ts`. The camera holds on the harvester, then pushes into the orange from 10.56 while the harvest beat fades (gone by 10.89). It holds on the halves from 11.07 and pushes into them from 11.67. The hairlines close into a square viewfinder around the halves (11.18 to 11.61), hold it until 11.90 and open out by 12.16. The sand sweeps in from 11.64, covers the screen fully from 12.26 to 12.34 (the camera reframes unseen) and clears by 12.70. The ruler switches to The Work at 12.30; the hairlines slide out and come back under the sand.
+**5. Share, 10.07 to 12.30.** His left hand comes in above the orange with a knife (10.11 to 10.31) and plunges the blade down through it (10.31 to 10.52); under the blade the whole orange gives way to its two peels (10.33 to 10.35), and the knife withdraws (10.52 to 10.72). The halves part and their cut faces are revealed (10.49 to 10.76). A second hand reaches in from center left to the left half (10.67 to 10.92), takes it and draws it a little away (10.92 to 11.09), and both hands bring the halves together (11.09 to 11.36) and hold them: the harvest, shared. The timings are the `SHARE` object, played by `src/components/stage/share-art.tsx` through `share-cut.ts`. The camera holds on the harvester, then pushes into the orange from 10.56 while the harvest beat fades (gone by 10.89). It holds on the hands and the halves from 11.07 (half the width of the frame, the halves in the middle of the viewfinder) and pushes into them from 11.67. The hairlines close into a square viewfinder around the halves (11.18 to 11.61), hold it until 11.90 and open out by 12.16. The sand sweeps in from 11.64, covers the screen fully from 12.26 to 12.34 (the camera reframes unseen) and clears by 12.70. The ruler switches to The Work at 12.30; the hairlines slide out and come back under the sand.
 
-**6. Work, 12.30 to 17.91.** The camera dollies slowly upward through the clouds from 12.34 to 17.75, ending close to the blueprint's first frame. The service cards take turns in the right column, chained from the moment the sand clears: card 1 from 12.80 to 14.10, card 2 from 14.40 to 15.70, card 3 from 16.00 to 17.60 (1.6 screens for its longer body). Six cloud plates, each drawn twice, drift right on idle time and shift right with the scroll; from 12.50 to 17.90 they part around the card text (`cloudClearing`): a cloud drifting toward the words thins out and re-forms beyond them, so the clouds pass on both sides and white text never sits on a white cloud. The giant orange on its minaret rises into view with its builder as card 3 arrives (16.00 to 17.86).
+**6. Work, 12.30 to 17.91.** The camera dollies slowly upward through the clouds from 12.34; as the third card arrives (16.00) it closes in on the builder rising with the giant orange, left of the card, and by 17.75 holds on him knees up, 80% of the height. The service cards take turns in the right column, chained from the moment the sand clears: card 1 from 12.80 to 14.10, card 2 from 14.40 to 15.70, card 3 from 16.00 to 17.60 (1.6 screens for its longer body). Six cloud plates, each drawn twice, drift right on idle time and shift right with the scroll; from 12.50 to 17.90 they part around the card text (`cloudClearing`): a cloud drifting toward the words thins out and re-forms beyond them, so the clouds pass on both sides and white text never sits on a white cloud. The giant orange on its minaret rises into view with its builder as card 3 arrives (16.00 to 17.86).
 
-**7. Blueprint, 17.91 to 21.20.** The camera holds on the scaffold, then pushes into the plan from 19.06. The architect holds the folded packet in his hands; it is brought forward to the middle (18.57 to 19.10) and opens panel by panel (19.10 to 20.54). The paper unfold starts at 20.61 and covers the screen fully from 21.12 to 21.28 (the camera reframes unseen), then the sheet opens onto the next scene by 22.01. The chrome and hairlines turn ink on milk from 20.87 to 22.01. The ruler switches to The Terms at 21.20.
+**7. Blueprint, 17.91 to 21.20.** The work's frame dissolves into the sky beside the scaffold; the camera pans across to the builder on his platform (knees up, by 18.30), holds while he works, then from 18.57 comes down the scaffold to the architect (knees up, at 19.10) as she brings the plan forward, and pushes into the plan as it opens. The architect holds the folded packet in his hands; it is brought forward to the middle (18.57 to 19.10) and opens panel by panel (19.10 to 20.54). The paper unfold starts at 20.61 and covers the screen fully from 21.12 to 21.28 (the camera reframes unseen), then the sheet opens onto the next scene by 22.01. The chrome and hairlines turn ink on milk from 20.87 to 22.01. The ruler switches to The Terms at 21.20.
 
-**8. Site, 21.20 to 25.44.** The camera holds at ground level from 21.28 (builders working a little: 21.71 to 22.73), then rises to a straight top-down view (22.05 to 22.98). The matching top-down set, the plain sand ground and the first tiles fade in (22.60 to 22.90) while the side plates fade out (22.68 to 22.94); the sea and its sky leave last (22.90 to 22.98), so the top-down view has no sky. The camera then keeps rising and pulls out (22.98 to 24.17) while the whole site slides into the middle of the left half in step with it (`shrinkAt` reads the camera's travel) and the tiled field grows around it (22.81 to 24.25). The right half becomes the milk-white panel from 23.07 to 23.40 (`SitePanel`, with two slowly drifting, heavily blurred leaf-shadow layers) until the dust covers it at 25.40 (ink chrome and text from 22.90). The terms block sits in the right column from 23.15 to 25.19. The rising dust starts at 25.10, covers the screen from 25.40 to 25.48 and clears by 25.80.
+**8. Site, 21.20 to 25.44.** The camera holds at ground level from 21.28, on a builder at work (knees up, 80% of the height, the orange under construction beside him; builders working a little: 21.71 to 22.73), then pulls back to the whole site by the sea (22.05 to 22.43) and rises to a straight top-down view (to 22.98). The matching top-down set, the plain sand ground and the first tiles fade in (22.60 to 22.90) while the side plates fade out (22.68 to 22.94); the sea and its sky leave last (22.90 to 22.98), so the top-down view has no sky. The camera then keeps rising and pulls out (22.98 to 24.17) while the whole site slides into the middle of the left half in step with it (`shrinkAt` reads the camera's travel) and the tiled field grows around it (22.81 to 24.25). The right half becomes the milk-white panel from 23.07 to 23.40 (`SitePanel`, with two slowly drifting, heavily blurred leaf-shadow layers) until the dust covers it at 25.40 (ink chrome and text from 22.90). The terms block sits in the right column from 23.15 to 25.19. The rising dust starts at 25.10, covers the screen from 25.40 to 25.48 and clears by 25.80.
 
-**9. Prune, 25.44 to 29.42.** The camera holds on the gardener from 25.48: on a wide screen he and his column stand right of center, so the fit text at the bottom left reads on clear sky; on a phone the camera centers him again and lifts the picture a little (the key's `pan`), and the column recedes into the haze behind the text. The shears snip from 25.84 to 28.82. "The Terms" starts rising from the bottom in very large type at 25.92 and shrinks as it climbs until it docks in the top-left corner by 27.32. The fit text and its "In plain terms" aside arrive bottom left at 27.23. Both stay until the branch is cut.
+**9. Prune, 25.44 to 29.42.** The camera holds on the gardener from 25.48, waist up, 90% of the height, on the right beside his young tree, which fills the left of the frame and recedes into the sky's haze behind the chapter title and the fit text while they are up (`unionArea`: behind both slots at once); on a phone he is half the height, his shears in the frame, and recedes behind the fit text too. The shears snip from 25.84 to 28.82. "The Terms" starts rising from the bottom in very large type at 25.92 and shrinks as it climbs until it docks in the top-left corner by 27.32. The fit text and its "In plain terms" aside arrive bottom left at 27.23. Both stay until the branch is cut.
 
-**10. Fall, 29.42 to 33.28.** All the text blurs and sinks back into the picture as the scene begins (29.48 to 29.88). The camera pushes toward the gardener's face (29.42 to 30.27), dollies down after the falling orange (30.27 to 31.16), pushes into it (31.16 to 31.54), then dollies up between the rows of trees (31.54 to 33.28). The scene opens on the prune picture as it was left. At 29.69 the branch is cut: the still branch (fruit and all) hands over to a copy without its fruit, which drops faster and faster, turning (29.74 to 30.96), while the orange sits where the fruit hung and falls on its own (29.74 to 31.16), the camera following; the gardener drifts right and out of frame (29.80 to 30.65). The orange is placed relative to the camera and settles at the ring's origin on screen. The rainbow ring sweeps out from the orange from 31.16 to 31.97: the old picture is cut away outside the ring and the orchard rows show only inside it, while the orange stays in front. It goes soft (31.16 to 32.20) and keeps falling out of the bottom of the frame (31.54 to 33.28), fading out by the end. Timings are the `FALL` object, played by `src/components/stage/fall-art.tsx` through `fall-plan.ts`. The ruler switches to Questions at 33.28, with the hairlines sliding out from 32.98 and back by 33.88.
+**10. Fall, 29.42 to 33.28.** All the text blurs and sinks back into the picture as the scene begins (29.48 to 29.88). The camera pushes toward the gardener's face (29.42 to 30.27: his head half the height of the frame), dollies down after the falling orange (30.27 to 31.16), pushes into it (31.16 to 31.54), then dollies up between the rows of trees (31.54 to 33.28). The scene opens on the prune picture as it was left. At 29.69 the branch is cut: the still branch (fruit and all) hands over to a copy without its fruit, which drops faster and faster, turning (29.74 to 30.96), while the orange sits where the fruit hung and falls on its own (29.74 to 31.16), the camera following; the gardener drifts right and out of frame (29.80 to 30.65). The orange is placed relative to the camera and settles at the ring's origin on screen. The rainbow ring sweeps out from the orange from 31.16 to 31.97: the old picture is cut away outside the ring and the orchard rows show only inside it, while the orange stays in front. It goes soft (31.16 to 32.20) and keeps falling out of the bottom of the frame (31.54 to 33.28), fading out by the end. Timings are the `FALL` object, played by `src/components/stage/fall-art.tsx` through `fall-plan.ts`. The ruler switches to Questions at 33.28, with the hairlines sliding out from 32.98 and back by 33.88.
 
 **11. Questions, 33.28 to 40.70.** "Questions worth asking first." arrives top center at 33.28 and stays through all five cards; while it is up, the fruit of the rows behind it recedes into the haze. The cards take turns in the center, 1.3 screens each, end to end: question 1 from 33.54 to 34.84, question 2 to 36.14, question 3 to 37.44, question 4 to 38.74, question 5 to 40.04. The first zooms up from small in the center; the others arrive from the right along the arc; cards 1 to 4 swing left along the arc as they leave, and each has swung fully away at the very point where the next starts to arrive. Each card's connector line draws out from its orange as the card arrives (question 1 from 33.70 to 34.09, then 1.30 screens later for each card) and its square locks onto the card's corner. The camera climbs between the rows one step per card, during the card's arrival (33.54 to 33.89 for the first, and so on), and holds while the card is read, so the orange stays put under the line. After the last card, the card, its line and the title dissolve upward like smoke (39.69 to 40.04) while the camera pushes forward into the blue. The fabric sky starts at 40.48, covers the screen from 40.65 to 40.75 (the camera reframes unseen) and clears by 41.23. The deck is `FAQ` in the script, played by `src/components/story/question-deck.tsx` through `question-plan.ts` (see "The questions' deck" below).
 
-**12. Stars, 40.70 to 43.35.** No text. The camera holds on the stargazer from 40.75 while the constellation grows from his fingertip (41.29 to 43.22).
+**12. Stars, 40.70 to 43.35.** No text. The camera holds on the stargazer from 40.75 (82% of the height, top left, his pointing hand in the sky) while the constellation grows from his fingertip (41.29 to 43.22); the constellation is laid out in the sky that frame sees (`SKY`, `stars-plan.ts`).
 
-**13. Apply, 43.35 to 47.59.** The astronomer and his platform step down the sky (43.61 to 44.20; on a phone they sink right out of the frame, which the text and the form fill). The application tag, title and subtitle arrive top left at 43.69; the form fades in on the right from 43.86. Both are fully on screen from about 44.16 to 47.94 (this is where "Apply" lands), then blur, rise and fade out by 48.24, in the finale. The constellation recedes while they are up (`starsDim`).
+**13. Apply, 43.35 to 47.59.** The astronomer and his platform step down the sky until his hand is level with the middle of the frame (43.61 to 44.20; on a phone they sink right out of the frame, which the text and the form fill). Both depths are worked out from the camera (`apply-plan.ts`). The application tag, title and subtitle arrive top left at 43.69; the form fades in on the right from 43.86. Both are fully on screen from about 44.16 to 47.94 (this is where "Apply" lands), then blur, rise and fade out by 48.24, in the finale. The constellation recedes while they are up (`starsDim`).
 
-**14. Finale, 47.59 to 53.00.** The camera holds while the art moves. The astronomer and platform sink on from the apply position and the stars drift up (47.59 to 49.22), the old cloud slides away (to 49.76), the tree rises (48.57 to 49.76), the woman and the man walk in (49.32 to 50.41) and settle, and from 50.41 their loop runs on idle time (watering, snipping, an orange cut free, oranges dropping, clouds drifting right); it pauses offscreen and fades out when scrolling back. The hairlines slide out to the edges (49.49 to 50.30), then close in from there into a square viewfinder by 52.19 and stay closed. The wordmark, subtitle, copyright and email arrive inside the frame from 50.84 and never leave; as they arrive, the tree inside the frame recedes into the haze and goes a little soft. The page ends at 53.00; further scrolling does nothing, and scrolling up plays everything back to the hero.
+**14. Finale, 47.59 to 53.00.** The camera holds while the astronomer and platform sink on from the apply position (out of every frame the finale films) and the stars drift up (47.59 to 49.22), then from 48.57 comes down to the orchard keepers as the old cloud slides away (to 49.76), the tree rises (48.57 to 49.76) and the woman and the man walk in (49.32 to 50.41) and settle: by 50.41 they fill 95% of the height either side of the frame, cropped at the bottom, the tree between them; and from 50.41 their loop runs on idle time (watering, snipping, an orange cut free, oranges dropping, clouds drifting right); it pauses offscreen and fades out when scrolling back. The hairlines slide out to the edges (49.49 to 50.30), then close in from there into a square viewfinder by 52.19 and stay closed. The wordmark, subtitle, copyright and email arrive inside the frame from 50.84 and never leave; as they arrive, the tree inside the frame recedes into the haze and goes a little soft. The page ends at 53.00; further scrolling does nothing, and scrolling up plays everything back to the hero.
 
 ## Scenes
 
@@ -244,52 +246,71 @@ Art that must move in step with a camera move reads the path itself through `cam
 
 | Scene | At | Move from here | Position | Target | FOV | Tall-screen pan |
 | --- | --- | --- | --- | --- | --- | --- |
-| hero | 0.0000 | hold | 0, 0, 14 | 0, 0, 0 | 35 | 2, 0.75 |
-| ascent | 0.0300 | push | 0, 0, 14 | 0, 0, 0 | 35 | |
-| ascent | 0.0440 | push | 2.1, 2.5, 9.6 | 2.5, 2.9, 0 | 33.5 | 0, 0 |
-| ascent | 0.0575 | pan | 2.6, 4.6, 7.5 | 2.8, 4.9, 0 | 32 | |
-| ascent | 0.0725 | dolly-up | 2.2, 6.4, 6.5 | 2.2, 6.6, 0 | 31 | |
-| graft | 0.0800 | hold | 2, 8.4, 5.5 | 2, 8.4, 0 | 30 | |
-| graft | 0.1110 | pull | 2, 8.4, 5.5 | 2, 8.4, 0 | 30 | |
-| pluck | 0.1300 | hold | 1.6, 11, 12 | 1.6, 10.5, 0 | 36 | |
-| pluck | 0.1510 | dolly-down | 1.6, 11, 12 | 1.6, 10.5, 0 | 36 | |
-| pluck | 0.1744 | hold | 1.4, 4.2, 9 | 1.4, 4.2, 0 | 34 | |
-| share | 0.1900 | hold | 1.4, 4.2, 9 | 1.4, 4.2, 0 | 34 | |
-| share | 0.1992 | push | 1.4, 4.2, 9 | 1.4, 4.2, 0 | 34 | |
-| share | 0.2089 | hold | 1.5, 4.5, 4.8 | 1.5, 4.5, 0 | 30 | |
-| share | 0.2202 | push | 1.5, 4.5, 4.8 | 1.5, 4.5, 0 | 30 | |
-| share | 0.2312 | reframe | 1.5, 4.5, 2.2 | 1.5, 4.5, 0 | 28 | |
-| work | 0.2328 | dolly-up | 0, 0, 14 | 0, 0.5, 0 | 40 | |
-| work | 0.3348 | dolly-up | 0, 8.5, 13.5 | 0, 9, 0 | 39 | |
-| blueprint | 0.3380 | hold | 0, 9, 13 | 0, 9.5, 0 | 38 | |
-| blueprint | 0.3597 | push | 0, 9, 13 | 0, 9.5, 0 | 38 | |
-| blueprint | 0.3985 | reframe | 0, 9.6, 2.6 | 0, 9.6, 0 | 34 | |
-| site | 0.4015 | hold | 0, 1.2, 12 | 0, 1, 0 | 38 | |
-| site | 0.4160 | dolly-up | 0, 1.2, 12 | 0, 1, 0 | 38 | |
-| site | 0.4336 | pull | 0, 13, 0.01 | 0, 0, 0 | 38 | |
-| site | 0.4560 | hold | 0, 24, 0.01 | 0, 0, 0 | 38 | |
-| site | 0.4792 | reframe | 0, 24, 0.01 | 0, 0, 0 | 38 | |
-| prune | 0.4808 | hold | -1.9, 0, 12 | -1.9, 0.5, 0 | 35 | 1.9, -0.6 |
-| fall | 0.5550 | push | -1.9, 0, 12 | -1.9, 0.5, 0 | 35 | |
-| fall | 0.5711 | dolly-down | 0.4, 2.2, 6.5 | 0.4, 2.2, 0 | 32 | 0, 0 |
-| fall | 0.5878 | push | 0, -3, 5 | 0, -3, 0 | 32 | |
-| fall | 0.5951 | dolly-up | 0, -4, 2.6 | 0, -4, 0 | 30 | |
-| faq | 0.6280 | hold | 0, 1, 12 | 0, 2, 0 | 40 | |
-| faq | 0.6329 | dolly-up | 0, 1, 12 | 0, 2, 0 | 40 | |
-| faq | 0.6395 | hold | 0, 1.7, 12 | 0, 2.7, 0 | 40 | |
-| faq | 0.6574 | dolly-up | 0, 1.7, 12 | 0, 2.7, 0 | 40 | |
-| faq | 0.6640 | hold | 0, 2.4, 12 | 0, 3.4, 0 | 40 | |
-| faq | 0.6820 | dolly-up | 0, 2.4, 12 | 0, 3.4, 0 | 40 | |
-| faq | 0.6886 | hold | 0, 3.1, 12 | 0, 4.1, 0 | 40 | |
-| faq | 0.7065 | dolly-up | 0, 3.1, 12 | 0, 4.1, 0 | 40 | |
-| faq | 0.7131 | hold | 0, 3.8, 12 | 0, 4.8, 0 | 40 | |
-| faq | 0.7310 | dolly-up | 0, 3.8, 12 | 0, 4.8, 0 | 40 | |
-| faq | 0.7376 | hold | 0, 4.5, 12 | 0, 5.5, 0 | 40 | |
-| faq | 0.7489 | push | 0, 4.5, 12 | 0, 5.5, 0 | 40 | |
-| faq | 0.7671 | reframe | 0, 5, 6 | 0, 6, 0 | 38 | |
-| stars | 0.7689 | hold | 0, 6, 7 | 0, 6.5, 0 | 38 | |
-| apply | 0.8180 | hold | 0, 6, 7 | 0, 6.5, 0 | 38 | |
-| finale | 0.8980 | hold | 0, 6, 7 | 0, 6.5, 0 | 38 | |
+| hero | 0.0000 | hold | 2, 2.16, 3.87 | 2, 2.16, -1.5 | 35 | 0.96, 0.39, -3.09 |
+| ascent | 0.0300 | push | 2, 2.16, 3.87 | 2, 2.16, -1.5 | 35 | 0.96, 0.39, -3.09 |
+| ascent | 0.0440 | push | 2.9, 3.34, 2.86 | 2.9, 3.34, -1.5 | 33.5 | 0.5, 0, -2.29 |
+| ascent | 0.0575 | pan | 3.17, 3.69, 2.81 | 3.17, 3.69, -1.5 | 32 | 0.24, 0.16, -2.21 |
+| ascent | 0.0725 | dolly-up | 2.76, 5.51, 1.28 | 2.76, 5.51, -1.69 | 31 | 0, 0, -0.1 |
+| graft | 0.0800 | hold | 2.75, 5.48, -0.14 | 2.75, 5.48, -1.61 | 30 | 0, -0.04, 0.17 |
+| graft | 0.1110 | pull | 2.75, 5.48, -0.14 | 2.75, 5.48, -1.61 | 30 | 0, -0.04, 0.17 |
+| pluck | 0.1300 | hold | 2.62, 6.05, 1.96 | 2.62, 6.05, -1.59 | 36 | 0, 0.05, -1.69 |
+| pluck | 0.1510 | dolly-down | 2.62, 6.05, 1.96 | 2.62, 6.05, -1.59 | 36 | 0, 0.05, -1.69 |
+| pluck | 0.1744 | hold | 2.54, 4.42, -0.42 | 2.54, 4.42, -1.88 | 34 | 0.27, -0.34, -0.51 |
+| share | 0.1900 | hold | 2.54, 4.42, -0.42 | 2.54, 4.42, -1.88 | 34 | 0.27, -0.34, -0.51 |
+| share | 0.1992 | push | 2.54, 4.42, -0.42 | 2.54, 4.42, -1.88 | 34 | 0.27, -0.34, -0.51 |
+| share | 0.2089 | hold | 2.59, 4.29, -0.54 | 2.59, 4.29, -1.75 | 30 | 0, -0.05, 0.28 |
+| share | 0.2202 | push | 2.59, 4.29, -0.54 | 2.59, 4.29, -1.75 | 30 | 0, -0.05, 0.28 |
+| share | 0.2312 | reframe | 2.59, 4.3, -1.19 | 2.59, 4.3, -1.77 | 28 | 0, -0.05, 0.28 |
+| work | 0.2328 | dolly-up | 0, 0, 14 | 0, 0.5, 0 | 40 | 0, 0, 0 |
+| work | 0.3019 | push | 0, 5.76, 13.66 | 0, 6.26, 0 | 39.5 | 0, 0, 0 |
+| work | 0.3348 | hold | -4, 11.78, 1.9 | -4, 11.78, -0.6 | 39 | -0.57, -0.72, -0.92 |
+| blueprint | 0.3380 | pan | -4, 11.78, 1.9 | -4, 11.78, -0.6 | 39 | -0.57, -0.72, -0.92 |
+| blueprint | 0.3454 | hold | -1.31, 11.77, 1.95 | -1.31, 11.77, -0.6 | 38 | -0.56, -0.72, -0.94 |
+| blueprint | 0.3504 | pan | -1.31, 11.77, 1.95 | -1.31, 11.77, -0.6 | 38 | -0.56, -0.72, -0.94 |
+| blueprint | 0.3603 | push | 0.85, 9, 1.89 | 0.85, 9, -0.5 | 38 | 0.45, 0, -1.15 |
+| blueprint | 0.3985 | reframe | 0.2, 9.5, 1.47 | 0.2, 9.5, -0.3 | 34 | 0.45, 0, -1.15 |
+| site | 0.4015 | hold | -1.59, 2.09, 1.78 | -1.59, 2.09, -0.8 | 38 | -0.28, -0.13, -1.24 |
+| site | 0.4160 | dolly-up | -1.59, 2.09, 1.78 | -1.59, 2.09, -0.8 | 38 | -0.28, -0.13, -1.24 |
+| site | 0.4336 | pull | 0, 13, 0.01 | 0, 0, 0 | 38 | 0, 0, 0 |
+| site | 0.4560 | hold | 0, 24, 0.01 | 0, 0, 0 | 38 | 0, 0, 0 |
+| site | 0.4792 | reframe | 0, 24, 0.01 | 0, 0, 0 | 38 | 0, 0, 0 |
+| prune | 0.4808 | hold | 0.06, 0.71, 1.44 | 0.06, 0.71, 0 | 35 | 0.2, -0.05, -0.52 |
+| fall | 0.5550 | push | 0.06, 0.71, 1.44 | 0.06, 0.71, 0 | 35 | 0.2, -0.05, -0.52 |
+| fall | 0.5711 | dolly-down | 0.31, 0.94, 1.08 | 0.31, 0.94, 0 | 32 | 0.06, -0.01, -0.53 |
+| fall | 0.5878 | push | 0, -3, 5 | 0, -3, 0 | 32 | 0, 0, 0 |
+| fall | 0.5951 | dolly-up | 0, -4, 2.6 | 0, -4, 0 | 30 | 0, 0, 0 |
+| faq | 0.6280 | hold | 0, 1, 12 | 0, 2, 0 | 40 |  |
+| faq | 0.6329 | dolly-up | 0, 1, 12 | 0, 2, 0 | 40 |  |
+| faq | 0.6395 | hold | 0, 1.7, 12 | 0, 2.7, 0 | 40 |  |
+| faq | 0.6574 | dolly-up | 0, 1.7, 12 | 0, 2.7, 0 | 40 |  |
+| faq | 0.6640 | hold | 0, 2.4, 12 | 0, 3.4, 0 | 40 |  |
+| faq | 0.6820 | dolly-up | 0, 2.4, 12 | 0, 3.4, 0 | 40 |  |
+| faq | 0.6886 | hold | 0, 3.1, 12 | 0, 4.1, 0 | 40 |  |
+| faq | 0.7065 | dolly-up | 0, 3.1, 12 | 0, 4.1, 0 | 40 |  |
+| faq | 0.7131 | hold | 0, 3.8, 12 | 0, 4.8, 0 | 40 |  |
+| faq | 0.7310 | dolly-up | 0, 3.8, 12 | 0, 4.8, 0 | 40 |  |
+| faq | 0.7376 | hold | 0, 4.5, 12 | 0, 5.5, 0 | 40 |  |
+| faq | 0.7489 | push | 0, 4.5, 12 | 0, 5.5, 0 | 40 |  |
+| faq | 0.7671 | reframe | 0, 5, 6 | 0, 6, 0 | 38 |  |
+| stars | 0.7689 | hold | -1.84, 6.98, 3.26 | -1.84, 6.98, -0.2 | 38 | -0.69, 0.06, -1.91 |
+| apply | 0.8180 | hold | -1.84, 6.98, 3.26 | -1.84, 6.98, -0.2 | 38 | -0.69, 0.06, -1.91 |
+| finale | 0.8980 | hold | -1.84, 6.98, 3.26 | -1.84, 6.98, -0.2 | 38 | -0.69, 0.06, -1.91 |
+| finale | 0.9164 | dolly-down | -1.84, 6.98, 3.26 | -1.84, 6.98, -0.2 | 38 | -0.69, 0.06, -1.91 |
+| finale | 0.9510 | hold | -0.06, 4.85, 2.38 | -0.06, 4.85, -0.3 | 38 | 0, 0.01, 0.67 |
+
+The keys of the questions inherit the fall's pan (none). Positions are rounded to two places here; the script has them exact.
+
+### Framing
+
+The camera keys of the figure scenes are not typed in: they are worked out from the framing table (`FRAMING` in `src/scroll/framing.ts`; the targets are in `docs/ART-PLATES.md`, "Framing"). Each row names a subject (a world box from the manifest: a figure's visible `box`, the top of it for "waist up" or "knees up", two hands around their grips), the share of the stage it should fill (of the height, or the width for hands), where on the stage its pin should land, and the field of view, on a laptop (1440 by 900) and on a phone (390 by 844):
+
+- `shot(spec)` puts the camera on the subject's plane normal, far enough away that the box fills the share, and slides it so the pin lands where it should. Shots look straight along -z, so a pan never tilts the picture.
+- `phonePan(desktop, phone)` works out the phone's own shot and returns the difference as the key's `pan`: [x, y, z], the third value bringing the camera nearer the picture (the phone's fitted field of view is nearly three times as tall). The camera path fades it in on tall screens (`panAmount`), so a phone frames the subject at its own size, below or beside the text.
+- `framedKey(id)` is both, for a row; `FRAMED` in the script lists the key each row is checked at.
+
+Keys between framed ones keep the moves of the story: the ascent's push, pan and dolly follow the rising statue (`risenStatue`, the rise of `ASCENT`) to the branch of the graft; the pluck's dolly runs from the fruiting tree (its near foliage filling the frame, the special orange in the middle) to the harvester; the work's dolly through the clouds turns into a push toward the builder as the third card arrives; the reframes under the covers go into the halves and into the plan.
+
+**Checked by `npm run framing`** (`scripts/framing-report.mjs`): every target at its key, on both stages; at every camera key of every figure scene, how much of the height and the width each figure plate covers, where its heads and hands land and how much of a text slot (`SLOT_AREAS`) it covers while words are up; along every move (48 samples, both stages), the nearest any figure comes to the camera (the near plane is 0.1; nearer than 0.35 is flagged) and whether its size on screen pops; and how many pixels each figure plate needs. The report goes to `test-results/framing/` (`-- --save before` and `-- --save after` for a phase's comparison). Figures stand at their manifest places there (their rest pose): the choreography (rising into view, walking in, sinking away) moves them from it.
 
 ## Scenes on the canvas
 
@@ -301,12 +322,13 @@ Every canvas frame first settles the values the scene arts derive from progress 
 
 | Scene | What recedes | Behind |
 | --- | --- | --- |
+| Hero | on a phone only: the onlookers | "What we do" and its paragraph |
 | Work | the clouds thin out (`cloudClearing`, its own envelope over all three cards) | the card text |
 | Pluck, share | the foliage (and on a phone the harvester's robe) | "We get you found.", "We split the harvest." |
-| Prune | on a phone only: the column, the urn, the tree and the gardener | the fit text |
+| Prune (and the fall, as the words sink) | the urn, the young tree and its branches, behind both words at once (`union`); on a phone also the column and the gardener | "The Terms" docked and the fit text |
 | Questions | the orchard rows' fruit | "Questions worth asking first." |
 | Apply | on a phone only: the stargazer's cloud thins out | the form |
-| Finale | the tree, the clouds and the falling fruit (and on a phone the keepers) | the wordmark, subtitle and footer |
+| Finale | the tree, the clouds, the water from the jug and the falling fruit (and on a phone the keepers) | the wordmark, subtitle and footer |
 
 ### The hero's art
 
@@ -364,6 +386,8 @@ The ruler's progress line has one segment per stretch between `RULER_STOPS`: eve
 - every transition has a valid range and peak, is sorted by start, starts on the stage (a ring's `origin`), and a transition that hands one scene to the next straddles their boundary and fully covers the screen at it; transitions on the one transition canvas never overlap;
 - the camera starts at 0, its keys increase strictly, every scene has a key, fields of view stay between 10 and 90 degrees, and every `reframe` sits inside a full cover;
 - hairline envelopes are in order, progress lines draw before they erase, and tones and anchors stay inside 0 to 1.
+
+**The framing check** (`npm run framing`, see Camera, "Framing") is not part of `npm test`: it prints a report (`test-results/framing/report.md`) of every target of the framing table, every figure at every camera key on both stages, every move (near-plane clearance and pops) and the pixels each figure plate needs. The unit tests hold the parts it depends on: the world scale's heights (`npm run art:import -- --check`), the onlookers turning toward the statue as the hero's camera sees them, the statue whole on a phone, the astronomer leaving every phone frame.
 
 **The scroll test** (`npm run test:story`, `e2e/story.spec.ts`) builds the site, serves it and walks the story in Chromium on a 1440 by 900 laptop screen and on a phone (Pixel 7), through the window's own scroll (the phone's bent scroll map included). Its expectations come from the script, so retuning never touches the test:
 
@@ -444,9 +468,21 @@ The living stage (phase 23: the painted canvas, the figures' life, the halftone 
 | Lowest tier (`?quality=low`), fast | | 16.7 / 16.8 / 16.8 ms, 0.42% | 0.75 |
 | Lowest tier, phone | | 16.7 / 16.7 / 16.8 ms, 0.42% | 0.75 |
 
-The p99 holds at 16.8 ms. The share of frames over 20 ms is up (about a dozen more frames in a fast run): they fall where a scene mounts and its figures' rig meshes and the new shaders are first built (the slowest single frame on the GPU went from 183 to 217 ms). The slowest single frames come when a scene mounts. What keeps it smooth:
+The p99 holds at 16.8 ms. The share of frames over 20 ms is up (about a dozen more frames in a fast run): they fall where a scene mounts and its figures' rig meshes and the new shaders are first built (the slowest single frame on the GPU went from 183 to 217 ms). The slowest single frames come when a scene mounts.
 
-- **Textures:** WebP with alpha (98 plates, 3.1 MB in all), capped at 2048 px on the longest side (1024 on low-memory and small touch devices), uploaded with premultiplied alpha and mipmaps. Only the current and the next scene are preloaded; a texture nobody holds leaves the GPU 4 s later.
+The framing (phase 24: figures at one world scale, the camera close on them, the glow and the constellation laid out for the nearer frames), measured the same way on the same machine (the textures are the same images: no painting grew yet):
+
+| Run | p50 / p95 / p99 | Frames over 20 ms | Slowest frame | Pixel ratio |
+| --- | --- | --- | --- | --- |
+| Reading pace (about 110 s) | 16.7 / 16.8 / 16.8 ms | 0.15% | 217 ms | 1.5 |
+| Fast (about 48 s) | 16.7 / 16.8 / 16.8 ms | 0.32% | 233 ms | 1.5 |
+| Reading pace, CPU throttled 4 times | 16.7 / 16.8 / 16.8 ms | 0.36% | 667 ms | 1.5 |
+| Phone (Pixel 7, scripted scroll, 48 s) | 16.7 / 16.7 / 16.8 ms | 0.39% | 50 ms | 1.25 |
+| Lowest tier (`?quality=low`), fast | 16.7 / 16.8 / 16.8 ms | 0.35% | 233 ms | 0.75 |
+
+The percentiles are phase 21's; the share of frames over 20 ms is phase 23's (where a scene mounts), within a few frames of phase 21's. A figure drawn larger costs no more to draw: the plates are the same images, the same meshes and the same shaders. When the larger paintings of "Regenerate at higher resolution" (`docs/ART-BRIEFS.md`) land, the texture cap (2560 on the long side, `TEXTURE_CAP`) bounds what they cost on the GPU. What keeps it smooth:
+
+- **Textures:** WebP with alpha (98 plates, 3.1 MB in all), capped at 2560 px on the longest side (1024 on low-memory and small touch devices; no plate is over 2048 yet), uploaded with premultiplied alpha and mipmaps. Only the current and the next scene are preloaded; a texture nobody holds leaves the GPU 4 s later.
 - **Drawing on demand:** the stage canvas draws once per progress change, plus every frame only while an idle effect is in view; both canvases stop in a hidden tab.
 - **Instancing:** the glow's droplets and every star or sparkle field are one instanced draw each, animated in the vertex shader.
 - **The living stage in the shaders:** one plate program for every plate (the canvas, the grade, the rim and the life are uniforms, not variants, so nothing compiles mid-story) and one halftone program (clouds, water and rings), both first compiled in the hero. The figures' life is computed once per figure per frame on the CPU (a few dozen numbers) and bends the mesh in the vertex shader; the rig meshes and weight textures are built once per plate and shared by reference count. The canvas is two shared textures every plate reads, loaded once.
@@ -460,7 +496,7 @@ Scene by scene against `docs/STORYBOARD.md`. Everything the storyboard asks for 
 
 | Scene | Status |
 | --- | --- |
-| 1 Hero | Matched: sky, statue raising the orange on the minaret, the glow ripple before any scroll, the crowd looking up, the hero copy and button, "What we do", the chrome. |
+| 1 Hero | Matched: sky, statue raising the orange on the minaret (large, on the right third), the glow ripple before any scroll, the crowd looking up (heads and shoulders along the bottom, in front of the minaret), the hero copy and button, "What we do", the chrome. |
 | 2 Ascent | Matched: the glow brightens and quickens, the copy drifts left title first, the push-in, the rising minaret turning to bark, branches and leaves, settling on one branch. |
 | 3 Graft | Matched: two sleeved hands fit the cutting, wrap and knot it, then the camera pulls out to the swaying tree full of oranges. |
 | 4 Pluck | Matched: the rising hand, "We get you found." with its progress line as the hand closes, the dolly down, the harvester, "We split the harvest." with the tag and the typed line. |
@@ -468,7 +504,7 @@ Scene by scene against `docs/STORYBOARD.md`. Everything the storyboard asks for 
 | 6 Work | Matched: clouds drifting right and the dolly up, three cards in turn (the clouds part around them), the giant orange and builder with card 3, the ruler, the percent counter. |
 | 7 Blueprint | Matched, with one simplification: the packet is in the architect's hands, but it is brought forward and opens by itself in front of the scaffold (his arms do not move: TODO with final art, arm frames for him). |
 | 8 Site | Matched: the seaside site, the rise to straight above with no sky, the shrink into the left half with the field of tiles, the milk panel with drifting leaf shadows, the terms text. |
-| 9 Prune | Matched, with one deliberate change: on a wide screen the gardener stands right of center (the storyboard says center) so the fit text at the bottom left never sits on the white column; on a phone he is centered. The dust, the docking title and the fit text are as described. |
+| 9 Prune | Matched, with one deliberate change: the gardener stands right of center, waist up beside his tree (the storyboard says center), so the words on the left sit on the tree receding into the sky's haze rather than on him. The column is below the frame. The dust, the docking title and the fit text are as described. |
 | 10 Fall | Matched: the cut branch, the push toward his face and his drift out, the falling orange followed to the center, the text sinking, the rainbow ring, the orchard, the dolly up, Questions on the ruler and the section title. |
 | 11 Questions | Matched: five glass cards, one connector fixed on an orange and locked to a different corner each time, zoom then arc, sparkles, exact reversal (checked in the browser), the smoke. |
 | 12 Stargazer | Matched: the push into the blue, the fabric sky and the billowing cloud, the astronomer pointing from his platform, the growing constellation, the clear bottom right. |
@@ -492,7 +528,7 @@ Visitors who prefer reduced motion get no pinned stage, no smooth scrolling and 
 
 **Layout.** Slots stack (`slots.ts`, `max-md:` classes): titles and the hero hang from the top; paragraphs, cards and the form sit at the bottom; the question cards and the finale keep the middle. The hairline grid mirrors on the right and the top line drops to 56px (`stackedGrid`), so the mark, the menu button and Apply sit in a row above it and no star lands on the pill. The form is one column. The site scene shrinks into the upper half with the milk panel below. Fewer particles (half the glow droplets) and a lower pixel ratio (`quality.ts`).
 
-**Camera on tall screens.** Below an aspect of 1.3 the field of view widens so the picture keeps the width it has at 1.3 (`fitFov`, `camera-path.ts`), and keys can carry a `pan`: the hero slides toward the statue, and the prune centers the gardener again and lifts the picture above the text. The stage reports its shape with `setStageAspect`, so the rig, the connector lines and the falling orange all use the same fitted camera. Wide screens are untouched. The taller picture this shows is accounted for: the astronomer sinks right out of a phone's frame in the application (`SINK_DEPTH_STACKED`, checked against projected phone frames), and the orchard rows fade out at their foot instead of ending in a cut edge.
+**Camera on tall screens.** Below an aspect of 1.3 the field of view widens so the picture keeps the width it has at 1.3 (`fitFov`, `camera-fit.ts`), and keys can carry a `pan` of x, y and z: the framing table gives every framed key one (`phonePan`), so on a phone the camera also comes nearer and the subject keeps a phone-sized share of the taller picture, placed below or beside the text (the statue right of the button, the harvester with his orange above the words, the builder above the card). The stage reports its shape with `setStageAspect`, so the rig, the connector lines and the falling orange all use the same fitted camera. Wide screens are untouched. The taller picture this shows is accounted for: the astronomer sinks right out of a phone's frame in the application (`SINK_DEPTH_STACKED`, checked against projected phone frames), and the orchard rows fade out at their foot instead of ending in a cut edge.
 
 **Touch.** Native momentum: Lenis smooths wheel input only, and nothing sets `touch-action`.
 

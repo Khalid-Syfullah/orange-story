@@ -1,4 +1,4 @@
-import { plateEntry, platePoint } from "@/art/manifest";
+import { plateEntry, platePoint, WORLD_SCALE } from "@/art/manifest";
 import { clamp01, ease, lerp, remap } from "@/lib/progress";
 import { CAMERA, PLUCK } from "@/scroll/script";
 
@@ -7,7 +7,8 @@ import { cameraTravel } from "./camera-path";
 /**
  * The pluck and the harvester as pure functions of story progress (no React, no three), so the whole
  * scene plays backwards exactly. Timings live in `PLUCK` (`src/scroll/script.ts`); places come from
- * the art manifest. All offsets are world units added to a plate's manifest place.
+ * the art manifest. All offsets are world units added to a plate's manifest place, sized from the art
+ * (the orange's plate height, the world scale), so they keep their proportions with the figures.
  *
  * The hand rises from below the frame to the hero orange and closes on it; the camera then dollies
  * down through the branches (the pluck camera keys, same `dolly` range) while the hand pulls the
@@ -58,10 +59,22 @@ function ballRest(): Offset {
  */
 export const carryAt = cameraTravel(CAMERA, PLUCK.dolly[0], PLUCK.dolly[1]);
 
-/** The hand is fully below the frame at the start by this much (world units from its manifest place). */
-export const HAND_BELOW = -4.3;
-/** The fingertips end this far above the ball's center, so the fingers wrap over its lower half. */
-const FINGERS_OVER_CENTER = -0.1;
+/**
+ * The hand starts below the frame: its fingertips this far (world units) below their manifest place,
+ * just under the bottom of the first pluck frame on a wide screen (the camera key's own view).
+ */
+export const HAND_BELOW = (() => {
+  const first = CAMERA.find((k) => k.scene === "pluck");
+  if (!first) throw new Error("The pluck needs a camera key");
+  const h = hand();
+  const half = (first.position[2] + h.depth) * Math.tan((first.fov * Math.PI) / 360);
+  return first.position[1] - 1.06 * half - h.position[1];
+})();
+/** The fingertips end this far above the ball's center (in orange plate heights), so the fingers wrap over its lower half. */
+const FINGERS_OVER_CENTER = -0.2;
+/** The tug's pull on the fruit, the hand's drift as it lets go and how far it drops away, in orange plate heights. */
+const TUG = 0.56;
+const LET_GO = { x: 0.12, y: 3.4 } as const;
 
 /** The fruit's travel from the branch to the harvester's hand, in offsets from its manifest place. */
 function travel(): Offset {
@@ -90,7 +103,7 @@ export function heroOrangeAt(p: number): Offset & { rotate: number; scale: numbe
   const carry = carryAt(p);
   const go = travel();
   // The tug: a quick pull down, then it settles (the hand drags the fruit before it comes free).
-  const pull = 0.28 * bump(p, PLUCK.tug);
+  const pull = TUG * orange().height * bump(p, PLUCK.tug);
   return {
     x: go.x * carry,
     y: go.y * carry - pull,
@@ -118,12 +131,13 @@ export function handAt(p: number): HandPose {
   const h = hand();
   // From below the frame to the fruit: its fingertips end over the ball's lower half.
   const rest = ballRest();
-  const toFruit = rest.y + FINGERS_OVER_CENTER - h.position[1];
+  const unit = orange().height;
+  const toFruit = rest.y + FINGERS_OVER_CENTER * unit - h.position[1];
   const up = lerp(HAND_BELOW, toFruit, rise);
-  const pull = 0.28 * bump(p, PLUCK.tug);
+  const pull = TUG * unit * bump(p, PLUCK.tug);
   return {
-    x: lerp(0, rest.x - h.position[0], rise) + go.x * carry - 0.06 * release,
-    y: up + go.y * carry - pull - 1.7 * release,
+    x: lerp(0, rest.x - h.position[0], rise) + go.x * carry - LET_GO.x * unit * release,
+    y: up + go.y * carry - pull - LET_GO.y * unit * release,
     // Fingers close (narrower, slightly shorter) and open again as it lets go.
     scaleX: 1 - 0.16 * grasp * (1 - release),
     scaleY: 1 - 0.04 * grasp * (1 - release),
@@ -138,9 +152,12 @@ export function handAt(p: number): HandPose {
  * from a little below as the camera comes down to him; his arm (which holds an orange) arrives with
  * the handoff, so there is never a second orange before the fruit has reached his hand.
  */
+/** How far below his place the harvester settles in from: a twelfth of a standing figure. */
+const SETTLE_FROM = WORLD_SCALE.adult / 12;
+
 export function harvesterAt(p: number): { opacity: number; rise: number; arm: number } {
   const t = eased(p, PLUCK.reveal);
-  return { opacity: t, rise: -0.5 * (1 - t), arm: eased(p, PLUCK.handoff) };
+  return { opacity: t, rise: -SETTLE_FROM * (1 - t), arm: eased(p, PLUCK.handoff) };
 }
 
 /** The foliage layers that fall away: near first, then the middle one. */

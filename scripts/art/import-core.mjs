@@ -156,6 +156,18 @@ export function cutOut(rgba, W, H, { key = "magenta", low = 0.1, high = 0.4, def
   return out;
 }
 
+/**
+ * The visible painting in an image: the box of its clearly visible pixels (alpha above about 10%),
+ * as [left, top, right, bottom] fractions rounded to 4 places, or the whole image when it is empty.
+ * The manifest's `box`, from which a figure's height is worked out (`world-scale.mjs`).
+ */
+export function visibleBox(rgba, W, H) {
+  const box = trimBox(rgba, W, H, 24);
+  if (!box) return [0, 0, 1, 1];
+  const r = (v) => Math.round(v * 1e4) / 1e4;
+  return [r(box.x0 / W), r(box.y0 / H), r(box.x1 / W), r(box.y1 / H)];
+}
+
 /** The box (x0, y0, x1, y1 exclusive) of pixels with alpha above `threshold`, or null. */
 export function trimBox(rgba, W, H, threshold = 8) {
   let x0 = W;
@@ -219,6 +231,8 @@ const round6 = (v) => Math.round(v * 1e6) / 1e6;
 
 /** A point in the source's fractions to the manifest canvas's fractions. */
 export function remapPoint([u, v], fit, srcSize, size) {
+  // A painting registered to the canvas keeps its fractions exactly (a point that must equal the anchor stays equal to it).
+  if (fit.x === 0 && fit.y === 0 && srcSize[0] * fit.scale === size[0] && srcSize[1] * fit.scale === size[1]) return [u, v];
   return [round6((fit.x + u * srcSize[0] * fit.scale) / size[0]), round6((fit.y + v * srcSize[1] * fit.scale) / size[1])];
 }
 
@@ -553,13 +567,19 @@ export function formatManifest(manifest) {
 /**
  * The manifest entry after an import: the placeholder spec gone, `painted: true`, the sidecar's
  * points (remapped) over the entry's own, and the sidecar's rig (or, without one, the entry's own,
- * kept until the sidecar has its own). Keys stay in the manifest's order: points, rig and paint
- * just before the note.
+ * kept until the sidecar has its own); and, when given, the painting's visible `box` and the
+ * `height` the world scale gives it. Keys stay in the manifest's order: box right after height,
+ * points, rig and paint just before the note.
  */
-export function paintedEntry(entry, { points, rig }) {
+export function paintedEntry(entry, { points, rig, box, height }) {
   const next = {};
   for (const [k, v] of Object.entries(entry)) {
-    if (k === "placeholder" || k === "painted" || k === "rig" || k === "points" || k === "paint") continue;
+    if (k === "placeholder" || k === "painted" || k === "rig" || k === "points" || k === "paint" || (k === "box" && box)) continue;
+    if (k === "height") {
+      next.height = height ?? v;
+      if (box) next.box = box;
+      continue;
+    }
     if (k === "note") {
       const merged = { ...(entry.points ?? {}), ...(points ?? {}) };
       if (Object.keys(merged).length) next.points = merged;

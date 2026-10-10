@@ -7,7 +7,8 @@ import { HELD, HELD_SCALE, heldOffset } from "./pluck-harvest";
 /**
  * The cut and the share as pure functions of story progress (no React, no three), so the whole scene
  * plays backwards exactly. Timings live in `SHARE` (`src/scroll/script.ts`); places come from the art
- * manifest. All offsets are world units added to a plate's manifest place.
+ * manifest. All offsets are world units added to a plate's manifest place, sized in orange plate
+ * heights (`UNIT`), so the knife, the halves and the hands keep their proportions with the fruit.
  *
  * His left hand comes in above the orange he holds, the knife plunges down through it (the whole
  * orange gives way to its two peels under the blade), the knife withdraws and the halves open, their
@@ -44,12 +45,15 @@ export const CLOSED_SCALE = 0.9;
 /** World x of the cut where the two halves meet (the middle of the held orange). */
 export const CUT_X = HELD[0];
 
+/** The unit of the offsets here: the height of the orange's plate (the fruit and a little air around it). */
+export const UNIT = plateEntry("pluck/hero-orange").height;
+
 /** World x of the cut edges while the halves are opened and drawn away (relative to the cut, so they follow the held orange). */
 export const EDGE = {
-  openLeft: CUT_X - 0.11,
-  openRight: CUT_X + 0.08,
+  openLeft: CUT_X - 0.22 * UNIT,
+  openRight: CUT_X + 0.16 * UNIT,
   /** The second hand draws the left half this far out. */
-  takenLeft: CUT_X - 0.29,
+  takenLeft: CUT_X - 0.58 * UNIT,
 } as const;
 
 const left = () => plateEntry("share/peel-left");
@@ -134,12 +138,12 @@ const turn = ([x, y]: [number, number], a: number): [number, number] => [x * Mat
 /** The blade points down (the plate's blade points left; this turns it a little short of a quarter). */
 export const KNIFE_TILT = 1.25;
 
-const KNIFE_ENTER: Offset = { x: 2, y: 1.5 };
+const KNIFE_ENTER: Offset = { x: 4 * UNIT, y: 3 * UNIT };
 /** The blade tip hangs just above the orange. */
-export const KNIFE_ABOVE: Offset = { x: 0, y: 0.16 };
+export const KNIFE_ABOVE: Offset = { x: 0, y: 0.32 * UNIT };
 /** ...and goes through to just below it. */
-export const KNIFE_THROUGH: Offset = { x: 0, y: -0.34 };
-const KNIFE_AWAY: Offset = { x: 1.8, y: 1.3 };
+export const KNIFE_THROUGH: Offset = { x: 0, y: -0.68 * UNIT };
+const KNIFE_AWAY: Offset = { x: 3.6 * UNIT, y: 2.6 * UNIT };
 
 export function knifeAt(p: number): Offset & { rotate: number; opacity: number } {
   const arrive = eased(p, SHARE.knifeIn);
@@ -161,7 +165,7 @@ export function knifeAt(p: number): Offset & { rotate: number; opacity: number }
   };
 }
 
-/** Where the blade tip is in the world at progress p (the orange's top is about 0.18 above the held center). */
+/** Where the blade tip is in the world at progress p (the orange's top is about 0.36 `UNIT` above the held center). */
 export function knifeTip(p: number): Offset {
   const k = knife();
   const o = knifeAt(p);
@@ -171,7 +175,7 @@ export function knifeTip(p: number): Offset {
 
 /* The second hand: from center left to the left half, takes it, and holds it with the other. */
 
-const HAND_FROM_X = -2.4;
+const HAND_FROM_X = -4.8 * UNIT;
 
 export interface SecondHandPose extends Offset {
   scaleY: number;
@@ -186,7 +190,7 @@ export function secondHandAt(p: number): SecondHandPose {
   return {
     // It arrives at the half, then rides with it wherever the half goes.
     x: lerp(HAND_FROM_X, 0, reach) + (leftEdgeAt(p) - heldLeft) * reach,
-    y: -0.08 * (1 - reach),
+    y: -0.16 * UNIT * (1 - reach),
     scaleY: 1 - 0.1 * grasp,
     rotate: -0.06 * (1 - reach),
     opacity: clamp01(remap(reach, 0, 0.3)),

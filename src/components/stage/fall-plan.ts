@@ -18,9 +18,10 @@ import { createCameraPath, getStageAspect, type CameraPath } from "./camera-path
  *   of focus, while the camera pushes into it and then dollies up between the rows.
  */
 
-/** The fruit on the branch that is cut (`prune/branch-right`): world centre (its `fruit` point) and diameter. */
+/** The branch that is cut, and the fruit on it (its `fruit` point): world centre and diameter (a fifth of the branch plate's height). */
+const branch = plateEntry("prune/branch-right");
 const fruitPoint = platePoint("prune/branch-right", "fruit");
-export const BRANCH_FRUIT = { x: fruitPoint[0], y: fruitPoint[1], diameter: 0.121 } as const;
+export const BRANCH_FRUIT = { x: fruitPoint[0], y: fruitPoint[1], diameter: 0.2017 * branch.height } as const;
 
 /** Where the ball sits in the falling-orange sprite: its diameter and the drop of its centre below the sprite's, as fractions of the sprite. */
 export const SPRITE_BALL = { diameter: 0.76, drop: 0.07 } as const;
@@ -39,10 +40,10 @@ export const RING_SCREEN_Y = (() => {
 const GONE_SCREEN_Y = -1.35;
 /** Peak blur of the orange, as a fraction of the view height. */
 export const SOFT_BLUR = 0.045;
-/** The gardener's drift to the right, in world units. */
-export const GARDENER_DRIFT = 6;
-/** How far the cut branch drops, in world units. */
-export const BRANCH_DROP = 9;
+/** The gardener's drift to the right, in world units: about twice his height, well out of the frame. */
+export const GARDENER_DRIFT = 2.07 * plateEntry("prune/gardener").height;
+/** How far the cut branch drops, in world units: fifteen times its plate's height. */
+export const BRANCH_DROP = 15 * branch.height;
 
 const smooth = (t: number) => t * t * (3 - 2 * t);
 
@@ -88,7 +89,7 @@ export function branchDropY(p: number): number {
 }
 
 export function branchDropX(p: number): number {
-  return 0.5 * smooth(dropAmount(p));
+  return 0.83 * branch.height * smooth(dropAmount(p));
 }
 
 export function branchTurn(p: number): number {

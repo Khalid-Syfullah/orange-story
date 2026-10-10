@@ -19,6 +19,39 @@ Every character is an original design for this story. Never attach, describe or 
 4. **Parts overlap at their joints.** A head and an arm are their own plates and the stage turns them a few degrees on their joint (the head bows, the arm settles, the body leans with a snip): paint each part on past its joint, about a quarter of a head into the body plate, and paint the body under it (the neck stub, the shoulder under the sleeve), so no gap ever shows when a part turns.
 5. Save each painting at `art/source/<scene>/<name>.png` (not committed), write its sidecar at `art/rig/<scene>/<name>.json` (committed) with its points and its rig (the chest, hem and head rectangles and the pivots the stage moves it by; see `docs/ART-PLATES.md`), run `npm run art:import`, and calibrate the points in the plate lab (`/design`, points mode) if they are off.
 
+## Regenerate at higher resolution
+
+The framing (phase 24, `npm run framing`) draws these figures larger than their paintings: on a 2x display each needs the long side below (capped at 2560). Ask for at least that size, same aspect, and import as usual; raise the plate's manifest `size` to the new painting's (the importer fits the painting to it). Until a larger painting exists the current import stays: the stage scales it up.
+
+| Plate | Now | Ask for | Drawn up to (CSS px) |
+| --- | --- | --- | --- |
+| `hero/statue` | 768 x 1536 | 960 x 1856 | 922 (desktop, ascent at 0.0644) |
+| `hero/crowd-far` | 1536 x 512 | 2560 x 832 | 643 (desktop, ascent at 0.0394) |
+| `hero/crowd-mid` | 1536 x 512 | 2560 x 832 | 693 (desktop, ascent at 0.0389) |
+| `hero/crowd-near` | 1536 x 512 | 2560 x 832 | 800 (phone, ascent at 0.0333) |
+| `graft/hand-left` | 1024 x 1024 | 1088 x 1088 | 543 (desktop, graft at 0.0800) |
+| `graft/hand-right` | 1024 x 1024 | 1088 x 1088 | 543 (desktop, graft at 0.0800) |
+| `pluck/hand` | 512 x 1536 | 640 x 1856 | 912 (desktop, pluck at 0.1693) |
+| `pluck/harvester-body` | 1024 x 2048 | 1280 x 2560 | 2339 (desktop, share at 0.2091) |
+| `pluck/harvester-arm` | 768 x 768 | 1024 x 1024 | 486 (desktop, share at 0.2091) |
+| `pluck/harvester-head` | 512 x 512 | 640 x 640 | 314 (desktop, share at 0.2091) |
+| `share/arm-open` | 768 x 768 | 1024 x 1024 | 486 (desktop, share at 0.2091) |
+| `share/knife-hand` | 1024 x 512 | 1216 x 640 | 302 (desktop, share at 0.2091) |
+| `work/builder` | 512 x 1024 | 1088 x 2112 | 1045 (desktop, work at 0.3356) |
+| `blueprint/builder` | 512 x 1024 | 1088 x 2112 | 1051 (desktop, blueprint at 0.3552) |
+| `blueprint/architect` | 512 x 1024 | 1280 x 2560 | 1417 (desktop, blueprint at 0.3883) |
+| `site/builder-left` | 512 x 1024 | 1088 x 2112 | 1042 (desktop, site at 0.4160) |
+| `site/builder-seated` | 512 x 768 | 576 x 896 | 435 (desktop, site at 0.4178) |
+| `prune/gardener` | 512 x 1024 | 1280 x 2560 | 2741 (desktop, fall at 0.5712) |
+| `prune/gardener-arms-1` | 512 x 512 | 1728 x 1728 | 861 (desktop, fall at 0.5712) |
+| `prune/gardener-arms-2` | 512 x 512 | 1728 x 1728 | 861 (desktop, fall at 0.5712) |
+| `stars/astronomer` | 512 x 1024 | 832 x 1600 | 792 (desktop, stars at 0.7786) |
+| `finale/woman-body` | 512 x 1024 | 960 x 1856 | 907 (desktop, finale at 0.9513) |
+| `finale/woman-arm` | 512 x 512 | 576 x 576 | 286 (desktop, finale at 0.9513) |
+| `finale/man-body` | 512 x 1024 | 960 x 1856 | 907 (desktop, finale at 0.9513) |
+| `finale/man-arms-1` | 512 x 512 | 576 x 576 | 286 (desktop, finale at 0.9513) |
+| `finale/man-arms-2` | 512 x 512 | 576 x 576 | 286 (desktop, finale at 0.9513) |
+
 ## Reference sheets
 
 ### statue reference sheet
@@ -100,7 +133,7 @@ a carved marble statue of a young woman: marble, not a living person; an idealis
 #### `hero/statue`
 
 - **Save as** `art/source/hero/statue.png`; sidecar `art/rig/hero/statue.json`.
-- **Manifest** 768 x 1536 px (1:2), anchor [0.5, 1], depth 0. **Ask for** 1152 x 2304 px (same aspect); the importer fits it down.
+- **Manifest** 768 x 1536 px (1:2), anchor [0.5, 1], depth 1.5. **Ask for** 1152 x 2304 px (same aspect); the importer fits it down.
 - **Key colour** magenta `#ff00ff`.
 - **Placement** the figure stands on the bottom edge (the importer stands it there).
 - **Points** (the story ties things to them): `orange`: the centre of her cupped raised hand, where the orange sits (stand-in at [0.7, 0.065306]).
@@ -134,7 +167,7 @@ Check afterwards:
 #### `hero/statue-orange`
 
 - **Save as** `art/source/hero/statue-orange.png`; sidecar `art/rig/hero/statue-orange.json`.
-- **Manifest** 256 x 256 px (1:1), anchor [0.5, 0.5], depth 0. **Ask for** 2048 x 2048 px (same aspect); the importer fits it down.
+- **Manifest** 256 x 256 px (1:1), anchor [0.5, 0.5], depth 1.5. **Ask for** 2048 x 2048 px (same aspect); the importer fits it down.
 - **Key colour** cyan `#00ffff` (skin, red or terracotta dominate this plate).
 - **Placement** the sidecar's `anchor` point, the centre of the fruit, lands on the manifest anchor.
 
@@ -169,7 +202,7 @@ Check afterwards:
 #### `hero/crowd-far`
 
 - **Save as** `art/source/hero/crowd-far.png`; sidecar `art/rig/hero/crowd-far.json`.
-- **Manifest** 1536 x 512 px (3:1), anchor [0.5, 1], depth 1.6. **Ask for** 2304 x 768 px (same aspect); the importer fits it down.
+- **Manifest** 1536 x 512 px (3:1), anchor [0.5, 1], depth 1.25. **Ask for** 2304 x 768 px (same aspect); the importer fits it down.
 - **Key colour** magenta `#ff00ff`.
 - **Placement** the figure stands on the bottom edge (the importer stands it there).
 - **Points** (the story ties things to them): `look-at`: a point on the top edge below the statue: every face turns toward it (stand-in at [0.05, 0]).
@@ -202,7 +235,7 @@ Check afterwards:
 #### `hero/crowd-mid`
 
 - **Save as** `art/source/hero/crowd-mid.png`; sidecar `art/rig/hero/crowd-mid.json`.
-- **Manifest** 1536 x 512 px (3:1), anchor [0.5, 1], depth 0.8. **Ask for** 2304 x 768 px (same aspect); the importer fits it down.
+- **Manifest** 1536 x 512 px (3:1), anchor [0.5, 1], depth 0.9. **Ask for** 2304 x 768 px (same aspect); the importer fits it down.
 - **Key colour** magenta `#ff00ff`.
 - **Placement** the figure stands on the bottom edge (the importer stands it there).
 - **Points** (the story ties things to them): `look-at`: a point on the top edge below the statue: every face turns toward it (stand-in at [0.375, 0]).
@@ -234,7 +267,7 @@ Check afterwards:
 #### `hero/crowd-near`
 
 - **Save as** `art/source/hero/crowd-near.png`; sidecar `art/rig/hero/crowd-near.json`.
-- **Manifest** 1536 x 512 px (3:1), anchor [0.5, 1], depth 0. **Ask for** 2304 x 768 px (same aspect); the importer fits it down.
+- **Manifest** 1536 x 512 px (3:1), anchor [0.5, 1], depth 0.5. **Ask for** 2304 x 768 px (same aspect); the importer fits it down.
 - **Key colour** magenta `#ff00ff`.
 - **Placement** the figure stands on the bottom edge (the importer stands it there).
 - **Points** (the story ties things to them): `look-at`: a point on the top edge below the statue: every face turns toward it (stand-in at [0.28, 0]).
@@ -271,7 +304,7 @@ the weathered hands of an old gardener; rolled linen cuffs at the wrists. Palett
 #### `graft/hand-left`
 
 - **Save as** `art/source/graft/hand-left.png`; sidecar `art/rig/graft/hand-left.json`.
-- **Manifest** 1024 x 1024 px (1:1), anchor [0.72, 0.3], depth 0.05. **Ask for** 2048 x 2048 px (same aspect); the importer fits it down.
+- **Manifest** 1024 x 1024 px (1:1), anchor [0.72, 0.3], depth 1.6125. **Ask for** 2048 x 2048 px (same aspect); the importer fits it down.
 - **Key colour** cyan `#00ffff` (skin, red or terracotta dominate this plate).
 - **Placement** the sidecar's `anchor` point, the pinch between thumb and fingers, lands on the manifest anchor.
 - **Points** (the story ties things to them): `grip`: between the thumb and the fingers, where the stem is held (stand-in at [0.72, 0.3]).
@@ -304,7 +337,7 @@ Check afterwards:
 #### `graft/hand-right`
 
 - **Save as** `art/source/graft/hand-right.png`; sidecar `art/rig/graft/hand-right.json`.
-- **Manifest** 1024 x 1024 px (1:1), anchor [0.28, 0.3], depth 0.05. **Ask for** 2048 x 2048 px (same aspect); the importer fits it down.
+- **Manifest** 1024 x 1024 px (1:1), anchor [0.28, 0.3], depth 1.6125. **Ask for** 2048 x 2048 px (same aspect); the importer fits it down.
 - **Key colour** cyan `#00ffff` (skin, red or terracotta dominate this plate).
 - **Placement** the sidecar's `anchor` point, the pinch between thumb and index finger, lands on the manifest anchor.
 - **Points** (the story ties things to them): `grip`: between the thumb and the index finger, where the twine is held (stand-in at [0.28, 0.3]).
@@ -341,7 +374,7 @@ a young man in his twenties, lean and strong; a calm, open face, straight nose, 
 #### `pluck/hand`
 
 - **Save as** `art/source/pluck/hand.png`; sidecar `art/rig/pluck/hand.json`.
-- **Manifest** 512 x 1536 px (1:3), anchor [0.5, 0.04], depth 0.35. **Ask for** 768 x 2304 px (same aspect); the importer fits it down.
+- **Manifest** 512 x 1536 px (1:3), anchor [0.5, 0.04], depth 1.6938. **Ask for** 768 x 2304 px (same aspect); the importer fits it down.
 - **Key colour** cyan `#00ffff` (skin, red or terracotta dominate this plate).
 - **Placement** the sidecar's `anchor` point, the tip of the middle finger, lands on the manifest anchor.
 - **Points** (the story ties things to them): `fingertips`: the tips of the middle fingers, top centre (stand-in at [0.5, 0.04]).
@@ -374,7 +407,7 @@ Check afterwards:
 #### `pluck/harvester-body`
 
 - **Save as** `art/source/pluck/harvester-body.png`; sidecar `art/rig/pluck/harvester-body.json`.
-- **Manifest** 1024 x 2048 px (1:2), anchor [0.5, 1], depth 1. **Ask for** 1536 x 3072 px (same aspect); the importer fits it down.
+- **Manifest** 1024 x 2048 px (1:2), anchor [0.5, 1], depth 1.8833. **Ask for** 1536 x 3072 px (same aspect); the importer fits it down.
 - **Key colour** magenta `#ff00ff`.
 - **Placement** the figure stands on the bottom edge (the importer stands it there).
 - **Joints** (parts turn on this body): paint a neck stub up into where the head plate starts, and sleeve caps under the shoulders the arm plate covers, so no gap shows when a part turns.
@@ -408,7 +441,7 @@ Check afterwards:
 #### `pluck/harvester-arm`
 
 - **Save as** `art/source/pluck/harvester-arm.png`; sidecar `art/rig/pluck/harvester-arm.json`.
-- **Manifest** 768 x 768 px (1:1), anchor [0.88, 0.12], depth 0.9. **Ask for** 2048 x 2048 px (same aspect); the importer fits it down.
+- **Manifest** 768 x 768 px (1:1), anchor [0.88, 0.12], depth 1.8542. **Ask for** 2048 x 2048 px (same aspect); the importer fits it down.
 - **Key colour** cyan `#00ffff` (skin, red or terracotta dominate this plate).
 - **Placement** the sidecar's `anchor` point, the shoulder joint, lands on the manifest anchor.
 - **Points** (the story ties things to them): `orange`: the centre of the orange in his hand (stand-in at [0.172308, 0.696923]).
@@ -443,7 +476,7 @@ Check afterwards:
 #### `pluck/harvester-head`
 
 - **Save as** `art/source/pluck/harvester-head.png`; sidecar `art/rig/pluck/harvester-head.json`.
-- **Manifest** 512 x 512 px (1:1), anchor [0.5, 0.95], depth 0.95. **Ask for** 2048 x 2048 px (same aspect); the importer fits it down.
+- **Manifest** 512 x 512 px (1:1), anchor [0.5, 0.95], depth 1.8688. **Ask for** 2048 x 2048 px (same aspect); the importer fits it down.
 - **Key colour** cyan `#00ffff` (skin, red or terracotta dominate this plate).
 - **Placement** the sidecar's `anchor` point, the base of the neck, at the front of the collar, lands on the manifest anchor.
 - **Joint** (it turns here, on `pluck/harvester-body`): paint the neck on down past the anchor, about a quarter of a head into the collar, so no gap shows when it turns.
@@ -476,7 +509,7 @@ Check afterwards:
 #### `share/arm-open`
 
 - **Save as** `art/source/share/arm-open.png`; sidecar `art/rig/share/arm-open.json`.
-- **Manifest** 768 x 768 px (1:1), anchor [0.88, 0.12], depth 0.9. **Ask for** 2048 x 2048 px (same aspect); the importer fits it down.
+- **Manifest** 768 x 768 px (1:1), anchor [0.88, 0.12], depth 1.8542. **Ask for** 2048 x 2048 px (same aspect); the importer fits it down.
 - **Key colour** cyan `#00ffff` (skin, red or terracotta dominate this plate).
 - **Placement** the sidecar's `anchor` point, the shoulder joint, lands on the manifest anchor.
 - **Points** (the story ties things to them): `orange`: the centre of the cupped hand, where the fruit would sit (stand-in at [0.172308, 0.696923]).
@@ -510,10 +543,10 @@ Check afterwards:
 #### `share/knife-hand`
 
 - **Save as** `art/source/share/knife-hand.png`; sidecar `art/rig/share/knife-hand.json`.
-- **Manifest** 1024 x 512 px (2:1), anchor [0.05078125, 0.400390625], depth 0.3. **Ask for** 2048 x 1024 px (same aspect); the importer fits it down.
+- **Manifest** 1024 x 512 px (2:1), anchor [0.25390625, 0.421875], depth 1.6792. **Ask for** 2048 x 1024 px (same aspect); the importer fits it down.
 - **Key colour** cyan `#00ffff` (skin, red or terracotta dominate this plate).
 - **Placement** the sidecar's `anchor` point, the very tip of the blade, lands on the manifest anchor.
-- **Points** (the story ties things to them): `knife-tip`: the very tip of the blade (stand-in at [0.05078125, 0.400390625]).
+- **Points** (the story ties things to them): `knife-tip`: the very tip of the blade (stand-in at [0.25390625, 0.421875]).
 
 Prompt:
 
@@ -529,7 +562,7 @@ cartoon, anime, illustration, vector art, flat colours, cel shading, 3D render, 
 
 Consistency: attach `harvester reference sheet`; must match `pluck/harvester-arm` (same person, costume, scale and light).
 
-Sidecar (fractions of your painting, from its left and top; the plate lab can place the points for you): `{"key":"cyan","points":{"anchor":[u, v],"knife-tip":[u, v]}}`
+Sidecar (fractions of your painting, from its left and top; the plate lab can place the points for you): `{"key":"cyan","points":{"anchor":[u, v],"knife-tip":[u, v]},"rig":{"pivot":[u, v]}}`
 
 Check afterwards:
 
@@ -547,7 +580,7 @@ a woman's hand, slender; a rolled milk-linen cuff; a thin silver ring on the rin
 #### `share/second-hand`
 
 - **Save as** `art/source/share/second-hand.png`; sidecar `art/rig/share/second-hand.json`.
-- **Manifest** 1024 x 512 px (2:1), anchor [0.88, 0.5], depth 0.55. **Ask for** 2048 x 1024 px (same aspect); the importer fits it down.
+- **Manifest** 1024 x 512 px (2:1), anchor [0.88, 0.5], depth 1.7521. **Ask for** 2048 x 1024 px (same aspect); the importer fits it down.
 - **Key colour** cyan `#00ffff` (skin, red or terracotta dominate this plate).
 - **Placement** the sidecar's `anchor` point, the tip of the middle finger, lands on the manifest anchor.
 - **Points** (the story ties things to them): `fingertips`: the tips of the fingers (stand-in at [0.88, 0.5]).
@@ -582,7 +615,7 @@ a stocky man in his thirties, broad shoulders, strong forearms; a square face, h
 #### `work/builder`
 
 - **Save as** `art/source/work/builder.png`; sidecar `art/rig/work/builder.json`.
-- **Manifest** 512 x 1024 px (1:2), anchor [0.5, 1], depth 0.8. **Ask for** 1024 x 2048 px (same aspect); the importer fits it down.
+- **Manifest** 512 x 1024 px (1:2), anchor [0.5, 1], depth 0.6. **Ask for** 1024 x 2048 px (same aspect); the importer fits it down.
 - **Key colour** cyan `#00ffff` (skin, red or terracotta dominate this plate).
 - **Placement** the figure stands on the bottom edge (the importer stands it there).
 
@@ -959,7 +992,7 @@ Check afterwards:
 #### `finale/woman-arm`
 
 - **Save as** `art/source/finale/woman-arm.png`; sidecar `art/rig/finale/woman-arm.json`.
-- **Manifest** 512 x 512 px (1:1), anchor [0.12, 0.45], depth 0.28. **Ask for** 2048 x 2048 px (same aspect); the importer fits it down.
+- **Manifest** 512 x 512 px (1:1), anchor [0.12, 0.45], depth 0.2894. **Ask for** 2048 x 2048 px (same aspect); the importer fits it down.
 - **Key colour** cyan `#00ffff` (skin, red or terracotta dominate this plate).
 - **Placement** the sidecar's `anchor` point, her shoulder joint, lands on the manifest anchor.
 - **Points** (the story ties things to them): `spout`: the lip of the jug's spout, where the water leaves it (stand-in at [0.938182, 0.586364]).
@@ -1032,7 +1065,7 @@ Check afterwards:
 #### `finale/man-arms-1`
 
 - **Save as** `art/source/finale/man-arms-1.png`; sidecar `art/rig/finale/man-arms-1.json`.
-- **Manifest** 512 x 512 px (1:1), anchor [0.88, 0.38], depth 0.28. **Ask for** 2048 x 2048 px (same aspect); the importer fits it down.
+- **Manifest** 512 x 512 px (1:1), anchor [0.88, 0.38], depth 0.2894. **Ask for** 2048 x 2048 px (same aspect); the importer fits it down.
 - **Key colour** magenta `#ff00ff`.
 - **Placement** the sidecar's `anchor` point, his near shoulder joint, lands on the manifest anchor.
 - **Points** (the story ties things to them): `shears-tip`: the tips of the open blades, where he cuts (stand-in at [0.08, 0.543636]).
@@ -1066,7 +1099,7 @@ Check afterwards:
 #### `finale/man-arms-2`
 
 - **Save as** `art/source/finale/man-arms-2.png`; sidecar `art/rig/finale/man-arms-2.json`.
-- **Manifest** 512 x 512 px (1:1), anchor [0.88, 0.38], depth 0.28. **Ask for** 2048 x 2048 px (same aspect); the importer fits it down.
+- **Manifest** 512 x 512 px (1:1), anchor [0.88, 0.38], depth 0.2894. **Ask for** 2048 x 2048 px (same aspect); the importer fits it down.
 - **Key colour** magenta `#ff00ff`.
 - **Placement** the sidecar's `anchor` point, his near shoulder joint, lands on the manifest anchor.
 - **Points** (the story ties things to them): `shears-tip`: the tips of the closed blades (stand-in at [0.08, 0.543636]).

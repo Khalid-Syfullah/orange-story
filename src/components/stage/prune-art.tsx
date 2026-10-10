@@ -13,10 +13,17 @@ import { useStageProgress } from "./stage-context";
 import { useTextHaze } from "./use-text-haze";
 
 /**
- * On a phone the gardener's column stands in the middle, behind the fit text at the bottom: there it
- * recedes into the sky's haze while the text is up (a wide screen keeps him beside the text instead).
+ * On a phone the gardener and his column stand in the middle, behind the fit text at the bottom:
+ * there they recede into the sky's haze while the text is up (a wide screen keeps him beside the
+ * text instead).
  */
-const OVER_COLUMN = ["fit"] as const;
+export const OVER_COLUMN = ["fit"] as const;
+
+/**
+ * Framed waist up beside him, his young tree fills the left of the frame, where the docked chapter
+ * title and the fit text stand: it recedes into the sky's haze behind both while they are up.
+ */
+export const OVER_TREE = ["terms-title", "fit"] as const;
 
 /** His arms (both frames of the shears) ride his body. */
 const GARDENER_PARTS: readonly FigurePart[] = [{ id: "prune/gardener-arms-1" }, { id: "prune/gardener-arms-2" }];
@@ -52,16 +59,17 @@ export function PruneArt({ scene }: SceneArtProps) {
   const lean = useTransform(progress, armLean);
   const branch = useTransform(progress, trimmedScale);
   const haze = useTextHaze(OVER_COLUMN, { strength: 0.85, stackedOnly: true });
+  const treeHaze = useTextHaze(OVER_TREE, { strength: 0.8, union: true });
   const life = useGardenerLife();
 
   return (
     <>
       <Plate id="hero/sky" />
       <Plate id="prune/column" clearing={haze} />
-      <Plate id="prune/urn" clearing={haze} />
-      <Plate id="prune/tree" clearing={haze} />
-      <Plate id="prune/branch-left" scale={branch} clearing={haze} />
-      <Plate id="prune/branch-right" clearing={haze} />
+      <Plate id="prune/urn" clearing={treeHaze} />
+      <Plate id="prune/tree" clearing={treeHaze} />
+      <Plate id="prune/branch-left" scale={branch} clearing={treeHaze} />
+      <Plate id="prune/branch-right" clearing={treeHaze} />
       <Plate id="prune/gardener" clearing={haze} life={life} />
       <Plate id="prune/gardener-arms-1" rotate={lean} layer={1} clearing={haze} ride={life.ride("prune/gardener-arms-1")} />
       <Plate id="prune/gardener-arms-2" rotate={lean} opacity={closed} layer={2} clearing={haze} ride={life.ride("prune/gardener-arms-2")} />

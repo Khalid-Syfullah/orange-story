@@ -51,6 +51,8 @@ npx playwright install chromium   # once
 npm run test:story                # builds, serves on port 3100, runs e2e/story.spec.ts
 ```
 
+`npm run framing` checks the framing: every figure's size and place on a laptop and on a phone at every camera key, the moves between keys, the targets of the framing table and the pixels each figure plate needs (`test-results/framing/`).
+
 `npm run art:placeholders` repaints every stand-in plate on worker threads and writes the stand-ins' rigs (`-- --rigs` writes only the rigs; `-- --check` verifies every file against the manifest, fails a flat character plate and a stale rig). `npm run art:briefs` writes the painting briefs, `npm run art:import` brings finished paintings in (see "Replacing the art").
 
 ## Project structure
@@ -81,14 +83,14 @@ npm run test:story                # builds, serves on port 3100, runs e2e/story.
 
 **Copy.** Every string is in `src/content/copy.ts`; components never hold text. The script refers to copy by key (`model.found`, `work.cards.0`), and `npm test` fails if a key is missing.
 
-**Art.** Every plate is listed in `public/art/manifest.json`: its file, pixel size, depth, anchor, world height and named points (where code ties things to the art). `npm test` checks every file against the manifest. `docs/ART-PLATES.md` lists the plates per scene and what final art must keep (a sky that stays dark enough behind text, nothing cut by its image edge, orchard rows that fade out at their foot, one light).
+**Art.** Every plate is listed in `public/art/manifest.json`: its file, pixel size, depth, anchor, world height, visible box and named points (where code ties things to the art). Every plate keeps one world scale (an adult 1.75 world units tall): a figure's height is worked out from its visible box, and the camera keys of the figure scenes from a framing table (`src/scroll/framing.ts`), so figures fill the frame at the size the story asks for. `npm test` checks every file against the manifest. `docs/ART-PLATES.md` lists the plates per scene and what final art must keep (a sky that stays dark enough behind text, nothing cut by its image edge, orchard rows that fade out at their foot, one light).
 
 ### Replacing the art
 
 1. `npm run art:briefs` writes `docs/ART-BRIEFS.md`: the generation order (a reference sheet per recurring character first) and, per plate, the size, key colour, prompt, negative prompt and checks.
 2. Generate or paint each one on its flat key colour and save it as `art/source/<scene>/<name>.png` (not committed).
 3. Write its sidecar `art/rig/<scene>/<name>.json` (committed): the key colour, an `anchor` point for plates not standing on their foot, and the named points (the orange in the hand, the fingertip, ...), in the painting's own fractions.
-4. `npm run art:import` cuts each painting out, fits it to its plate, writes the WebP, the points and the rig (the sidecar's, or a first guess from the cut-out), and marks the entry `painted` so the stand-in generator leaves it alone; `npm run art:import -- --rigs` writes the rigs alone; `npm run art:import -- --check` checks the result.
+4. `npm run art:import` cuts each painting out, fits it to its plate, writes the WebP, the points, the rig (the sidecar's, or a first guess from the cut-out), the visible box and a figure's height from the world scale, and marks the entry `painted` so the stand-in generator leaves it alone; `npm run art:import -- --rigs` writes the rigs alone, `-- --scale` the boxes and heights alone; `npm run art:import -- --check` checks the result.
 5. If a point is off, place it by hand in the plate lab on `/design` (Points), copy the sidecar JSON, and import again. No code changes.
 
 **Pacing.** Everything that moves is placed in `src/scroll/script.ts`: `STAGE_VH` (the stage length), the scene shares, the beats, the transitions, the camera keys and each scene's own timing object. Positions inside a scene move with it when its share changes; text lengths are in screens. `validateScript()` stops the page in development on an impossible script (and fails `npm test`), the dev timeline (the backtick key) shows the live values, and `SCROLL.md` explains every number. Run `npm test` and `npm run test:story` after a change.

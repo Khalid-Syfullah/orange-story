@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { WORLD_SCALE } from "@/art/manifest";
 import { GRAFT, SCENES } from "@/scroll/script";
 
 import { cuttingAt, fruitAt, handsIn, knotAt, leftHandAt, rightHandAt, twineAt } from "./graft-hands";
@@ -10,8 +11,9 @@ describe("the graft", () => {
   it("starts empty: hands out of frame, no twine, no knot, no fruit", () => {
     const p = graft.start;
     expect(handsIn(p)).toBe(0);
-    expect(leftHandAt(p).x).toBeLessThan(-2);
-    expect(rightHandAt(p).x).toBeGreaterThan(2);
+    // Out of the frame: a few hand lengths down and to the side.
+    expect(leftHandAt(p).x).toBeLessThan(-3 * WORLD_SCALE.hand);
+    expect(rightHandAt(p).x).toBeGreaterThan(3 * WORLD_SCALE.hand);
     expect(twineAt(p)).toBe(0);
     expect(knotAt(p)).toEqual([0, 0, 0]);
     expect(fruitAt(p)).toBe(0);

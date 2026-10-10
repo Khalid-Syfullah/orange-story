@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { beatOf } from "@/scroll/helpers";
 import { BEATS } from "@/scroll/script";
 
-import { beatArea, beatHaze, hazeAmount, SLOT_AREAS, strongestBeat } from "./text-haze";
+import { beatArea, beatHaze, hazeAmount, SLOT_AREAS, strongestBeat, unionArea } from "./text-haze";
 import { cloudClearing } from "./work-sky";
 
 describe("the art receding behind text", () => {
@@ -51,5 +51,29 @@ describe("the art receding behind text", () => {
     }
     expect(cloudClearing((beatOf("card-1").out + beatOf("card-2").in) / 2)).toBe(1);
     expect(cloudClearing(last.out + 0.05)).toBe(0);
+  });
+
+  it("recedes behind the hero's words from the very first frame (they are up when the page opens)", () => {
+    expect(beatHaze("hero-intro", 0)).toBe(1);
+  });
+
+  it("covers two slots at once where two beats are up together, growing smoothly as the second arrives", () => {
+    const ids = ["terms-title", "fit"] as const;
+    const fit = beatOf("fit");
+    const title = SLOT_AREAS["top-left"].wide;
+    const words = SLOT_AREAS["bottom-left"].wide;
+    // Before the fit text: the docked title's slot alone.
+    expect(unionArea(ids, fit.in - 1e-4, false)).toEqual(title);
+    // Both up: both slots.
+    const both = unionArea(ids, fit.hold[0] + 1e-4, false);
+    expect(both.top).toBeCloseTo(Math.min(title.top, words.top), 9);
+    expect(both.bottom).toBeCloseTo(Math.max(title.bottom, words.bottom), 9);
+    // In between it grows without a jump.
+    let last = unionArea(ids, fit.in, false).bottom;
+    for (let k = 1; k <= 40; k++) {
+      const bottom = unionArea(ids, fit.in + ((fit.hold[0] - fit.in) * k) / 40, false).bottom;
+      expect(Math.abs(bottom - last)).toBeLessThan(0.1);
+      last = bottom;
+    }
   });
 });

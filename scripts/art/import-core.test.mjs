@@ -4,7 +4,8 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { compose, cutOut, edgeReport, formatManifest, guessRig, keyExcess, paintedEntry, planFit, remapPoint, remapRig, trimBox } from "./import-core.mjs";
+import { compose, cutOut, edgeReport, formatManifest, guessRig, keyExcess, paintedEntry, planFit, remapPoint, remapRig, trimBox, visibleBox } from "./import-core.mjs";
+import { FIGURE_SPANS, heightFor, spanOf } from "./world-scale.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -238,5 +239,35 @@ describe("a first rig from the cut-out", () => {
     expect(centres[2]).toBeCloseTo(610 / W, 1);
     expect(guessRig(px, W, H, { kind: "part", anchor: [0.88, 0.12] })).toEqual({ pivot: [0.88, 0.12] });
     expect(guessRig(px, W, H, { kind: null })).toBeUndefined();
+  });
+});
+
+describe("the world scale", () => {
+  it("measures the visible painting, not the image", () => {
+    const W = 10;
+    const H = 20;
+    const rgba = new Uint8ClampedArray(W * H * 4);
+    for (let y = 4; y < 18; y++) for (let x = 2; x < 7; x++) rgba[(y * W + x) * 4 + 3] = 255;
+    expect(visibleBox(rgba, W, H)).toEqual([0.2, 0.2, 0.7, 0.9]);
+    expect(visibleBox(new Uint8ClampedArray(W * H * 4), W, H)).toEqual([0, 0, 1, 1]);
+  });
+
+  it("sizes a figure from its visible box, so more margin does not draw it smaller", () => {
+    const span = FIGURE_SPANS["finale/woman-body"].span;
+    const tight = heightFor("finale/woman-body", [0.3, 0.05, 0.7, 1]);
+    const loose = heightFor("finale/woman-body", [0.3, 0.3, 0.7, 1]);
+    expect(spanOf(tight, [0.3, 0.05, 0.7, 1])).toBeCloseTo(span, 3);
+    expect(spanOf(loose, [0.3, 0.3, 0.7, 1])).toBeCloseTo(span, 3);
+    expect(loose).toBeGreaterThan(tight);
+    // Frames of one pose share the first frame's height; a plate the scale does not size has none.
+    expect(heightFor("finale/man-arms-2", [0, 0.1, 1, 0.9], { "finale/man-arms-1": 0.58 })).toBe(0.58);
+    expect(heightFor("site/orange", [0, 0, 1, 1])).toBeNull();
+  });
+
+  it("writes the box right after the height in the manifest entry", () => {
+    const entry = { id: "x/y", height: 1, note: "n", placeholder: { kind: "study" } };
+    const next = paintedEntry(entry, { points: {}, box: [0.1, 0.2, 0.9, 1], height: 2 });
+    expect(Object.keys(next)).toEqual(["id", "height", "box", "note", "painted"]);
+    expect(next.height).toBe(2);
   });
 });

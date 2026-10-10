@@ -23,7 +23,10 @@
  * 4. encodes WebP with alpha (quality lowered until the file is at most 600 KB), writes it at the
  *    manifest path, deletes the entry's `placeholder` spec and sets `painted: true`, so
  *    `npm run art:placeholders` never overwrites it;
- * 5. prints a table: plate, source size, output size, KB, alpha margin, warnings.
+ * 5. measures the painting's visible box (its alpha) and writes it to the manifest (`box`); a figure
+ *    plate's `height` follows from it and the world scale (`art/world-scale.mjs`), so a painting
+ *    with more empty margin around the figure is not drawn smaller (it stays on its anchor);
+ * 6. prints a table: plate, source size, output size, KB, alpha margin, height, warnings.
  *
  *   npm run art:import                      import everything in art/source/
  *   npm run art:import -- --only finale     only ids starting with "finale"
@@ -31,8 +34,13 @@
  *   npm run art:import -- --rigs            write the painted plates' sidecar rigs into the manifest
  *                                           (no painting imported again); a figure without one
  *                                           gets a first guess from its cut-out
+ *   npm run art:import -- --scale           measure every painted plate's visible box from its file
+ *                                           and set the figures' heights from the world scale (no
+ *                                           painting imported again)
  *   npm run art:import -- --check           every painted entry has its file, at its size, with a
- *                                           clean alpha edge (and figure plates pass the texture guard)
+ *                                           clean alpha edge, its visible box and, for a figure, the
+ *                                           height the world scale gives it (and figure plates pass
+ *                                           the texture guard)
  */
 
 import { readdir, readFile, stat, writeFile } from "node:fs/promises";
@@ -43,7 +51,8 @@ import sharp from "sharp";
 
 import { castFor, isFigurePlate, rigGuessFor } from "./art/cast.mjs";
 import { formatMetrics, judgeTexture, measureTexture } from "./art/guard.mjs";
-import { compose, cutOut, edgeReport, formatManifest, guessRig, paintedEntry, planFit, remapPoint, remapRig, trimBox } from "./art/import-core.mjs";
+import { compose, cutOut, edgeReport, formatManifest, guessRig, paintedEntry, planFit, remapPoint, remapRig, trimBox, visibleBox } from "./art/import-core.mjs";
+import { FIGURE_SPANS, heightFor, spanOf } from "./art/world-scale.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const MANIFEST_PATH = path.join(ROOT, "public/art/manifest.json");
@@ -100,10 +109,13 @@ export async function cutAndFit(entry, file, side) {
   return { cut, W, H, key, fit };
 }
 
-async function importOne(entry, file, side) {
+async function importOne(entry, file, side, heights) {
   const { cut, W, H, key, fit } = await cutAndFit(entry, file, side);
   const canvas = compose(cut, W, H, fit, entry.size);
   const [CW, CH] = entry.size;
+  // The visible painting, and the height the world scale gives a figure for it.
+  const box = fullBleed(entry) ? undefined : visibleBox(canvas, CW, CH);
+  const height = box ? heightFor(entry.id, box, heights) ?? entry.height : entry.height;
   const points = {};
   for (const [name, p] of Object.entries(side.points ?? {})) if (name !== "anchor") points[name] = remapPoint(p, fit, [W, H], entry.size);
   // The sidecar's rig; without one, a first guess from the cut-out (calibrate it in the sidecar).
@@ -137,12 +149,13 @@ async function importOne(entry, file, side) {
     if (!verdict.ok) warnings.push(`flat: ${verdict.reasons.join(", ")}`);
   }
   if (W < 1024 && H < 1024) warnings.push(`small source (${W}x${H}); ask for a long side of 2048`);
-  return { buffer, points, rig, fit, warnings, row: { id: entry.id, source: `${W}x${H}`, output: `${CW}x${CH}`, kb: buffer.length / 1024, margin: edge.margin, quality, rule: fit.rule } };
+  if (Math.abs(height - entry.height) > 0.01 * entry.height) warnings.push(`height ${entry.height} -> ${height} (the world scale, for its visible box): check its scene, the parts and props placed with it`);
+  return { buffer, points, rig, box, height, fit, warnings, row: { id: entry.id, source: `${W}x${H}`, output: `${CW}x${CH}`, kb: buffer.length / 1024, margin: edge.margin, quality, rule: fit.rule, height } };
 }
 
 function table(rows) {
-  const head = ["plate", "source", "output", "KB", "margin", "fit", "warnings"];
-  const lines = rows.map((r) => [r.id, r.source, r.output, r.kb.toFixed(0), `${r.margin}px`, r.rule, r.warnings.join("; ") || "-"]);
+  const head = ["plate", "source", "output", "KB", "margin", "fit", "height", "warnings"];
+  const lines = rows.map((r) => [r.id, r.source, r.output, r.kb.toFixed(0), `${r.margin}px`, r.rule, String(r.height), r.warnings.join("; ") || "-"]);
   const widths = head.map((h, i) => Math.max(h.length, ...lines.map((l) => String(l[i]).length)));
   const fmt = (cells) => cells.map((c, i) => (i === cells.length - 1 ? String(c) : String(c).padEnd(widths[i]))).join("  ");
   return [fmt(head), fmt(widths.map((w) => "-".repeat(Math.min(w, 40)))), ...lines.map(fmt)].join("\n");
@@ -164,6 +177,18 @@ export async function checkPainted(manifest, only) {
     if (meta.format !== "webp") problems.push(`${entry.src} is ${meta.format}, not webp`);
     if (info.width !== entry.size[0] || info.height !== entry.size[1]) problems.push(`${entry.src} is ${info.width}x${info.height}, the manifest says ${entry.size.join("x")}`);
     const rgba = new Uint8ClampedArray(data.buffer, data.byteOffset, data.byteLength);
+    // Its visible box, and a figure's height for it (the world scale).
+    if (!fullBleed(entry)) {
+      const box = visibleBox(rgba, info.width, info.height);
+      if (!entry.box) problems.push(`${entry.id} has no visible box (run npm run art:import -- --scale)`);
+      else if (entry.box.some((v, i) => Math.abs(v - box[i]) > 0.003)) problems.push(`${entry.id}'s visible box is [${box.join(", ")}] in its file, the manifest says [${entry.box.join(", ")}] (run npm run art:import -- --scale)`);
+      const rule = FIGURE_SPANS[entry.id];
+      if (rule?.span && entry.box && Math.abs(spanOf(entry.height, entry.box) - rule.span) > 0.01 * rule.span) problems.push(`${entry.id} is ${spanOf(entry.height, entry.box).toFixed(3)} tall in the world, the world scale says ${rule.span} (run npm run art:import -- --scale)`);
+      if (rule?.sameAs) {
+        const other = manifest.plates.find((p) => p.id === rule.sameAs);
+        if (other && other.height !== entry.height) problems.push(`${entry.id} must share ${rule.sameAs}'s height (${other.height}), it has ${entry.height}`);
+      }
+    }
     const edge = edgeReport(rgba, info.width, info.height, briefKey(entry.id));
     if (!fullBleed(entry) && edge.margin < 1) problems.push(`${entry.id} is cut by its own image edge`);
     if (edge.fringe > 0.02) problems.push(`${entry.id} has a key-coloured fringe (${(edge.fringe * 100).toFixed(1)}% of its edge)`);
@@ -228,6 +253,30 @@ export async function importRigs(manifest, only) {
   return { rows, written };
 }
 
+/**
+ * Measures every painted plate's visible box from its file and sets each figure's height from the
+ * world scale (`--scale`), without importing any painting again. A figure stays on its anchor; its
+ * parts and the props placed around it do not move, so a height that changes needs a look at its
+ * scene (the importer says which).
+ */
+export async function scalePlates(manifest, only) {
+  const rows = [];
+  const heights = Object.fromEntries(manifest.plates.map((p) => [p.id, p.height]));
+  for (let i = 0; i < manifest.plates.length; i++) {
+    const entry = manifest.plates[i];
+    if (!entry.painted || fullBleed(entry) || (only && !entry.id.startsWith(only))) continue;
+    const { data, info } = await sharp(path.join(ROOT, "public", entry.src)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const box = visibleBox(new Uint8ClampedArray(data.buffer, data.byteOffset, data.byteLength), info.width, info.height);
+    const height = heightFor(entry.id, box, heights) ?? entry.height;
+    heights[entry.id] = height;
+    const same = entry.box && entry.box.every((v, k) => v === box[k]) && height === entry.height;
+    if (same) continue;
+    manifest.plates[i] = paintedEntry(entry, { points: entry.points, rig: entry.rig, box, height });
+    rows.push(`  ${entry.id}: box [${box.join(", ")}]${height !== entry.height ? `, height ${entry.height} -> ${height}${Math.abs(height - entry.height) > 0.01 * entry.height ? " (check its scene)" : ""}` : ""}`);
+  }
+  return rows;
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const onlyIndex = args.indexOf("--only");
@@ -241,6 +290,14 @@ async function main() {
     for (const row of rows) console.log(row);
     if (written && !dryRun) await writeFile(MANIFEST_PATH, formatManifest(manifest));
     console.log(`Rigs: ${written} painted plate${written === 1 ? "" : "s"} took the rig from ${written === 1 ? "its" : "their"} sidecar${dryRun ? " (dry run: nothing written)" : ""}.`);
+    return;
+  }
+
+  if (args.includes("--scale")) {
+    const rows = await scalePlates(manifest, only);
+    for (const row of rows) console.log(row);
+    if (rows.length && !dryRun) await writeFile(MANIFEST_PATH, formatManifest(manifest));
+    console.log(`Scale: ${rows.length} painted plate${rows.length === 1 ? "" : "s"} took a new visible box or height${dryRun ? " (dry run: nothing written)" : ""}.`);
     return;
   }
 
@@ -263,15 +320,18 @@ async function main() {
     return;
   }
   const rows = [];
+  // Heights settled so far (a frame of a pose takes its first frame's: `sameAs`).
+  const heights = Object.fromEntries(manifest.plates.map((p) => [p.id, p.height]));
   for (const { id, file } of todo) {
     const index = manifest.plates.findIndex((p) => p.id === id);
     const entry = manifest.plates[index];
     const side = await readSidecar(id);
-    const result = await importOne(entry, file, side);
+    const result = await importOne(entry, file, side, heights);
+    heights[id] = result.height;
     rows.push({ ...result.row, warnings: result.warnings });
     if (dryRun) continue;
     await writeFile(path.join(ROOT, "public", entry.src), result.buffer);
-    manifest.plates[index] = paintedEntry(entry, { points: result.points, rig: result.rig });
+    manifest.plates[index] = paintedEntry(entry, { points: result.points, rig: result.rig, box: result.box, height: result.height });
   }
   console.log(table(rows));
   if (dryRun) {

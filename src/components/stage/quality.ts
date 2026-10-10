@@ -32,8 +32,12 @@ export const particleCount = (count: number, stacked: boolean): number => (stack
 /** Screens of scrolling before a transition when its art (ring mask, cloud) starts to load. */
 export const TRANSITION_PRELOAD_SCREENS = 3;
 
-/** Longest side of a plate texture on the GPU, in pixels. Larger images are scaled down on load. */
-export const TEXTURE_CAP = 2048;
+/**
+ * Longest side of a plate texture on the GPU, in pixels. Larger images are scaled down on load. The
+ * manifest's `maxSize`: a figure framed to fill the screen needs up to this on a 2x display (the
+ * framing report, `npm run framing`).
+ */
+export const TEXTURE_CAP = 2560;
 /** The same on low-memory and small touch devices. */
 export const TEXTURE_CAP_LOW = 1024;
 

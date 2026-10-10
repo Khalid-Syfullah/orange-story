@@ -13,6 +13,15 @@ import data from "../../public/art/manifest.json";
  */
 
 /**
+ * The one world scale every plate keeps (`docs/ART-PLATES.md`), in world units: a standing adult,
+ * a head (crown to chin) and a hand (wrist to fingertip). A figure plate's `height` is worked out
+ * from its visible painting (`box`) so the figure comes out at this size; only the orange may be
+ * heroically large, where the storyboard says so (the statue's torch, the falling orange).
+ * `scripts/art/world-scale.mjs` holds the same numbers for the importer.
+ */
+export const WORLD_SCALE = { adult: 1.75, head: 0.23, hand: 0.19 } as const;
+
+/**
  * - `plate`: placed in depth at its position.
  * - `backdrop`: fills the view behind its scene and follows the camera (a sky at infinity).
  * - `texture`: read by a material (stone and bark for the morph, masks, tile patterns).
@@ -46,8 +55,18 @@ export interface PlateEntry {
   anchor: Pair;
   /** World x and y of the anchor. */
   position: Pair;
-  /** Height in world units; the width follows the image aspect (and `repeat`). */
+  /**
+   * Height in world units; the width follows the image aspect (and `repeat`). For a figure it is
+   * worked out from `box`, so the painted figure itself is the size the world scale says
+   * (`docs/ART-PLATES.md`), however much empty margin its image has.
+   */
   height: number;
+  /**
+   * Where the painting is inside the image: the box of its visible pixels (its alpha), as
+   * [left, top, right, bottom] fractions. Written by `npm run art:import`; the framing table frames
+   * figures by it (`src/scroll/framing.ts`).
+   */
+  box?: RigBox;
   /** Euler rotation in degrees (x, y, z) about the anchor, e.g. [-90, 0, 0] to lie flat on the ground. */
   rotation?: readonly [number, number, number];
   /** Stacking inside the scene for plates at the same depth: higher draws later. Default 0. */
@@ -126,6 +145,8 @@ export interface PlateRig extends PlateRigFigure {
  * - `contact`: the figure stands on something: a soft contact shadow plate under its feet (the rig
  *   pivot), this many world units wide.
  * - `life`: false keeps a rigged figure still (a statue).
+ * - `cell`: a multiplier of the halftone's dot cell (default 1): a cloud or a stream laid out smaller,
+ *   for a scene filmed from near (the finale's, life size with its keepers), keeps fine dots.
  */
 export interface PlatePaint {
   figure?: boolean;
@@ -134,6 +155,7 @@ export interface PlatePaint {
   halftone?: "cloud" | "water";
   contact?: number;
   life?: boolean;
+  cell?: number;
 }
 
 /** The paint of a plate with its defaults resolved. */

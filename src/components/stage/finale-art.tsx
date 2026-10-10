@@ -15,6 +15,7 @@ import {
   armBobAt,
   astronomerOffset,
   CAN_TIP,
+  CLOUD_SCALE,
   CUT_POINT,
   cutFruitAt,
   SPOUT,
@@ -88,14 +89,14 @@ function Cloud({ id, clearing }: { id: (typeof CLOUDS)[number]; clearing: PlateC
   const progress = useStageProgress();
   const clock = useIdleClock();
   const key = React.useMemo(() => ({}), []);
-  const idle = useMotionValue(driftX(entry.position[0], entry.depth, clock.time()));
+  const idle = useMotionValue(driftX(entry.position[0], entry.depth, clock.time(), CLOUD_SCALE));
 
   React.useEffect(() => () => clock.drop(key), [clock, key]);
   useFrame(() => {
     const p = progress?.get() ?? 1;
     if ((scene?.presence(p) ?? 1) > 0.001) clock.hold(key);
     else clock.drop(key);
-    idle.set(driftX(entry.position[0], entry.depth, clock.time()) + finaleCloudShift(p, entry.depth));
+    idle.set(driftX(entry.position[0], entry.depth, clock.time(), CLOUD_SCALE) + finaleCloudShift(p, entry.depth));
   });
 
   return <Plate id={id} x={idle} layer={LAYER.cloud} sway={false} clearing={clearing} />;
@@ -124,7 +125,11 @@ function Fruit({ motion, clearing, ride }: { motion: FruitMotion; clearing: Plat
   return <Plate id="finale/falling-orange" position={[0, 0]} x={motion.x} y={motion.y} rotate={motion.rotate} opacity={motion.opacity} scale={motion.scale} layer={LAYER.fruit} sway={false} clearing={clearing} ride={ride} />;
 }
 
-/** The orchard keepers once they have settled: the idle-time loop (see `finale-plan.ts`). */
+/**
+ * The orchard keepers once they have settled: the idle-time loop (see `finale-plan.ts`). The keepers
+ * recede behind the words only on a phone (`clearing`); what they pour and cut runs in the frame, in
+ * front of the tree, and recedes with the tree on any screen (`fruitClearing`).
+ */
 function Keepers({ clearing, fruitClearing }: { clearing: PlateClearing; fruitClearing: PlateClearing }) {
   const scene = useSceneLayer();
   const progress = useStageProgress();
@@ -196,9 +201,9 @@ function Keepers({ clearing, fruitClearing }: { clearing: PlateClearing; fruitCl
     <>
       <Plate id="finale/woman-body" x={womanX} y={womanY} layer={LAYER.body} clearing={clearing} life={woman} />
       <Plate id="finale/woman-arm" x={womanX} y={womanY} rotate={tip} layer={LAYER.arm} clearing={clearing} ride={woman.ride("finale/woman-arm")} />
-      <Plate id="finale/water-1" position={SPOUT} x={womanX} y={womanY} opacity={streams[0]} layer={LAYER.stream} clearing={clearing} ride={stream} />
-      <Plate id="finale/water-2" position={SPOUT} x={womanX} y={womanY} opacity={streams[1]} layer={LAYER.stream} clearing={clearing} ride={stream} />
-      <Plate id="finale/water-3" position={SPOUT} x={womanX} y={womanY} opacity={streams[2]} layer={LAYER.stream} clearing={clearing} ride={stream} />
+      <Plate id="finale/water-1" position={SPOUT} x={womanX} y={womanY} opacity={streams[0]} layer={LAYER.stream} clearing={fruitClearing} ride={stream} />
+      <Plate id="finale/water-2" position={SPOUT} x={womanX} y={womanY} opacity={streams[1]} layer={LAYER.stream} clearing={fruitClearing} ride={stream} />
+      <Plate id="finale/water-3" position={SPOUT} x={womanX} y={womanY} opacity={streams[2]} layer={LAYER.stream} clearing={fruitClearing} ride={stream} />
 
       <Plate id="finale/man-body" x={manX} y={manY} layer={LAYER.body} clearing={clearing} life={man} />
       <Plate id="finale/man-arms-1" x={manX} y={armY} layer={LAYER.arm} clearing={clearing} ride={man.ride("finale/man-arms-1")} />

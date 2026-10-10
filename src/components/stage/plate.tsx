@@ -331,7 +331,10 @@ export function usePlateFrame(
       (u.canvasRepeat.value as Vector4).set(r[0], r[1], r[2], r[3]);
     }
     // The halftone's dot grid, in plate space: the same world size on any screen.
-    if (u.cells) (u.cells.value as Vector2).set(w / halftoneCell(u.mode.value as number), h / halftoneCell(u.mode.value as number));
+    if (u.cells) {
+      const cell = halftoneCell(u.mode.value as number) * (entry.paint?.cell ?? 1);
+      (u.cells.value as Vector2).set(w / cell, h / cell);
+    }
     extra?.(material, p);
   });
 }

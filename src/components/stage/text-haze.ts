@@ -38,6 +38,8 @@ export const HAZE_SOFT = 0.08;
 export function beatHaze(id: BeatId, p: number): number {
   const beat = beatOf(id);
   if (beat.leave === "hold" && p >= beat.hold[0]) return 1;
+  // A beat already on screen when the page opens (the hero's) is up from its very first frame.
+  if (beat.enter === "load" && p >= beat.in && p <= beat.hold[0]) return 1;
   return envelope(p, [beat.in, beat.hold[0], beat.hold[1], beat.out]);
 }
 
@@ -66,4 +68,25 @@ export function hazeAmount(ids: readonly BeatId[], p: number): number {
 export function beatArea(id: BeatId, stacked: boolean): StageArea {
   const area = SLOT_AREAS[beatOf(id).slot];
   return stacked ? area.stacked : area.wide;
+}
+
+/**
+ * The area the art recedes in behind several beats that can be up together (the docked title and
+ * the fit text over the gardener's tree): the strongest beat's slot, grown toward each other beat's
+ * slot as far as that beat is up, so it widens and narrows smoothly as the words come and go.
+ */
+export function unionArea(ids: readonly BeatId[], p: number, stacked: boolean): StageArea {
+  const out = { ...beatArea(ids[strongestBeat(ids, p)], stacked) };
+  const most = hazeAmount(ids, p);
+  if (most <= 0) return out;
+  for (const id of ids) {
+    const w = beatHaze(id, p) / most;
+    if (w <= 0) continue;
+    const a = beatArea(id, stacked);
+    out.left -= Math.max(0, out.left - a.left) * w;
+    out.right += Math.max(0, a.right - out.right) * w;
+    out.top -= Math.max(0, out.top - a.top) * w;
+    out.bottom += Math.max(0, a.bottom - out.bottom) * w;
+  }
+  return out;
 }

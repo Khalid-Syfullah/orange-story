@@ -1,5 +1,7 @@
 import { platePoint } from "@/art/manifest";
 import { clamp01, ease, remap, seeded } from "@/lib/progress";
+import { fitFov, panAmount } from "@/scroll/camera-fit";
+import { PHONE_ASPECT } from "@/scroll/framing";
 import { CAMERA, STARS } from "@/scroll/script";
 
 import { hazeAmount } from "./text-haze";
@@ -12,10 +14,49 @@ import type { TwinklePoint } from "./twinkle";
  * fingertip: nodes nearer the finger appear first, edges join some of them and draw out from the
  * older end as the newer node appears, and many stars just twinkle. The bottom right stays clear
  * (only clouds there). Everything is a function of progress, so it plays backwards exactly.
+ *
+ * The graph is laid out in the sky the stargazer camera sees (`SKY`): its spread, the size of its
+ * stars and how far apart joined stars may be are all fractions of that view, so a nearer or wider
+ * frame keeps the same constellation on screen.
  */
 
-/** World z of the stars (behind the platform, in front of the sky). */
-export const STAR_Z = -2;
+/** The stargazer camera key (where the constellation is seen from). */
+const KEY = (() => {
+  const key = CAMERA.find((k) => k.scene === "stars");
+  if (!key) throw new Error("The stars need a camera key");
+  return key;
+})();
+
+/** World z of the stars: a little behind the astronomer and his platform, in front of the sky. */
+export const STAR_Z = -0.6;
+
+/** The sky the stargazer camera sees on the star plane: on a laptop, and the taller one a phone sees (with its pan), together. */
+export const SKY = (() => {
+  const tan = (fov: number) => Math.tan((fov * Math.PI) / 360);
+  const [cx, cy, cz] = KEY.position;
+  const halfH = (cz - STAR_Z) * tan(KEY.fov);
+  const halfW = halfH * 1.6;
+  const pan = KEY.pan ?? [0, 0];
+  const k = panAmount(PHONE_ASPECT);
+  const px = cx + pan[0] * k;
+  const py = cy + pan[1] * k;
+  const pz = cz + (pan[2] ?? 0) * k;
+  const phoneH = (pz - STAR_Z) * tan(fitFov(KEY.fov, PHONE_ASPECT));
+  const phoneW = phoneH * PHONE_ASPECT;
+  return {
+    /** The laptop's view: its centre and half sizes. */
+    cx,
+    cy,
+    halfW,
+    halfH,
+    /** Both views together. */
+    x: [Math.min(cx - halfW, px - phoneW), Math.max(cx + halfW, px + phoneW)] as const,
+    y: [Math.min(cy - halfH, py - phoneH), Math.max(cy + halfH, py + phoneH)] as const,
+  };
+})();
+
+/** The laptop view's height on the star plane: the unit of the constellation's sizes and spacings. */
+export const VIEW = 2 * SKY.halfH;
 
 /**
  * Where the graph grows from: the astronomer's fingertip (the `fingertip` point of his plate), seen
@@ -24,19 +65,19 @@ export const STAR_Z = -2;
  */
 export const FINGERTIP: readonly [number, number] = (() => {
   const [x, y, z] = platePoint("stars/astronomer", "fingertip");
-  const camera = CAMERA.find((k) => k.scene === "stars")?.position ?? [0, 6, 7];
+  const camera = KEY.position;
   const t = (camera[2] - STAR_Z) / (camera[2] - z);
   return [camera[0] + (x - camera[0]) * t, camera[1] + (y - camera[1]) * t];
 })();
 
-/** The part of the sky that stays empty: the bottom right, where only clouds drift. */
+/** The part of the sky that stays empty: the bottom right of the laptop's view, where only clouds drift. */
 export function inClearCorner(x: number, y: number): boolean {
-  return x > 0.2 && y < 6.4;
+  return x > SKY.cx + 0.04 * SKY.halfW && y < SKY.cy - 0.016 * VIEW;
 }
 
-/** Keep stars off the astronomer himself. */
+/** Keep stars off the astronomer himself (and his platform below him). */
 function onFigure(x: number, y: number): boolean {
-  return x < -1.1 && y < 7.3;
+  return x < FINGERTIP[0] + 0.17 * VIEW && y < FINGERTIP[1] - 0.11 * VIEW;
 }
 
 export interface StarEdge {
@@ -51,8 +92,11 @@ export interface Constellation {
   edges: StarEdge[];
 }
 
-const COUNT = 90;
-const BOUNDS = { x: [-5.2, 5.2], y: [3.9, 9.3] } as const;
+/** Stars in the laptop's view; the phone's taller view gets as many again for its extra sky. */
+const DENSITY = 90;
+/** The sky they are scattered over: a little inside the two views together. */
+const BOUNDS = { x: [SKY.x[0] + 0.02 * VIEW, SKY.x[1] - 0.02 * VIEW], y: [SKY.y[0] + 0.05 * VIEW, SKY.y[1] - 0.02 * VIEW] } as const;
+const COUNT = Math.round((DENSITY * ((BOUNDS.x[1] - BOUNDS.x[0]) * (BOUNDS.y[1] - BOUNDS.y[0]))) / (4 * SKY.halfW * SKY.halfH));
 
 function build(): Constellation {
   const rand = seeded("constellation");
@@ -61,11 +105,11 @@ function build(): Constellation {
     const x = BOUNDS.x[0] + (BOUNDS.x[1] - BOUNDS.x[0]) * rand();
     const y = BOUNDS.y[0] + (BOUNDS.y[1] - BOUNDS.y[0]) * rand();
     if (inClearCorner(x, y) || onFigure(x, y)) continue;
-    raw.push({ x, y, size: 0.09 + rand() * 0.14 });
+    raw.push({ x, y, size: (0.0145 + rand() * 0.0226) * VIEW });
   }
   // Order by distance from the fingertip (with a little jitter), so the graph grows outward.
   const dist = (n: { x: number; y: number }) => Math.hypot(n.x - FINGERTIP[0], n.y - FINGERTIP[1]);
-  const jitter = raw.map(() => rand() * 1.2);
+  const jitter = raw.map(() => rand() * 0.19 * VIEW);
   const order = raw.map((_, i) => i).sort((a, b) => dist(raw[a]) + jitter[a] - (dist(raw[b]) + jitter[b]));
   const sorted = order.map((i) => raw[i]);
 
@@ -103,7 +147,7 @@ function build(): Constellation {
     const earlier = Array.from({ length: i }, (_, j) => j);
     const { best, d } = nearest(i, earlier);
     // Most newcomers join the graph; many stay loose and only twinkle.
-    if (best >= 0 && d < 1.6 && rand() < 0.55) add(best, i);
+    if (best >= 0 && d < 0.26 * VIEW && rand() < 0.55) add(best, i);
   }
   return { nodes, edges };
 }

@@ -12,8 +12,9 @@ describe("the pluck", () => {
     const p = pluck.start;
     const hand = handAt(p);
     const hand0 = plateEntry("pluck/hand");
-    // The hand's fingertips are below the bottom of the first camera frame.
-    const bottom = CAMERA.find((k) => k.scene === "pluck")!.target[1] - 4;
+    // The hand's fingertips are below the bottom of the first camera frame (at the hand's depth).
+    const first = CAMERA.find((k) => k.scene === "pluck")!;
+    const bottom = first.target[1] - (first.position[2] + hand0.depth) * Math.tan((first.fov * Math.PI) / 360);
     expect(hand0.position[1] + hand.y).toBeLessThan(bottom);
     const orange = heroOrangeAt(p);
     expect(orange.x).toBeCloseTo(0);

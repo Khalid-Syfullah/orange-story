@@ -15,11 +15,13 @@
  * `validateScript()` (`src/scroll/validate.ts`) checks the result in development and in the unit test.
  */
 
+import { plateEntry, platePoint } from "@/art/manifest";
 import type { HairlineCue } from "@/components/chrome/hairlines";
 import type { ProgressEnvelope, ProgressRange } from "@/lib/progress";
 
 import type { CopyPath } from "./copy-path";
 import { pointInScene, round6, screensFor, tileScenes, type ScenePlan } from "./define";
+import { framedKey, phonePan, plateBox, rigBox, shot, unionBox, type FramingId, type Shot, type ShotSpec, type WorldBox } from "./framing";
 import type {
   AnchorId,
   BeatDef,
@@ -435,7 +437,9 @@ function peakOf(id: TransitionId): ProgressRange {
 /* Camera: keyframes per scene                                         */
 /* ------------------------------------------------------------------ */
 
-const key = (scene: SceneId, p: number, move: CameraMove, position: Vec3, target: Vec3, fov: number, pan?: readonly [number, number]): CameraKey => ({
+type Pan = NonNullable<CameraKey["pan"]>;
+
+const key = (scene: SceneId, p: number, move: CameraMove, position: Vec3, target: Vec3, fov: number, pan?: Pan): CameraKey => ({
   scene,
   at: round6(p),
   position,
@@ -445,29 +449,13 @@ const key = (scene: SceneId, p: number, move: CameraMove, position: Vec3, target
   ...(pan ? { pan } : {}),
 });
 
+/** A key filmed from a shot (a row of the framing table, or any `Shot` with its pan). */
+const shotKey = (scene: SceneId, p: number, move: CameraMove, s: Shot & { pan?: Pan }, pan: Pan | undefined = s.pan): CameraKey => key(scene, p, move, s.position, s.target, s.fov, pan);
+
 const [SAND_COVERED, SAND_CLEARING] = peakOf("sand");
 const [UNFOLD_COVERED, UNFOLD_CLEARING] = peakOf("unfold");
 const [DUST_COVERED, DUST_CLEARING] = peakOf("dust");
 const [FABRIC_COVERED, FABRIC_CLEARING] = peakOf("fabric");
-
-const HERO_WIDE: Vec3 = [0, 0, 14];
-/** On a phone the statue and the crowd sit in the middle band: the camera slides toward them and up, below the title. */
-const HERO_PAN = [2, 0.75] as const;
-const BRANCH: Vec3 = [2, 8.4, 5.5];
-const FRUITING_TREE: Vec3 = [1.6, 11, 12];
-const HARVESTER: Vec3 = [1.4, 4.2, 9];
-const HALVES: Vec3 = [1.5, 4.5, 4.8];
-const TOP_DOWN: Vec3 = [0, 13, 0.01];
-const TOP_DOWN_FAR: Vec3 = [0, 24, 0.01];
-/**
- * The gardener on his column sits right of center on a wide screen, so the fit text at the bottom
- * left reads on clear sky; on a tall phone screen (`pan`) the camera centers him again and lifts the
- * picture a little, above the text at the bottom.
- */
-const GARDENER: Vec3 = [-1.9, 0, 12];
-const GARDENER_TARGET: Vec3 = [-1.9, 0.5, 0];
-const GARDENER_PAN = [1.9, -0.6] as const;
-const STARGAZER: Vec3 = [0, 6, 7];
 
 /**
  * The ascent's own timings (progress). The art in `src/components/stage/ascent-tree.ts` choreographs
@@ -480,6 +468,9 @@ const STARGAZER: Vec3 = [0, 6, 7];
 export const ASCENT = {
   /** The statue and the minaret rise. */
   rise: [at("ascent", 0), at("ascent", 1)] as ProgressRange,
+  /** How far (world units) the statue has risen by the end, and the power of the rise's curve (slowly at first, then faster: the trunk "keeps growing"). */
+  riseTotal: 10,
+  risePower: 2,
   /** The stone-to-bark front: [progress, world height] pairs, then it rides the top of the trunk. */
   front: [
     [at("ascent", 0), -5.2],
@@ -619,9 +610,9 @@ export const BLUEPRINT = {
 
 /**
  * The site's own timings (progress). The art in `src/components/stage/site-plan.ts` choreographs on
- * these: the builders work at ground level, the camera rises to a straight top-down view (`rise`,
- * the first two site camera keys), the side-view plates give way to the matching top-down set
- * (`sideOut`, `topDownIn`), the top-down view zooms out and shrinks into the left half (`shrink`,
+ * these: the builders work at ground level, the camera pulls back from a builder to the whole site
+ * and rises to a straight top-down view (`rise`, between the site's second and fourth camera keys),
+ * the side-view plates give way to the matching top-down set (`sideOut`, `topDownIn`), the top-down view zooms out and shrinks into the left half (`shrink`,
  * the pull camera move) while the tiled ground grows into a large field around it (`tiles`), and
  * the right half becomes the milk-white panel with its leaf shadows (`panel`) until the dust covers
  * it (`end`).
@@ -833,48 +824,118 @@ const faqCamera = (n: number): [Vec3, Vec3] => {
   ];
 };
 
+/* The shots: each figure's from its row of the framing table (`framing.ts`), the rest from the art they look at. */
+
+const STATUE = framedKey("statue");
+
+/** The statue's box once the ascent has raised it by fraction `t` of the scene (the rise of `ASCENT`). */
+const risenStatue = (t: number): WorldBox => {
+  const box = plateBox("hero/statue");
+  const rise = ASCENT.riseTotal * t ** ASCENT.risePower;
+  return { ...box, y0: box.y0 + rise, y1: box.y1 + rise };
+};
+
+/** A shot of a subject with its own phone placement: the laptop's pose and the pan to the phone's. */
+const withPhone = (spec: ShotSpec, phone: Omit<ShotSpec, "fov" | "aspect" | "box">): Shot & { pan: Pan } => {
+  const s = shot(spec);
+  return { ...s, pan: phonePan(s, { ...phone, box: spec.box }) };
+};
+
+/** The ascent pushes in on the rising statue, pans down the trunk below her, and settles on the branch the graft is made on. */
+const ASCENT_PUSH = withPhone({ box: risenStatue(0.28), height: 0.8, at: [0.62, 0.5], fov: 33.5 }, { height: 0.6, at: [0.5, 0.5] });
+const ASCENT_TRUNK = withPhone({ box: risenStatue(0.55), height: 0.85, pin: [0.5, 1], at: [0.56, 0.16], fov: 32 }, { height: 0.62, pin: [0.5, 1], at: [0.5, 0.3] });
+const ASCENT_BRANCH = withPhone({ box: plateBox("graft/branch"), width: 0.55, at: [0.5, 0.5], fov: 31 }, { width: 0.7, at: [0.5, 0.5] });
+
+const GRAFT_HANDS = framedKey("graftHands");
+/** The fruiting tree as the graft pulls out to it: the near foliage fills the frame, the special orange in the middle. */
+const HERO_ORANGE: readonly [number, number] = [plateEntry("pluck/hero-orange").position[0], plateEntry("pluck/hero-orange").position[1]];
+const FRUITING_TREE = withPhone({ box: plateBox("pluck/foliage-near"), height: 1.25, pinWorld: HERO_ORANGE, at: [0.5, 0.48], fov: 36 }, { height: 0.85, pinWorld: HERO_ORANGE, at: [0.5, 0.5] });
+const HARVESTER = framedKey("harvester");
+const HALVES = framedKey("shareHands");
+/** Under the sand: into the halves (it happens unseen). */
+const INTO_HALVES = shot({ box: unionBox(plateBox("share/peel-left"), plateBox("share/peel-right")), width: 0.32, pinWorld: [platePoint("share/arm-open", "orange")[0], platePoint("share/arm-open", "orange")[1]], at: [0.5, 0.47], fov: 28 });
+
+/** The work's dolly up through the clouds, and the builder the camera closes in on during the third card. */
+const CLOUDS_LOW: Vec3 = [0, 0, 14];
+const CLOUDS_HIGH: Vec3 = [0, 8.5, 13.5];
+const WORK_BUILDER = framedKey("workBuilder");
+const BLUEPRINT_BUILDER = framedKey("blueprintBuilder");
+const ARCHITECT = framedKey("architect");
+/** Into the open plan as the paper unfold covers the screen. */
+const INTO_PLAN = shot({ box: unionBox(plateBox("blueprint/plan-1"), plateBox("blueprint/plan-4")), width: 1.15, at: [0.5, 0.5], fov: 34 });
+
+const SITE_BUILDER = framedKey("siteBuilder");
+/** The whole site at ground level, the sea behind it: where the rise to straight above starts. */
+const SITE_WIDE: Vec3 = [0, 1.2, 12];
+const TOP_DOWN: Vec3 = [0, 13, 0.01];
+const TOP_DOWN_FAR: Vec3 = [0, 24, 0.01];
+
+const GARDENER = framedKey("gardener");
+/** Toward the gardener's face (his head, from his rig), before he drifts out of the frame to the right. */
+const GARDENER_FACE = withPhone({ box: rigBox("prune/gardener", "head"), height: 0.5, at: [0.56, 0.4], fov: 32 }, { height: 0.35, at: [0.5, 0.42] });
+
+const ASTRONOMER = framedKey("astronomer");
+const KEEPERS = framedKey("keepers");
+
+/** No pan: a phone films the laptop's frame, fitted to its shape. */
+const NO_PAN: Pan = [0, 0, 0];
+
+/** Where the work's dolly through the clouds has got to at progress p: on its straight line, so adding a key there keeps the move. */
+const cloudsAt = (p: number): Vec3 => {
+  const t = (p - SAND_CLEARING) / (at("work", 0.97) - SAND_CLEARING);
+  return [round6(CLOUDS_LOW[0] + (CLOUDS_HIGH[0] - CLOUDS_LOW[0]) * t), round6(CLOUDS_LOW[1] + (CLOUDS_HIGH[1] - CLOUDS_LOW[1]) * t), round6(CLOUDS_LOW[2] + (CLOUDS_HIGH[2] - CLOUDS_LOW[2]) * t)];
+};
+const CARD_THREE = cloudsAt(WORK.rise[0]);
+
 export const CAMERA: readonly CameraKey[] = [
-  // Hero: wide and still.
-  key("hero", at("hero", 0), "hold", HERO_WIDE, [0, 0, 0], 35, HERO_PAN),
-  // Ascent: push in on the statue, ease into a pan and dolly along the trunk, settle on one branch.
-  key("ascent", at("ascent", 0), "push", HERO_WIDE, [0, 0, 0], 35),
-  key("ascent", at("ascent", 0.28), "push", [2.1, 2.5, 9.6], [2.5, 2.9, 0], 33.5, [0, 0]),
-  key("ascent", at("ascent", 0.55), "pan", [2.6, 4.6, 7.5], [2.8, 4.9, 0], 32),
-  key("ascent", at("ascent", 0.85), "dolly-up", [2.2, 6.4, 6.5], [2.2, 6.6, 0], 31),
-  // Graft: steady on the branch while the hands work, then dolly up and pull out to the fruiting tree.
-  key("graft", at("graft", 0), "hold", BRANCH, [2, 8.4, 0], 30),
-  key("graft", at("graft", 0.62), "pull", BRANCH, [2, 8.4, 0], 30),
+  // Hero: still, the statue large on the right third, the onlookers' heads along the bottom.
+  shotKey("hero", at("hero", 0), "hold", STATUE),
+  // Ascent: push in on the statue, ease into a pan along the rising trunk, settle on the branch of the graft.
+  shotKey("ascent", at("ascent", 0), "push", STATUE),
+  shotKey("ascent", at("ascent", 0.28), "push", ASCENT_PUSH),
+  shotKey("ascent", at("ascent", 0.55), "pan", ASCENT_TRUNK),
+  shotKey("ascent", at("ascent", 0.85), "dolly-up", ASCENT_BRANCH),
+  // Graft: steady on the hands while they work, then dolly up and pull out to the fruiting tree.
+  shotKey("graft", at("graft", 0), "hold", GRAFT_HANDS),
+  shotKey("graft", at("graft", 0.62), "pull", GRAFT_HANDS),
   // Pluck: the hand rises, then the camera dollies down through the branches to the harvester.
-  key("pluck", at("pluck", 0), "hold", FRUITING_TREE, [1.6, 10.5, 0], 36),
-  key("pluck", PLUCK.dolly[0], "dolly-down", FRUITING_TREE, [1.6, 10.5, 0], 36),
-  key("pluck", PLUCK.dolly[1], "hold", HARVESTER, [1.4, 4.2, 0], 34),
-  // Share: the cut, a push into the orange, the halves held, a push into the halves under the sand.
-  key("share", at("share", 0), "hold", HARVESTER, [1.4, 4.2, 0], 34),
-  key("share", at("share", 0.22), "push", HARVESTER, [1.4, 4.2, 0], 34),
-  key("share", at("share", 0.45), "hold", HALVES, [1.5, 4.5, 0], 30),
-  key("share", at("share", 0.72), "push", HALVES, [1.5, 4.5, 0], 30),
-  key("share", SAND_COVERED, "reframe", [1.5, 4.5, 2.2], [1.5, 4.5, 0], 28),
-  // Work: a slow dolly upward through the clouds, ending close to the blueprint's scaffold shot so
-  // the crossfade into it barely moves the camera.
-  key("work", SAND_CLEARING, "dolly-up", [0, 0, 14], [0, 0.5, 0], 40),
-  key("work", at("work", 0.97), "dolly-up", [0, 8.5, 13.5], [0, 9, 0], 39),
-  // Blueprint: the scaffold, then a push into the plan as it unfolds.
-  key("blueprint", at("blueprint", 0), "hold", [0, 9, 13], [0, 9.5, 0], 38),
-  key("blueprint", at("blueprint", 0.35), "push", [0, 9, 13], [0, 9.5, 0], 38),
-  key("blueprint", UNFOLD_COVERED, "reframe", [0, 9.6, 2.6], [0, 9.6, 0], 34),
-  // Site: rise from ground level to top-down, then pull out as the view shrinks into the left half.
-  key("site", UNFOLD_CLEARING, "hold", [0, 1.2, 12], [0, 1, 0], 38),
-  key("site", SITE.rise[0], "dolly-up", [0, 1.2, 12], [0, 1, 0], 38),
-  key("site", SITE.rise[1], "pull", TOP_DOWN, [0, 0, 0], 38),
-  key("site", SITE.shrink[1], "hold", TOP_DOWN_FAR, [0, 0, 0], 38),
-  key("site", DUST_COVERED, "reframe", TOP_DOWN_FAR, [0, 0, 0], 38),
-  // Prune: the gardener at work.
-  key("prune", DUST_CLEARING, "hold", GARDENER, GARDENER_TARGET, 35, GARDENER_PAN),
+  shotKey("pluck", at("pluck", 0), "hold", FRUITING_TREE),
+  shotKey("pluck", PLUCK.dolly[0], "dolly-down", FRUITING_TREE),
+  shotKey("pluck", PLUCK.dolly[1], "hold", HARVESTER),
+  // Share: the cut, a push into the hands and the orange, the halves held, a push into the halves under the sand.
+  shotKey("share", at("share", 0), "hold", HARVESTER),
+  shotKey("share", at("share", 0.22), "push", HARVESTER),
+  shotKey("share", at("share", 0.45), "hold", HALVES),
+  shotKey("share", at("share", 0.72), "push", HALVES),
+  shotKey("share", SAND_COVERED, "reframe", INTO_HALVES, HALVES.pan),
+  // Work: a slow dolly upward through the clouds; as the third card arrives the camera closes in on
+  // the builder rising with the giant orange, left of the card. The blueprint opens on the same
+  // frame, so the crossfade into it does not move the camera.
+  key("work", SAND_CLEARING, "dolly-up", CLOUDS_LOW, [CLOUDS_LOW[0], CLOUDS_LOW[1] + 0.5, 0], 40, NO_PAN),
+  key("work", WORK.rise[0], "push", CARD_THREE, [CARD_THREE[0], CARD_THREE[1] + 0.5, 0], 39.5, NO_PAN),
+  shotKey("work", at("work", 0.97), "hold", WORK_BUILDER),
+  // Blueprint: the scaffold appears around the builder of the work; across to the builder on his
+  // platform, down the scaffold to the architect as she brings the plan, then into the plan as it opens.
+  shotKey("blueprint", at("blueprint", 0), "pan", WORK_BUILDER),
+  shotKey("blueprint", at("blueprint", 0.12), "hold", BLUEPRINT_BUILDER),
+  shotKey("blueprint", BLUEPRINT.bring[0], "pan", BLUEPRINT_BUILDER),
+  shotKey("blueprint", BLUEPRINT.panels[0], "push", ARCHITECT),
+  shotKey("blueprint", UNFOLD_COVERED, "reframe", INTO_PLAN, ARCHITECT.pan),
+  // Site: a builder at work at ground level; pull back to the whole site by the sea, rise to
+  // top-down, then pull out as the view shrinks into the left half.
+  shotKey("site", UNFOLD_CLEARING, "hold", SITE_BUILDER),
+  shotKey("site", SITE.rise[0], "pull", SITE_BUILDER),
+  key("site", at("site", 0.29), "dolly-up", SITE_WIDE, [SITE_WIDE[0], SITE_WIDE[1] - 0.2, 0], 38, NO_PAN),
+  key("site", SITE.rise[1], "pull", TOP_DOWN, [0, 0, 0], 38, NO_PAN),
+  key("site", SITE.shrink[1], "hold", TOP_DOWN_FAR, [0, 0, 0], 38, NO_PAN),
+  key("site", DUST_COVERED, "reframe", TOP_DOWN_FAR, [0, 0, 0], 38, NO_PAN),
+  // Prune: the gardener at work, waist up beside his tree.
+  shotKey("prune", DUST_CLEARING, "hold", GARDENER),
   // Fall: toward the gardener's face, follow the orange down, push into it, then dolly up the rows.
-  key("fall", at("fall", 0), "push", GARDENER, GARDENER_TARGET, 35),
-  key("fall", at("fall", 0.22), "dolly-down", [0.4, 2.2, 6.5], [0.4, 2.2, 0], 32, [0, 0]),
-  key("fall", at("fall", 0.45), "push", [0, -3, 5], [0, -3, 0], 32),
-  key("fall", FALL.push[1], "dolly-up", [0, -4, 2.6], [0, -4, 0], 30),
+  shotKey("fall", at("fall", 0), "push", GARDENER),
+  shotKey("fall", at("fall", 0.22), "dolly-down", GARDENER_FACE),
+  key("fall", at("fall", 0.45), "push", [0, -3, 5], [0, -3, 0], 32, NO_PAN),
+  key("fall", FALL.push[1], "dolly-up", [0, -4, 2.6], [0, -4, 0], 30, NO_PAN),
   // Questions: climb between the rows one step per card, while the card arrives, and hold while it
   // is read (so its orange holds still under the line); then forward into the blue as the last card
   // dissolves, under the fabric sky.
@@ -883,10 +944,32 @@ export const CAMERA: readonly CameraKey[] = [
   key("faq", LAST_QUESTION.hold[1], "push", ...faqCamera(QUESTIONS.length), 40),
   key("faq", FABRIC_COVERED, "reframe", [0, 5, 6], [0, 6, 0], 38),
   // Stars: the astronomer and the growing constellation.
-  key("stars", FABRIC_CLEARING, "hold", STARGAZER, [0, 6.5, 0], 38),
-  // Application and finale: the frame stays still while the art moves.
-  key("apply", at("apply", 0), "hold", STARGAZER, [0, 6.5, 0], 38),
-  key("finale", at("finale", 0), "hold", STARGAZER, [0, 6.5, 0], 38),
+  shotKey("stars", FABRIC_CLEARING, "hold", ASTRONOMER),
+  // Application: the frame stays still while he steps down the sky.
+  shotKey("apply", at("apply", 0), "hold", ASTRONOMER),
+  // Finale: still while he sinks away, then down to the keepers as the tree rises and they walk in.
+  shotKey("finale", at("finale", 0), "hold", ASTRONOMER),
+  shotKey("finale", FINALE.tree[0], "dolly-down", ASTRONOMER),
+  shotKey("finale", FINALE.man[1], "hold", KEEPERS),
+];
+
+/**
+ * Where the framing table is checked (`npm run framing`): each row at the key that films it. The
+ * onlookers are checked in the statue's shot.
+ */
+export const FRAMED: readonly { framing: FramingId; at: number }[] = [
+  { framing: "statue", at: at("hero", 0) },
+  { framing: "onlookers", at: at("hero", 0) },
+  { framing: "graftHands", at: at("graft", 0) },
+  { framing: "harvester", at: PLUCK.dolly[1] },
+  { framing: "shareHands", at: at("share", 0.45) },
+  { framing: "workBuilder", at: at("work", 0.97) },
+  { framing: "blueprintBuilder", at: at("blueprint", 0.12) },
+  { framing: "architect", at: BLUEPRINT.panels[0] },
+  { framing: "siteBuilder", at: UNFOLD_CLEARING },
+  { framing: "gardener", at: DUST_CLEARING },
+  { framing: "astronomer", at: FABRIC_CLEARING },
+  { framing: "keepers", at: FINALE.man[1] },
 ];
 
 /* ------------------------------------------------------------------ */

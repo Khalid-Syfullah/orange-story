@@ -7,7 +7,9 @@
  * Each brief: the file to save, the size to ask for, the key colour, a ready-to-paste prompt (the
  * style bible of docs/ART-DIRECTION.md, the character, the pose and framing), a negative prompt,
  * the sidecar to write, what it must match, and what to check afterwards. The document opens with
- * the generation order: one reference sheet per recurring character first, then the plates.
+ * the generation order: one reference sheet per recurring character first, then the plates; then
+ * the plates whose paintings are too small for how large the story now draws them ("Regenerate at
+ * higher resolution", from the framing: `scripts/framing/core.mjs`).
  */
 
 import { readFile, writeFile } from "node:fs/promises";
@@ -16,6 +18,7 @@ import { fileURLToPath } from "node:url";
 
 import { CAST, LIGHT } from "./art/cast.mjs";
 import { parseKey } from "./art/import-core.mjs";
+import { figureBoxes, loadStory, MAX_SIDE, resolutionNeeds, sizeWithLong } from "./framing/core.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const OUT = path.join(ROOT, "docs/ART-BRIEFS.md");
@@ -172,6 +175,19 @@ async function main() {
   out.push("4. **Parts overlap at their joints.** A head and an arm are their own plates and the stage turns them a few degrees on their joint (the head bows, the arm settles, the body leans with a snip): paint each part on past its joint, about a quarter of a head into the body plate, and paint the body under it (the neck stub, the shoulder under the sleeve), so no gap ever shows when a part turns.");
   out.push("5. Save each painting at `art/source/<scene>/<name>.png` (not committed), write its sidecar at `art/rig/<scene>/<name>.json` (committed) with its points and its rig (the chest, hem and head rectangles and the pivots the stage moves it by; see `docs/ART-PLATES.md`), run `npm run art:import`, and calibrate the points in the plate lab (`/design`, points mode) if they are off.");
   out.push("");
+  // The paintings the framing draws larger than they are.
+  const story = await loadStory();
+  const needs = resolutionNeeds(story, await figureBoxes(story.art.PLATES)).filter((n) => n.neededLong > Math.max(...n.size));
+  if (needs.length) {
+    out.push("## Regenerate at higher resolution");
+    out.push("");
+    out.push(`The framing (phase 24, \`npm run framing\`) draws these figures larger than their paintings: on a 2x display each needs the long side below (capped at ${MAX_SIDE}). Ask for at least that size, same aspect, and import as usual; raise the plate's manifest \`size\` to the new painting's (the importer fits the painting to it). Until a larger painting exists the current import stays: the stage scales it up.`);
+    out.push("");
+    out.push("| Plate | Now | Ask for | Drawn up to (CSS px) |");
+    out.push("| --- | --- | --- | --- |");
+    for (const n of needs) out.push(`| \`${n.id}\` | ${n.size.join(" x ")} | ${sizeWithLong(n.size, n.neededLong).join(" x ")} | ${n.drawnPx} (${n.where}) |`);
+    out.push("");
+  }
   out.push("## Reference sheets");
   out.push("");
   for (const s of sheets) {

@@ -6,10 +6,11 @@ import { PRUNE } from "@/scroll/script";
 
 import { branchDropX, branchDropY, branchTurn, cutBranchOpacity, gardenerX, orangeFrame, stillBranchOpacity } from "./fall-plan";
 import { Plate, type PlateReveal } from "./plate";
-import { useGardenerLife } from "./prune-art";
+import { OVER_COLUMN, OVER_TREE, useGardenerLife } from "./prune-art";
 import { trimmedScale } from "./prune-plan";
 import type { SceneArtProps } from "./scene-layers";
 import { useStageProgress } from "./stage-context";
+import { useTextHaze } from "./use-text-haze";
 
 /** The old picture leaves where the ring has passed; the orchard shows only inside it. */
 const OLD: PlateReveal = { transition: "ring", side: "outside" };
@@ -39,6 +40,9 @@ export function FallArt({ scene }: SceneArtProps) {
   const turn = useTransform(progress, branchTurn);
   const drift = useTransform(progress, gardenerX);
   const gardener = useGardenerLife();
+  // The prune's words are still sinking away as the scene opens: the same haze as there, so nothing pops.
+  const haze = useTextHaze(OVER_COLUMN, { strength: 0.85, stackedOnly: true });
+  const treeHaze = useTextHaze(OVER_TREE, { strength: 0.8, union: true });
 
   const orangeX = useTransform(progress, (p) => orangeFrame(p).x);
   const orangeY = useTransform(progress, (p) => orangeFrame(p).y);
@@ -58,14 +62,14 @@ export function FallArt({ scene }: SceneArtProps) {
       <Plate id="fall/trees-right-near" reveal={ORCHARD} />
 
       {/* The gardener's picture, as the prune scene leaves it; cut away outside the ring. */}
-      <Plate id="prune/column" reveal={OLD} />
-      <Plate id="prune/urn" reveal={OLD} />
-      <Plate id="prune/tree" reveal={OLD} />
-      <Plate id="prune/branch-left" scale={trimmed} reveal={OLD} />
-      <Plate id="prune/branch-right" opacity={still} reveal={OLD} />
-      <Plate id="fall/branch-cut" opacity={cut} x={dropX} y={dropY} rotate={turn} sway={false} reveal={OLD} />
-      <Plate id="prune/gardener" x={drift} reveal={OLD} life={gardener} />
-      <Plate id="prune/gardener-arms-1" x={drift} layer={1} reveal={OLD} ride={gardener.ride("prune/gardener-arms-1")} />
+      <Plate id="prune/column" reveal={OLD} clearing={haze} />
+      <Plate id="prune/urn" reveal={OLD} clearing={treeHaze} />
+      <Plate id="prune/tree" reveal={OLD} clearing={treeHaze} />
+      <Plate id="prune/branch-left" scale={trimmed} reveal={OLD} clearing={treeHaze} />
+      <Plate id="prune/branch-right" opacity={still} reveal={OLD} clearing={treeHaze} />
+      <Plate id="fall/branch-cut" opacity={cut} x={dropX} y={dropY} rotate={turn} sway={false} reveal={OLD} clearing={treeHaze} />
+      <Plate id="prune/gardener" x={drift} reveal={OLD} life={gardener} clearing={haze} />
+      <Plate id="prune/gardener-arms-1" x={drift} layer={1} reveal={OLD} ride={gardener.ride("prune/gardener-arms-1")} clearing={haze} />
 
       {/* The orange: no reveal, so it stays in front while the ring sweeps past it. */}
       <Plate

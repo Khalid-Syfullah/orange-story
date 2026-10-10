@@ -5,7 +5,7 @@ import { useMotionValue, useTransform, type MotionValue } from "motion/react";
 
 import { BRANCHES, branchAt, LEAVES, leafAt, MINARET, morphAt, riseAt, shaftAt, statueAt, type LeafSpec } from "./ascent-tree";
 import { GlowRipple } from "./glow-ripple";
-import { HALO, ORANGE, ORANGE_WHITENING, useCrowdLife } from "./hero-art";
+import { GLOW_UNIT, HALO, ORANGE, ORANGE_DEPTH, ORANGE_WHITENING, useCrowdLife } from "./hero-art";
 import { MorphPlate } from "./morph-plate";
 import { colors, mixColors } from "@/styles/tokens";
 
@@ -77,7 +77,7 @@ export function AscentArt({ scene }: SceneArtProps) {
   return (
     <>
       <Plate id="hero/sky" />
-      <GlowRipple sprite="hero/glow-droplet" source={ORANGE} offsetY={rise} opacity={glow} lift={GLOW_LIFT} />
+      <GlowRipple sprite="hero/glow-droplet" source={ORANGE} depth={ORANGE_DEPTH} unit={GLOW_UNIT} offsetY={rise} opacity={glow} lift={GLOW_LIFT} />
       <Twinkle sprite="hero/glow-droplet" points={HALO} y={rise} opacity={halo} tint={colors.white} tintAmount={GLOW_LIFT} additive layer={-1} name="hero-halo" />
       <Plate id="hero/crowd-far" life={far} />
       <Plate id="hero/crowd-mid" life={mid} />

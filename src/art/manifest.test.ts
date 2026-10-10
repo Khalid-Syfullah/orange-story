@@ -6,7 +6,9 @@ import { describe, expect, it } from "vitest";
 import { HELD as PACKET_HELD } from "@/components/stage/blueprint-plan";
 import { BRANCH_FRUIT } from "@/components/stage/fall-plan";
 import { CUT_POINT, SPOUT } from "@/components/stage/finale-plan";
-import { ORANGE } from "@/components/stage/hero-art";
+import { CAMERA } from "@/scroll/script";
+import { poseOf, projectPoint } from "@/components/stage/camera-path";
+import { crowdFacing, ORANGE } from "@/components/stage/hero-art";
 import { HELD } from "@/components/stage/pluck-harvest";
 import { HALF_EDGE } from "@/components/stage/share-cut";
 import { SCENES } from "@/scroll/script";
@@ -69,9 +71,10 @@ describe("the art manifest", () => {
       // Every file comes from somewhere: the generator (a placeholder spec) or a painting (painted).
       expect(Boolean(plate.placeholder) !== Boolean(plate.painted), `${name} has a placeholder spec or is painted, not both`).toBe(true);
       expect(rigProblems(plate.rig), `${name} rig`).toEqual([]);
-      for (const key of Object.keys(plate.paint ?? {})) expect(["figure", "grain", "craquelure", "halftone", "contact", "life"], `${name} paint.${key}`).toContain(key);
+      for (const key of Object.keys(plate.paint ?? {})) expect(["figure", "grain", "craquelure", "halftone", "contact", "life", "cell"], `${name} paint.${key}`).toContain(key);
       if (plate.paint?.halftone) expect(["cloud", "water"], `${name} paint.halftone`).toContain(plate.paint.halftone);
       if (plate.paint?.contact !== undefined) expect(plate.paint.contact > 0 && plate.paint.figure, `${name} contact is for a standing figure`).toBe(true);
+      if (plate.paint?.cell !== undefined) expect(plate.paint.cell > 0 && Boolean(plate.paint.halftone), `${name} cell is for the halftone layer`).toBe(true);
     }
   });
 
@@ -139,15 +142,16 @@ describe("the art manifest", () => {
   });
 
   it("takes the places on painted figures from their points, where the story had them", () => {
-    // The numbers the scenes were tuned on, now read from the art (fractions chosen so they come out the same).
-    expect(HELD[0]).toBeCloseTo(1.51, 5);
-    expect(HELD[1]).toBeCloseTo(4.5, 5);
-    expect(PACKET_HELD[0]).toBeCloseTo(1.25, 5);
-    expect(PACKET_HELD[1]).toBeCloseTo(-0.28, 5);
-    expect(CUT_POINT[0]).toBeCloseTo(1.42, 5);
-    expect(CUT_POINT[1]).toBeCloseTo(6.42, 5);
-    expect(BRANCH_FRUIT.x).toBeCloseTo(0.74, 5);
-    expect(BRANCH_FRUIT.y).toBeCloseTo(1.993, 5);
+    // Where the figures hold things at the world scale (phase 24), read from the art: the places the
+    // scenes were tuned on, moved with their figures to life size.
+    expect(HELD[0]).toBeCloseTo(2.5924, 3);
+    expect(HELD[1]).toBeCloseTo(4.3125, 3);
+    expect(PACKET_HELD[0]).toBeCloseTo(1.05, 5);
+    expect(PACKET_HELD[1]).toBeCloseTo(-0.18, 5);
+    expect(CUT_POINT[0]).toBeCloseTo(0.7542, 3);
+    expect(CUT_POINT[1]).toBeCloseTo(5.215, 3);
+    expect(BRANCH_FRUIT.x).toBeCloseTo(0.4813, 3);
+    expect(BRANCH_FRUIT.y).toBeCloseTo(1.0518, 3);
     expect(HALF_EDGE.left).toBeCloseTo(0.12, 9);
     expect(HALF_EDGE.right).toBeCloseTo(0.12, 9);
     // The orange stands in the statue's hand, the water hangs from the jug's spout, the blade tip is the knife plate's pivot.
@@ -208,9 +212,27 @@ describe("the art manifest", () => {
     expect(plateEntry("hero/contact-shadow").role).toBe("sprite");
   });
 
-  it("turns every onlooker toward the statue: each crowd's look-at point is below her", () => {
-    const statueX = plateEntry("hero/statue").position[0];
-    for (const id of ["hero/crowd-far", "hero/crowd-mid", "hero/crowd-near"]) expect(Math.abs(platePoint(id, "look-at")[0] - statueX), id).toBeLessThan(0.02);
+  it("turns every onlooker in the hero's frame toward the statue, as the camera sees them", () => {
+    // In front of her, nearer the camera, the onlookers stand where the frame wants them: what matters
+    // is that each one in the frame turns the way she is on screen.
+    const pose = poseOf(CAMERA[0]);
+    const statue = plateEntry("hero/statue");
+    const statueX = projectPoint(pose, [statue.position[0], statue.position[1], -statue.depth], 1440, 900).x;
+    let seen = 0;
+    for (const id of ["hero/crowd-far", "hero/crowd-mid", "hero/crowd-near"] as const) {
+      const entry = plateEntry(id);
+      const [w] = plateWorldSize(entry);
+      const facing = crowdFacing(id);
+      rigFigures(entry.rig).forEach((person, i) => {
+        if (!person.head) return;
+        const u = (person.head[0] + person.head[2]) / 2;
+        const head = projectPoint(pose, [entry.position[0] + (u - entry.anchor[0]) * w, entry.position[1], -entry.depth], 1440, 900);
+        if (head.x < 0 || head.x > 1440) return;
+        seen++;
+        expect(facing[i], `${id} person ${i + 1}`).toBe(Math.sign(statueX - head.x));
+      });
+    }
+    expect(seen).toBeGreaterThanOrEqual(3);
   });
 
   it("places named points on the plate in the world", () => {

@@ -14,6 +14,9 @@ import type { SceneArtProps } from "./scene-layers";
 import { useStageProgress } from "./stage-context";
 import { useTextHaze } from "./use-text-haze";
 
+/** The whole orange stands where its halves will be (the peels' depth), so it gives way to them in place. */
+const HALVES_DEPTH = plateEntry("share/peel-left").depth;
+
 /** The harvest beat carries on into the share: the foliage stays receded behind it. */
 const OVER_FOLIAGE = ["harvest"] as const;
 
@@ -81,7 +84,7 @@ export function ShareArt({ scene }: SceneArtProps) {
       <Plate id="pluck/harvester-body" clearing={robeHaze} life={life} />
       <Plate id="pluck/harvester-head" ride={life.ride("pluck/harvester-head")} />
       <Plate id="share/arm-open" ride={life.ride("share/arm-open")} />
-      <Plate id="pluck/hero-orange" depth={0.6} x={wholeX} y={wholeY} scale={wholeS} opacity={wholeO} sway={false} ride={inHand} />
+      <Plate id="pluck/hero-orange" depth={HALVES_DEPTH} x={wholeX} y={wholeY} scale={wholeS} opacity={wholeO} sway={false} ride={inHand} />
       <Plate id="share/peel-right" x={rightX} y={rightY} scale={halfS} opacity={peelO} ride={inHand} />
       <Plate id="share/face-right" x={rightX} y={rightY} scale={halfS} opacity={faceO} ride={inHand} />
       <Plate id="share/peel-left" x={leftX} y={leftY} scale={halfS} opacity={peelO} ride={inHand} />

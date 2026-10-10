@@ -6,6 +6,7 @@ import { animate, useMotionValue, useTransform, type MotionValue } from "motion/
 import { plateEntry, platePoint, plateWorldSize, type PlateId } from "@/art/manifest";
 import { ease } from "@/lib/progress";
 import { sceneProgress } from "@/scroll/helpers";
+import { CAMERA } from "@/scroll/script";
 
 import { crowdHeadAt } from "./acting";
 import { useFigureLife, type FigureLife } from "./figure-life";
@@ -17,6 +18,7 @@ import { Plate } from "./plate";
 import { rigFigures } from "./rig";
 import { useStageProgress } from "./stage-context";
 import { Twinkle } from "./twinkle";
+import { useTextHaze } from "./use-text-haze";
 import type { SceneArtProps } from "./scene-layers";
 
 /**
@@ -39,17 +41,29 @@ import type { SceneArtProps } from "./scene-layers";
  */
 const orangePoint = platePoint("hero/statue", "orange");
 export const ORANGE: readonly [number, number] = [orangePoint[0], orangePoint[1]];
+/** How far behind the picture plane the orange (and its glow) stands: the statue's depth. */
+export const ORANGE_DEPTH = -orangePoint[2];
+
+/**
+ * The glow is laid out for a camera 14 world units from the orange (its ripple units); the hero's
+ * camera stands nearer, so the ripple, its droplets, its rings and the halo are drawn at that ratio
+ * and look the same on screen.
+ */
+export const GLOW_UNIT = (CAMERA[0].position[2] + ORANGE_DEPTH) / 14;
+
+/** On a phone the onlookers stand along the bottom, under the "What we do" words: they recede into the sky's haze while those are up. */
+const UNDER_WORDS = ["hero-intro"] as const;
 
 /** World units the statue group and the crowd rise from as they appear. */
-const STATUE_RISE = 0.35;
-const CROWD_RISE = 0.2;
+const STATUE_RISE = 0.35 * GLOW_UNIT;
+const CROWD_RISE = 0.2 * GLOW_UNIT;
 /** Blur (fraction of the view height) a plate arrives out of. */
 const ARRIVE_BLUR = 0.012;
 /** How much of the orange turns white at full lift. */
 export const ORANGE_WHITENING = 0.45;
 
 /** The halo behind the orange: one big soft droplet that breathes. */
-export const HALO = [{ position: [ORANGE[0], ORANGE[1], 0], size: 2.6, phase: 0.6, speed: 0.16 }] as const;
+export const HALO = [{ position: [ORANGE[0], ORANGE[1], -ORANGE_DEPTH], size: 2.6 * GLOW_UNIT, phase: 0.6, speed: 0.16 }] as const;
 
 /**
  * Which way each onlooker on a crowd plate turns to look up at the statue: +1 when she stands to
@@ -138,16 +152,17 @@ export function HeroArt({ scene }: SceneArtProps) {
   const far = useCrowdLife("hero/crowd-far");
   const mid = useCrowdLife("hero/crowd-mid");
   const near = useCrowdLife("hero/crowd-near");
+  const haze = useTextHaze(UNDER_WORDS, { strength: 0.85, stackedOnly: true });
 
   return (
     <>
       <Plate id="hero/sky" opacity={sky} />
-      <GlowRipple sprite="hero/glow-droplet" source={ORANGE} opacity={glow} lift={lift} />
+      <GlowRipple sprite="hero/glow-droplet" source={ORANGE} depth={ORANGE_DEPTH} unit={GLOW_UNIT} opacity={glow} lift={lift} />
       <Twinkle sprite="hero/glow-droplet" points={HALO} opacity={halo} tint={colors.white} tintAmount={lift} additive layer={-1} name="hero-halo" />
-      <Plate id="hero/crowd-far" opacity={crowdFar} y={farY} life={far} />
-      <Plate id="hero/crowd-mid" opacity={crowdMid} y={midY} life={mid} />
       <Plate id="hero/minaret" opacity={minaret} y={minaretY} blur={minaretBlur} />
-      <Plate id="hero/crowd-near" opacity={crowdNear} y={nearY} life={near} />
+      <Plate id="hero/crowd-far" opacity={crowdFar} y={farY} life={far} clearing={haze} />
+      <Plate id="hero/crowd-mid" opacity={crowdMid} y={midY} life={mid} clearing={haze} />
+      <Plate id="hero/crowd-near" opacity={crowdNear} y={nearY} life={near} clearing={haze} />
       <Plate id="hero/statue" opacity={statue} y={statueY} blur={statueBlur} />
       <Plate id="hero/statue-orange" position={ORANGE} opacity={orange} y={orangeY} blur={orangeBlur} tint={colors.white} tintAmount={whitening} />
       <IntroDriver clock={clock} />

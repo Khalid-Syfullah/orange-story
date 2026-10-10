@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useFrame } from "@react-three/fiber";
-import { InstancedBufferAttribute, InstancedBufferGeometry, Mesh, PlaneGeometry, Sphere, Vector2, Vector3 } from "three";
+import { InstancedBufferAttribute, InstancedBufferGeometry, Mesh, PlaneGeometry, Sphere, Vector2, Vector3, type Group } from "three";
 
 import { plateEntry, type Pair, type PlateId } from "@/art/manifest";
 import { seeded } from "@/lib/progress";
@@ -92,21 +92,37 @@ export interface GlowRippleProps {
   lift?: Num;
   /** World height added to the source's (the orange rises with the statue in the ascent). */
   offsetY?: Num;
-  /** How far the droplets spread, in world units. Default 7. */
+  /** Distance of the source behind the picture plane (the orange's plate depth). */
+  depth?: number;
+  /**
+   * World units per ripple unit: the whole ripple (its reach, its droplets and its rings) is laid out
+   * in ripple units and drawn at this scale, so a closer camera can have a smaller ripple that looks
+   * the same on screen. Default 1.
+   */
+  unit?: number;
+  /** How far the droplets spread, in ripple units. Default 7. */
   reach?: number;
   count?: number;
   /** Stacking inside the scene. Negative draws behind the scene's plates (over its sky). */
   layer?: number;
-  /** World x where the rings of dots have calmed away (toward the words on the left), and where they are full. */
+  /** Where the rings of dots have calmed away (toward the words on the left), and where they are full: ripple units left (negative) or right of the source. */
   calm?: Pair;
+  /** Ripple units below the source where the droplets have faded out, and where they are full (they keep off the onlookers' heads). */
+  sky?: Pair;
+  /** Ripple units left of the source where the droplets are calmest, and where they are full (calmer behind the title). */
+  quiet?: Pair;
   name?: string;
 }
 
 /** World units the ring plane reaches past the droplets' reach, so no ring is ever cut by its edge. */
 const RING_MARGIN = 1.6;
 
-/** Where the rings calm away toward the hero's words on the left (world x): gone, then full. */
-const CALM: Pair = [-0.5, 1.6];
+/** Where the rings calm away toward the hero's words on the left (ripple units from the source): gone, then full. */
+const CALM: Pair = [-4.2, -2.1];
+/** Where the droplets fade out below the source (ripple units): gone, then full. */
+const SKY: Pair = [-5, -3];
+/** Where the droplets are calmer left of the source, behind the title (ripple units): calmest, then full. */
+const QUIET: Pair = [-6.2, -3.2];
 
 /** The plane of the ripple rings (owned: never the plates' shared quad), centred on the source. */
 export function ringGeometry(reach: number): PlaneGeometry {
@@ -114,7 +130,7 @@ export function ringGeometry(reach: number): PlaneGeometry {
   return new PlaneGeometry(size, size);
 }
 
-export function GlowRipple({ sprite, source, opacity, lift, offsetY, reach = 7, count: wanted = 320, layer = -2, calm = CALM, name = "glow-ripple" }: GlowRippleProps) {
+export function GlowRipple({ sprite, source, opacity, lift, offsetY, depth = 0, unit = 1, reach = 7, count: wanted = 320, layer = -2, calm = CALM, sky = SKY, quiet = QUIET, name = "glow-ripple" }: GlowRippleProps) {
   // Half as many droplets on a phone.
   const count = particleCount(wanted, useStacked());
   const entry = plateEntry(sprite);
@@ -124,7 +140,8 @@ export function GlowRipple({ sprite, source, opacity, lift, offsetY, reach = 7, 
   const clock = useIdleClock();
   const key = React.useMemo(() => ({}), []);
   const material = React.useMemo(() => new RippleMaterial(texture), [texture]);
-  const geometry = React.useMemo(() => rippleGeometry(`${name}-drops`, count, entry.height, source, reach), [name, count, entry.height, source, reach]);
+  // Laid out in ripple units around the source (the group below places and scales it in the world).
+  const geometry = React.useMemo(() => rippleGeometry(`${name}-drops`, count, entry.height, [0, 0], reach), [name, count, entry.height, reach]);
   // The concentric rings, as rings of dots (the halftone layer), on the same ripple clock as the droplets.
   const ringMaterial = React.useMemo(() => {
     const m = new HalftoneMaterial(texture, "rings");
@@ -132,10 +149,10 @@ export function GlowRipple({ sprite, source, opacity, lift, offsetY, reach = 7, 
     (m.uniforms.ringSize.value as Vector2).set(size, size);
     // The dot grid in world units: the same dot size on any screen.
     (m.uniforms.cells.value as Vector2).set(size / HALFTONE.ringCell, size / HALFTONE.ringCell);
-    (m.uniforms.calm.value as Vector2).set(calm[0] - source[0], calm[1] - source[0]);
+    (m.uniforms.calm.value as Vector2).set(calm[0], calm[1]);
     m.uniforms.reach.value = reach;
     return m;
-  }, [texture, reach, calm, source]);
+  }, [texture, reach, calm]);
   const rings = React.useMemo(() => ringGeometry(reach), [reach]);
 
   React.useEffect(
@@ -158,6 +175,7 @@ export function GlowRipple({ sprite, source, opacity, lift, offsetY, reach = 7, 
   const state = React.useRef(rippleClock(name));
   const ref = React.useRef<Mesh>(null);
   const ringRef = React.useRef<Mesh>(null);
+  const groupRef = React.useRef<Group>(null);
   useFrame(() => {
     const mesh = ref.current;
     const ring = ringRef.current;
@@ -177,18 +195,20 @@ export function GlowRipple({ sprite, source, opacity, lift, offsetY, reach = 7, 
       s.time += (now - s.last) * (1 + RIPPLE_SPEED_UP * level);
       s.last = now;
     }
-    const y = source[1] + read(offsetY, 0);
+    groupRef.current?.position.set(source[0], source[1] + read(offsetY, 0), -depth);
     const u = (mesh.material as RippleMaterial).uniforms;
     u.time.value = s.time;
     u.opacity.value = alpha;
     u.lift.value = level;
     u.reach.value = reach;
-    (u.source.value as Vector2).set(source[0], y);
+    (u.source.value as Vector2).set(0, 0);
+    (u.sky.value as Vector2).set(sky[0], sky[1]);
+    (u.quiet.value as Vector2).set(quiet[0], quiet[1]);
     const r = (ring.material as HalftoneMaterial).uniforms;
     r.time.value = s.time;
     r.opacity.value = alpha;
     r.lift.value = level;
-    ring.position.set(source[0], y, -0.01);
+    ring.position.set(0, 0, -0.01);
   });
 
   // The droplets move in the shader, so the mesh's own bounds are meaningless: never cull it.
@@ -205,9 +225,9 @@ export function GlowRipple({ sprite, source, opacity, lift, offsetY, reach = 7, 
   }, [rings, ringMaterial, name]);
 
   return (
-    <>
+    <group ref={groupRef} position={[source[0], source[1], -depth]} scale={unit} name={`${name}-place`}>
       <primitive ref={ringRef} object={ringPlace} renderOrder={plateRenderOrder(scene, layer - 0.5)} />
       <primitive ref={ref} object={place} renderOrder={plateRenderOrder(scene, layer)} />
-    </>
+    </group>
   );
 }

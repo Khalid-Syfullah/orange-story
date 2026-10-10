@@ -22,10 +22,10 @@ export type BranchId = (typeof BRANCHES)[number];
 
 const SHAFT = plateEntry(MINARET);
 
-/** World height the statue has risen by the end of the scene. */
-export const RISE_TOTAL = 10;
+/** World height the statue has risen by the end of the scene (`ASCENT.riseTotal`: the camera keys follow the same rise). */
+export const RISE_TOTAL = ASCENT.riseTotal;
 /** The rise starts slowly and accelerates: the trunk "keeps growing" faster and faster. */
-const RISE_POWER = 2;
+const RISE_POWER = ASCENT.risePower;
 
 /** How far the statue and the shaft top have risen at progress p (world units). */
 export function riseAt(p: number): number {

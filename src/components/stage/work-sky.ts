@@ -62,11 +62,16 @@ export function cloudShiftAt(p: number, depth: number): number {
   return ease(remap(p, WORK.clouds[0], WORK.clouds[1])) * CLOUD_SCROLL * cloudWeight(depth) * 0.5;
 }
 
-/** Idle drift of a cloud at idle time t, wrapped into the span so it comes round on the left again. */
-export function driftX(base: number, depth: number, t: number): number {
-  const travelled = base + t * CLOUD_SPEED * cloudWeight(depth);
-  const half = WRAP_SPAN / 2;
-  const wrapped = ((((travelled + half) % WRAP_SPAN) + WRAP_SPAN) % WRAP_SPAN) - half;
+/**
+ * Idle drift of a cloud at idle time t, wrapped into the span so it comes round on the left again.
+ * `scale` shrinks the drift and the span with a scene laid out smaller (the finale's clouds stand
+ * with the life-size keepers, near the camera).
+ */
+export function driftX(base: number, depth: number, t: number, scale = 1): number {
+  const span = WRAP_SPAN * scale;
+  const travelled = base + t * CLOUD_SPEED * scale * cloudWeight(depth);
+  const half = span / 2;
+  const wrapped = ((((travelled + half) % span) + span) % span) - half;
   return wrapped - base;
 }
 

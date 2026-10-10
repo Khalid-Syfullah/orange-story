@@ -1,5 +1,6 @@
 import { gsap } from "gsap";
 
+import { fitFov, panAmount, REFERENCE_ASPECT } from "@/scroll/camera-fit";
 import { registerGsap } from "@/scroll/stage-scroll";
 import type { CameraKey, Vec3 } from "@/scroll/types";
 
@@ -44,40 +45,8 @@ export interface CameraPath {
 /* Fitting the picture to the screen                                   */
 /* ------------------------------------------------------------------ */
 
-/** The shape of a stage the camera was authored for: any laptop, desktop or landscape tablet. The keys are exact here. */
-export const REFERENCE_ASPECT = 16 / 9;
-
-/**
- * Below this shape (width over height) the stage is tall and narrow: a portrait tablet or a phone.
- * There the same vertical field of view would cut the picture's sides off, so the field widens by
- * `(FIT_BELOW / aspect) ^ FIT_STRENGTH`: with a strength of 1 the picture keeps the width it has at
- * `FIT_BELOW`, and the extra height shows more sky and ground above and below (where the text goes).
- * At and above `FIT_BELOW` nothing changes.
- */
-export const FIT_BELOW = 1.3;
-export const FIT_STRENGTH = 1;
-
-/** Aspect ratios between which the keys' `pan` fades in: none at `FIT_BELOW` and wider, all of it at `PAN_TO` and narrower. */
-export const PAN_FROM = FIT_BELOW;
-export const PAN_TO = 0.6;
-
-/** How much wider the vertical field of view (its tangent) is on a stage of this aspect. 1 on any wide stage. */
-export function fovScale(aspect: number): number {
-  if (!(aspect > 0) || aspect >= FIT_BELOW) return 1;
-  return (FIT_BELOW / aspect) ** FIT_STRENGTH;
-}
-
-/** A vertical field of view (degrees) fitted to a stage of this aspect. */
-export function fitFov(fov: number, aspect: number): number {
-  const scale = fovScale(aspect);
-  return scale === 1 ? fov : (2 * Math.atan(Math.tan((fov * Math.PI) / 360) * scale) * 180) / Math.PI;
-}
-
-/** How much of the keys' `pan` applies on a stage of this aspect, 0 (wide) to 1 (tall and narrow). */
-export function panAmount(aspect: number): number {
-  if (!(aspect > 0)) return 0;
-  return Math.min(1, Math.max(0, (PAN_FROM - aspect) / (PAN_FROM - PAN_TO)));
-}
+// The fit itself is pure and lives in `@/scroll/camera-fit` (the framing table uses it too).
+export { FIT_BELOW, FIT_STRENGTH, PAN_FROM, PAN_TO, REFERENCE_ASPECT, fitFov, fovScale, panAmount } from "@/scroll/camera-fit";
 
 let stageAspect = REFERENCE_ASPECT;
 
@@ -153,6 +122,12 @@ export function unprojectToPlane(pose: CameraPose, x: number, y: number, width: 
   const dirZ = b.fz + b.rz * sx + b.uz * sy;
   const s = (z - pose.pz) / dirZ;
   return [pose.px + dirX * s, pose.py + dirY * s, z];
+}
+
+/** A key's tall-screen pan as [x, y, z] (a two-value pan moves the camera sideways and up only), or undefined. */
+export function panOf(key: CameraKey): readonly [number, number, number] | undefined {
+  if (!key.pan) return undefined;
+  return [key.pan[0], key.pan[1], key.pan[2] ?? 0];
 }
 
 export function poseOf(key: CameraKey): CameraPose {
@@ -275,9 +250,9 @@ export function createCameraPath(keys: readonly CameraKey[]): CameraPath {
   registerGsap();
   const pose = poseOf(keys[0]);
   // The pan offsets move along with the pose (a key without one keeps the one before it).
-  const pans: (readonly [number, number])[] = [];
-  keys.forEach((key, i) => pans.push(key.pan ?? pans[i - 1] ?? [0, 0]));
-  const pan = { x: pans[0][0], y: pans[0][1] };
+  const pans: (readonly [number, number, number])[] = [];
+  keys.forEach((key, i) => pans.push(panOf(key) ?? pans[i - 1] ?? [0, 0, 0]));
+  const pan = { x: pans[0][0], y: pans[0][1], z: pans[0][2] };
   const view: CameraPose = { ...pose };
   const timeline = gsap.timeline({ paused: true });
   const times = keys.map((key) => key.at);
@@ -287,6 +262,7 @@ export function createCameraPath(keys: readonly CameraKey[]): CameraPath {
     addValueTweens(timeline, pose as unknown as Record<string, number>, field, times, poses.map((p) => p[field]), rest);
   addValueTweens(timeline, pan, "x", times, pans.map((p) => p[0]), rest);
   addValueTweens(timeline, pan, "y", times, pans.map((p) => p[1]), rest);
+  addValueTweens(timeline, pan, "z", times, pans.map((p) => p[2]), rest);
   const first = keys[0].at;
   const last = keys[keys.length - 1].at;
 
@@ -300,7 +276,8 @@ export function createCameraPath(keys: readonly CameraKey[]): CameraPath {
       const dy = pan.y * k;
       view.px = pose.px + dx;
       view.py = pose.py + dy;
-      view.pz = pose.pz;
+      // The pan's third value moves the camera alone, nearer the picture (negative) or away from it: the subject keeps its size on a tall screen.
+      view.pz = pose.pz + pan.z * k;
       view.tx = pose.tx + dx;
       view.ty = pose.ty + dy;
       view.tz = pose.tz;

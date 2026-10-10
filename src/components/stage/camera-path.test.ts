@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
+import { plateBox } from "@/scroll/framing";
 import { CAMERA } from "@/scroll/script";
 
 import {
@@ -148,23 +149,28 @@ describe("fitting the camera to the screen", () => {
     expect(fovScale(Number.NaN)).toBe(1);
   });
 
-  it("shows what sits to the side: the statue and the crowd fit on a phone, only the middle did without the fit", () => {
+  it("frames the statue on a phone: cut off its side without the fit and its pan, large and whole with them", () => {
     const path = createCameraPath(CAMERA);
-    const statue: [number, number, number] = [3.45, 1.5, 0];
-    const crowd: [number, number, number] = [4.8, -3.35, -1.6];
+    const statue = plateBox("hero/statue");
+    const corners: [number, number, number][] = [
+      [statue.x0, statue.y0, statue.z],
+      [statue.x1, statue.y1, statue.z],
+    ];
     const phone = { width: 390, height: 844 };
     setStageAspect(0);
-    const before = projectPoint(path.seek(0), statue, phone.width, phone.height);
-    expect(before.x).toBeGreaterThan(phone.width);
+    const before = corners.map((c) => projectPoint(path.seek(0), c, phone.width, phone.height));
+    expect(Math.max(...before.map((c) => c.x))).toBeGreaterThan(phone.width);
     setStageAspect(phone.width / phone.height);
     const view = path.seek(0);
-    for (const point of [statue, crowd]) {
-      const at = projectPoint(view, point, phone.width, phone.height);
+    const [low, high] = corners.map((c) => projectPoint(view, c, phone.width, phone.height));
+    for (const at of [low, high]) {
       expect(at.x).toBeGreaterThan(0);
       expect(at.x).toBeLessThan(phone.width);
       expect(at.y).toBeGreaterThan(0);
       expect(at.y).toBeLessThan(phone.height);
     }
+    // About half the phone's height (the framing table asks for 55%).
+    expect((low.y - high.y) / phone.height).toBeGreaterThan(0.45);
     expect(getStageAspect()).toBeCloseTo(phone.width / phone.height, 9);
     path.kill();
   });
@@ -172,13 +178,18 @@ describe("fitting the camera to the screen", () => {
   it("eases the pan along with the rest of the move and keeps it between keys", () => {
     setStageAspect(0.46);
     const path = createCameraPath(CAMERA);
-    const heroX = path.seek(0).px;
-    expect(heroX).toBeGreaterThan(1);
-    // The ascent's second key sets the pan back to nothing: by then the camera is on its own x again.
-    const ascent = CAMERA.find((k) => k.scene === "ascent" && k.pan)!;
-    expect(path.seek(ascent.at).px).toBeCloseTo(ascent.position[0], 6);
-    let previous = heroX;
-    for (let p = 0; p <= ascent.at; p += ascent.at / 80) {
+    const hero = CAMERA[0];
+    const next = CAMERA.find((k) => k.scene === "ascent" && k.at > CAMERA[1].at)!;
+    // On a phone each key films from its position moved by its full pan (x, y and nearer the picture).
+    for (const key of [hero, next]) {
+      const pose = path.seek(key.at);
+      expect(pose.px).toBeCloseTo(key.position[0] + key.pan![0], 6);
+      expect(pose.py).toBeCloseTo(key.position[1] + key.pan![1], 6);
+      expect(pose.pz).toBeCloseTo(key.position[2] + (key.pan![2] ?? 0), 6);
+    }
+    // In between it eases: no jumps.
+    let previous = path.seek(0).px;
+    for (let p = 0; p <= next.at; p += next.at / 80) {
       const x = path.seek(p).px;
       expect(Math.abs(x - previous)).toBeLessThan(0.25);
       previous = x;

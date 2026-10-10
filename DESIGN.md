@@ -60,6 +60,8 @@ The people are paintings, not drawings: an academic neoclassical oil-painting lo
 
 Until then a procedural painter (`scripts/art/`) stands in: each character is built from rounded forms (turned heads, tapered limbs, grouped fingers, drapery hanging from points of tension), lit with five values and cast shadows, and painted with seeded brush strokes over a canvas weave and a faint craquelure. The props share the same light. A texture guard fails any character plate that turns out flat. Nothing in the interface changes for this: the plates are images, and where code ties something to a figure (a fruit in a hand, a fingertip, a blade) it reads a named point on the plate, never a constant.
 
+Figures are painted at one world scale (an adult 1.75 world units tall, a head 0.23, a hand 0.19) and framed like a painting seen up close: large and confident, cropped by the frame's edge, faces and hands big enough to read, the sky around them left as room for the words (the framing table, `docs/ART-PLATES.md`). Only the orange is ever heroically large.
+
 ## The living, painted stage
 
 The stage reads as one oil painting on canvas with a graphic layer drawn over it (`src/components/stage/paint.ts`, `materials.ts`; numbers in `SCROLL.md`):
@@ -74,9 +76,9 @@ The stage reads as one oil painting on canvas with a graphic layer drawn over it
 
 Text sits on painted plates, not on flat color, so where the painting runs behind words it gives way while the words are up (`useTextHaze`, see `SCROLL.md`):
 
-- **Haze.** Inside a soft rectangle around the words, foliage, fruit and figures recede toward the sky's color (the pluck's foliage behind its two beats, the orchard's fruit behind "Questions worth asking first.", the tree behind the finale's wordmark). It reads as atmosphere, not as a panel.
+- **Haze.** Inside a soft rectangle around the words, foliage, fruit and figures recede toward the sky's color (the pluck's foliage behind its two beats, the gardener's young tree behind "The Terms" and the fit text, the orchard's fruit behind "Questions worth asking first.", the tree behind the finale's wordmark). It reads as atmosphere, not as a panel.
 - **Parting.** Clouds thin out of the card column instead (the work scene) and re-form beyond it, so they pass on both sides of the cards.
-- **Composition first.** Where the art can simply stand aside it does: the gardener stands right of center so the fit text has clear sky; the astronomer sinks out of a phone's frame before the form arrives.
+- **Composition first.** Where the art can simply stand aside it does: the statue, the harvester, the builder and the astronomer are framed beside the words (the framing table); the gardener stands on the right, and only his tree reaches behind the words; the astronomer steps down the sky, and sinks out of a phone's frame, before the form arrives.
 - **Glass with a tint.** The question cards are glass with a 45% sky fill (not a white one), so their answers keep 4.5:1 over the orchard's fruit.
 - **Chrome chips.** The percent counter and the ruler's active entry sit on a `chrome-chip`: a 4px chip of the ground's own color (`--chrome-ground`, sky or milk) at 85%. On plain sky it all but disappears; over a robe or a cloud in that corner it keeps the readout legible. The ghost Apply pill takes an 80% sky fill for the same reason.
 

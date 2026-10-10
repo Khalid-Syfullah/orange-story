@@ -9,7 +9,7 @@ import { colors } from "@/styles/tokens";
 
 import type { PlateClearing } from "./plate";
 import { useStageProgress } from "./stage-context";
-import { beatArea, HAZE_SOFT, hazeAmount, strongestBeat } from "./text-haze";
+import { beatArea, HAZE_SOFT, hazeAmount, strongestBeat, unionArea } from "./text-haze";
 
 export interface TextHazeOptions {
   /** `haze`: the art recedes toward the sky's color behind the text. `clear`: it thins out there. */
@@ -18,6 +18,8 @@ export interface TextHazeOptions {
   strength?: number;
   /** Only on a stacked (phone) screen, where the text runs the full width over art a wide screen keeps beside it. */
   stackedOnly?: boolean;
+  /** Beats that can be up together: recede behind all of their slots at once (`unionArea`), not only the strongest one's. */
+  union?: boolean;
 }
 
 /**
@@ -25,12 +27,12 @@ export interface TextHazeOptions {
  * while the beat most on stage is up, the plates recede behind its words, over the area of its
  * slot (`text-haze.ts`), on the layout on screen. Pass the same object to every plate that needs it.
  */
-export function useTextHaze(ids: readonly BeatId[], { mode = "haze", strength = 1, stackedOnly = false }: TextHazeOptions = {}): PlateClearing {
+export function useTextHaze(ids: readonly BeatId[], { mode = "haze", strength = 1, stackedOnly = false, union = false }: TextHazeOptions = {}): PlateClearing {
   const stage = useStageProgress();
   const none = useMotionValue(0);
   const progress = stage ?? none;
   const stacked = useStacked();
-  const area = (p: number) => beatArea(ids[strongestBeat(ids, p)], stacked);
+  const area = (p: number) => (union ? unionArea(ids, p, stacked) : beatArea(ids[strongestBeat(ids, p)], stacked));
   const scale = stackedOnly && !stacked ? 0 : strength;
   const amount = useTransform(progress, (p) => hazeAmount(ids, p) * scale);
   const left = useTransform(progress, (p) => area(p).left);

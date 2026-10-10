@@ -23,6 +23,7 @@ import {
   wateringAt,
   womanAt,
 } from "./finale-plan";
+import { VIEW as STARS_VIEW } from "./stars-plan";
 
 describe("finale plan", () => {
   const finale = SCENES.find((s) => s.id === "finale")!;
@@ -47,7 +48,8 @@ describe("finale plan", () => {
   it("lifts and fades the stars, and puts everything back when scrolling up", () => {
     expect(starsLift(finale.start)).toBe(0);
     expect(starsOpacity(finale.start)).toBe(1);
-    expect(starsLift(FINALE.stars[1])).toBeGreaterThan(4);
+    // Most of the stargazer's view: up and out of the frame.
+    expect(starsLift(FINALE.stars[1])).toBeGreaterThan(0.7 * STARS_VIEW);
     expect(starsOpacity(FINALE.stars[1])).toBe(0);
     expect(starsLift(FINALE.stars[0] + 0.001)).toBe(starsLift(FINALE.stars[0] + 0.001));
   });

@@ -478,6 +478,8 @@ uniform float time;
 uniform vec2 source;
 uniform float reach;
 uniform float lift;
+uniform vec2 sky;    // below the source: where the droplets are gone, and where they are full
+uniform vec2 quiet;  // left of the source: where they are calmest, and where they are full
 varying vec2 vUv;
 varying float vAlpha;
 void main() {
@@ -493,10 +495,10 @@ void main() {
   // A faint glimmer runs through each front as it spreads.
   float wave = 0.5 + 0.5 * cos(6.2831853 * (drop.x * 3.0 + time * 0.12) + drop.y * 40.0);
   float born = smoothstep(0.0, 0.1, life) * (1.0 - smoothstep(0.35, 1.0, life));
-  float sky = smoothstep(-1.2, 0.8, center.y);
+  float high = smoothstep(sky.x, sky.y, center.y - source.y);
   // Keep the middle of the sky behind the title calmer.
-  float calm = mix(1.0, 0.4, smoothstep(0.5, -2.5, center.x));
-  vAlpha = born * sky * calm * (0.45 + 0.55 * wave);
+  float calm = mix(0.4, 1.0, smoothstep(quiet.x, quiet.y, center.x - source.x));
+  vAlpha = born * high * calm * (0.45 + 0.55 * wave);
   float size = drop.w * (0.8 + 0.4 * wave) * (0.7 + 0.5 * sin(3.14159265 * life)) * (1.0 + 0.45 * lift);
   gl_Position = projectionMatrix * modelViewMatrix * vec4(center + position.xy * size, 0.0, 1.0);
 }
@@ -704,6 +706,8 @@ export class RippleMaterial extends ShaderMaterial {
         map: { value: map },
         time: { value: 0 },
         source: { value: new Vector2(0, 0) },
+        sky: { value: new Vector2(-5, -3) },
+        quiet: { value: new Vector2(-6.2, -3.2) },
         reach: { value: 7 },
         lift: { value: 0 },
         opacity: { value: 1 },
