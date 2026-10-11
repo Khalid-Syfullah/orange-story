@@ -5,12 +5,14 @@ import { HeroCopy } from "./HeroCopy";
 import { ModelCopy } from "./ModelCopy";
 import { storyPasses } from "./passes";
 import { Stage } from "./Stage";
+import { WorkCopy } from "./WorkCopy";
 
 export function StoryStage() {
   return (
     <Stage passes={storyPasses}>
       <HeroCopy />
       <ModelCopy />
+      <WorkCopy />
     </Stage>
   );
 }

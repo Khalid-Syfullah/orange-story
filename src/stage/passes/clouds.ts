@@ -11,7 +11,13 @@
 // Instances differ in size, seed, drift speed and phase, the larger slower (rule 13). The hero
 // lays out its own three (passes/hero/frag.ts); the plate's live here in `plateClouds` because
 // The Split and The Work draw the same sky, mapped through the same `plateUV`.
+/** The plate's phone fit (see plateFit in the GLSL below and plateFit() in passes/work/timeline.ts). */
+export const PLATE_SPAN = 1.8;
+export const PLATE_CX = 0.62;
+
 export const CLOUDS_GLSL = /* glsl */ `
+const float PLATE_SPAN = ${PLATE_SPAN.toFixed(3)};
+const float PLATE_CX = ${PLATE_CX.toFixed(3)};
 const float CLOUD_TAU = 6.2831853;
 // Dot cell size in CSS px (multiply by uDpr for device px).
 const float CLOUD_CELL = 6.5;
@@ -75,12 +81,24 @@ float cloudDot(vec2 frag, float cellPx, float cov) {
 // so clouds sit behind leaves, scaffold and fruit.
 float skyMask(vec3 c) { return smoothstep(0.08, 0.22, c.b - max(c.r, c.g)); }
 
-// plateUV: screen uv (y down) -> painting uv of the 9:16 plate fitted to the frame's width and
-// scrolled through its own height: 'yOff' is the plate v at the top of the frame (0 = its top),
+// plateFit: how the 9:16 plate sits in the frame, as (fh, zoom, cx). It is fitted to the frame's
+// width; on a frame so tall that the plate would be shorter than 1.8 frames (phones), it is zoomed
+// in just enough that it still has a height to scroll through, cropping the sides about the plate's
+// column 'cx' (leaning right, toward the orange). 'fh' is the frame's height in plate heights after
+// the zoom. On desktop zoom is 1 and cx is 0.5, so the plain width-fit is unchanged.
+// PLATE_SPAN and PLATE_CX are mirrored by plateFit() in passes/work/timeline.ts.
+vec3 plateFit(vec2 plateSize) {
+  float k = (plateSize.x / plateSize.y) * (uRes.y / uRes.x);   // the frame's height in plate units at width-fit
+  float z = max(1.0, PLATE_SPAN * k);
+  return vec3(k / z, z, clamp(PLATE_CX, 0.5 / z, 1.0 - 0.5 / z));
+}
+
+// plateUV: screen uv (y down) -> painting uv of the 9:16 plate fitted to the frame (see plateFit)
+// and scrolled through its own height: 'yOff' is the plate v at the top of the frame (0 = its top),
 // 'pan' a screen-uv offset (pointer parallax and drift only, docs/STORY.md).
 vec2 plateUV(vec2 uv, vec2 plateSize, float yOff, vec2 pan) {
-  float k = (plateSize.x / plateSize.y) * (uRes.y / uRes.x);   // the frame's height in plate units
-  return vec2(uv.x + pan.x, (uv.y + pan.y) * k + yOff);
+  vec3 f = plateFit(plateSize);
+  return vec2(f.z + (uv.x - 0.5 + pan.x) / f.y, (uv.y + pan.y) * f.x + yOff);
 }
 
 // plateClouds: coverage of the plate's sky at painting point 'pa' (height units: x in 0..aspect),

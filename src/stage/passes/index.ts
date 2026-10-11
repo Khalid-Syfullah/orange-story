@@ -7,5 +7,6 @@ import { heroPass } from "./hero";
 import { modelPass } from "./model";
 import { placeholderPass } from "./placeholder";
 import { splitPass } from "./split";
+import { workPass } from "./work";
 
-export const storyPasses: readonly PassDef[] = [heroPass, bridgePass, modelPass, splitPass, placeholderPass];
+export const storyPasses: readonly PassDef[] = [heroPass, bridgePass, modelPass, splitPass, workPass, placeholderPass];

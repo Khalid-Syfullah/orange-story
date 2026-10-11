@@ -1,0 +1,78 @@
+/* The Work's cards: three panels in column B over the plate. The container carries the `on-sky`
+   ground (milk text on the painting's cobalt). Opacity and lift are written from the frame
+   subscription, and the card's y from the plate's own scroll, so every piece starts hidden until
+   the first frame. A panel is a dark, blurred plate behind the text so it reads over scaffold and
+   fruit as well as sky. */
+
+.work {
+  position: absolute;
+  inset: 0;
+  color: var(--fg);
+  pointer-events: none;
+}
+
+.card {
+  position: absolute;
+  left: var(--col-b);
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: clamp(0.6rem, 1.5vh, 0.95rem);
+  width: min(23vw, 22rem);
+  min-width: 17rem;
+  padding: clamp(1rem, 2.4vh, 1.5rem) clamp(1rem, 1.6vw, 1.5rem);
+  will-change: transform;
+}
+
+/* The ground of the text: opacity follows the title's. */
+.panel {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-tag);
+  background: color-mix(in srgb, var(--ink) 38%, transparent);
+  border: 1px solid var(--line-on-flat);
+  -webkit-backdrop-filter: blur(10px) saturate(1.1);
+  backdrop-filter: blur(10px) saturate(1.1);
+  opacity: 0;
+  visibility: hidden;
+  will-change: opacity;
+}
+
+.piece {
+  position: relative;
+  opacity: 0;
+  visibility: hidden;
+  will-change: opacity, transform;
+}
+
+.tag {
+  /* The tag keeps its own tint over the panel. */
+  text-shadow: none;
+}
+
+.title {
+  margin: 0;
+  max-width: 22rem;
+}
+
+.body {
+  margin: 0;
+  max-width: 24rem;
+  color: color-mix(in srgb, var(--fg) 88%, transparent);
+}
+
+/* Tall phones: one column, the card spans the frame between the gutters. */
+@media (max-aspect-ratio: 4 / 5) {
+  .card {
+    left: var(--col-a);
+    width: calc(100% - var(--col-a) * 2);
+    min-width: 0;
+    padding: 0.9rem 1rem;
+  }
+
+  .title,
+  .body {
+    max-width: none;
+  }
+}

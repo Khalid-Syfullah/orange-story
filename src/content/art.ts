@@ -208,7 +208,17 @@ export const art = {
     },
   },
 
-  plate: still("plate", "9:16", "The Work, the push into the parchment"),
+  plate: {
+    ...still("plate", "9:16", "The Work, the push into the parchment"),
+    anchors: {
+      /** Open sky above the orange: where Work card 1 sits. */
+      sky: { x: 0.2, y: 0.16 },
+      /** The orange's shoulder, level with the man polishing it: Work card 2. */
+      shoulder: { x: 0.38, y: 0.4 },
+      /** The woman reading the blueprint on the lower stage: Work card 3. */
+      blueprint: { x: 0.42, y: 0.73 },
+    },
+  },
 
   drawing: frames("drawing", "1:1", 121, "The Terms (window)"),
 

@@ -53,8 +53,8 @@ export const segments: readonly Segment[] = [
   { id: "bridge", start: 0.04, end: 0.07, chapter: "model", ground: { from: "sky", to: "milk", at: 0.6 } },
   // Three beats on a pale ground: graft, grove, share.
   { id: "model", start: 0.07, end: 0.19, chapter: "model", ground: "milk" },
-  // The Split: the cut in the orange becomes the cut in the picture.
-  { id: "split", start: 0.19, end: 0.22, chapter: "model", ground: { from: "milk", to: "sky", at: 0.45 } },
+  // The Split: the cut in the orange becomes the cut in the picture. The rail already reads The Work.
+  { id: "split", start: 0.19, end: 0.22, chapter: "work", ground: { from: "milk", to: "sky", at: 0.45 } },
   // The tall plate scrolled through its own height; the three Work cards.
   { id: "work", start: 0.22, end: 0.37, chapter: "work", ground: "sky" },
   // The push into the parchment she holds; the painting fades to paper around it.
