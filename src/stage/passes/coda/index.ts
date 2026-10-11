@@ -4,8 +4,8 @@
 // sequence scrubbed by local progress with the halo once the orange hangs alone (./frag.ts). Timing
 // and geometry are in ./timeline.ts (CodaCopy.tsx, TermsCopy.tsx and the HUD read the same).
 //
-// The match cut (phase 11) continues from the coda's last frame: the orange at codaOrange() with
-// the halo at haloAt(), both from ./timeline.ts.
+// The match cut (passes/canopy) continues from the coda's last frame: the orange at codaOrange()
+// with the halo at haloAt(), both from ./timeline.ts, drawn with setCodaUniforms() below.
 import { art } from "@/content/art";
 import type { PassDef } from "../../gl/passes";
 import type { UniformSetter } from "../../gl/program";
@@ -21,7 +21,7 @@ const state = { shown: -1, count: 1 };
 const anchor = codaAnchor();
 
 /** The coda picture's uniforms: its framing, the orange's anchor and the halo's growth. */
-function setCodaUniforms(u: UniformSetter, halo: number): void {
+export function setCodaUniforms(u: UniformSetter, halo: number): void {
   const framing = art.coda.framing;
   u.set2f("uCodaPan", framing.pan.x, framing.pan.y);
   u.set1f("uCodaZoom", framing.zoom);

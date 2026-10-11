@@ -71,8 +71,8 @@ export const segments: readonly Segment[] = [
   { id: "close", start: 0.5, end: 0.53, chapter: "terms", ground: { from: "paper", to: "sky", at: 0.56 } },
   // The coda frames: the picking rod, the orange floats free, the halo.
   { id: "coda", start: 0.53, end: 0.58, chapter: "terms", ground: "sky" },
-  // Match cut on the fruit into the canopy.
-  { id: "matchcut", start: 0.58, end: 0.59, chapter: "terms", ground: "sky" },
+  // Match cut on the fruit into the canopy. The rail already reads Questions from its first frame.
+  { id: "matchcut", start: 0.58, end: 0.59, chapter: "questions", ground: "sky" },
   // FAQ cards over the canopy, the handwritten title, the constellation.
   { id: "questions", start: 0.59, end: 0.76, chapter: "questions", ground: "sky" },
   // The coarse halftone screen with moiré; the next painting's clouds print in.

@@ -5,6 +5,7 @@ import { CodaCopy } from "./CodaCopy";
 import { HeroCopy } from "./HeroCopy";
 import { ModelCopy } from "./ModelCopy";
 import { storyPasses } from "./passes";
+import { QuestionsCopy } from "./QuestionsCopy";
 import { Stage } from "./Stage";
 import { TermsCopy } from "./TermsCopy";
 import { WorkCopy } from "./WorkCopy";
@@ -17,6 +18,7 @@ export function StoryStage() {
       <WorkCopy />
       <TermsCopy />
       <CodaCopy />
+      <QuestionsCopy />
     </Stage>
   );
 }

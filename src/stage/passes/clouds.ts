@@ -30,7 +30,9 @@ float smin(float a, float b, float k) {
 // One cloud: smooth-min circles bitten by fbm with a flat underside, as coverage 0..1.
 // 'pa' is a painting point in height units, 'c' the left end of the flat base, 'sc' the cloud's
 // size in the same units, 'seed' its own shape, 'sway' its drift (height units).
-float cloud(vec2 pa, vec2 c, float sc, float seed, vec2 sway) {
+// 'edge' advances the fbm that bites the outline, in noise lattice units (the canopy's cloud runs it
+// at 0.03 a second); 0 is the plain cloud the hero and the plate draw.
+float cloud(vec2 pa, vec2 c, float sc, float seed, vec2 sway, float edge) {
   vec2 q = (pa - c - sway) / sc;
   if (q.x < -0.9 || q.x > 2.0 || q.y < -1.05 || q.y > 0.2) return 0.0;
   float j = seed * 7.31;
@@ -42,11 +44,15 @@ float cloud(vec2 pa, vec2 c, float sc, float seed, vec2 sway) {
     float r = 0.20 + 0.12 * hash(j + fi * 3.1 + 5.0);
     d = smin(d, length(q - cc) - r, 0.16);
   }
-  d += (fbm(q * 3.4 + j, 3) - 0.5) * 0.34;
+  d += (fbm(q * 3.4 + j + vec2(edge, edge * 0.37), 3) - 0.5) * 0.34;
   d = max(d, q.y);                                   // flat underside
   float cov = smoothstep(0.02, -0.16, d);
   cov *= mix(0.45, 1.0, smoothstep(0.0, -0.55, q.y)); // lit from above: denser dots on top
   return cov;
+}
+
+float cloud(vec2 pa, vec2 c, float sc, float seed, vec2 sway) {
+  return cloud(pa, c, sc, seed, sway, 0.0);
 }
 
 // cloudSway: an instance's slow drift: two incommensurate sines in x and one in y (rule 9), slower

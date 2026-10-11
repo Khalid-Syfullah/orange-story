@@ -1,0 +1,106 @@
+/* Chapter 4's layer over the canopy: the title, five cards and the constellation. The container
+   carries the `on-sky` ground (milk on the loop's cobalt). Position, opacity and lift are written
+   from the frame subscription (QuestionsCopy.tsx), so every piece starts hidden until the first
+   frame. A card is a 1px hairline at 55% milk with no fill; its text carries a soft sky shadow so it
+   reads over a leaf or a fruit as well as over the sky. */
+
+.questions {
+  position: absolute;
+  inset: 0;
+  color: var(--fg);
+  pointer-events: none;
+  text-shadow:
+    0 0 14px color-mix(in srgb, var(--sky) 85%, transparent),
+    0 0 3px color-mix(in srgb, var(--sky) 60%, transparent);
+}
+
+.title {
+  position: absolute;
+  left: 0;
+  top: 0;
+  margin: 0;
+  max-width: 100%;
+  /* Sized by height as well as width so the two lines stay inside the sky gap on short frames. */
+  font-size: clamp(2.5rem, min(1rem + 4.6vw, 10.5vh), 5rem);
+  opacity: 0;
+  visibility: hidden;
+  will-change: opacity, transform;
+}
+
+/* The handwritten word: an inline SVG as tall as the type, sitting on the same baseline (its size,
+   margins and offset are in em, written from the generated outline's own box). */
+.hand {
+  display: inline-block;
+  overflow: visible;
+  color: inherit;
+  text-shadow: none;
+}
+
+.card {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: clamp(0.5rem, 1.3vh, 0.8rem);
+  padding: clamp(1rem, 2.4vh, 1.5rem) clamp(1rem, 1.6vw, 1.5rem);
+  will-change: transform;
+}
+
+/* The hairline: 1px at 55% milk, no fill; its opacity follows the headline's. */
+.panel {
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--line-on-paint);
+  opacity: 0;
+  visibility: hidden;
+  will-change: opacity;
+}
+
+.piece {
+  position: relative;
+  opacity: 0;
+  visibility: hidden;
+  will-change: opacity, transform;
+}
+
+.question {
+  margin: 0;
+}
+
+.answer {
+  margin: 0;
+  color: color-mix(in srgb, var(--fg) 90%, transparent);
+}
+
+.constellation {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  text-shadow: none;
+}
+
+.line {
+  stroke: var(--line-on-paint);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+  fill: none;
+}
+
+.star {
+  fill: var(--fg);
+}
+
+/* Tall phones: one column between the gutters (its width is written from the layout). */
+@media (max-aspect-ratio: 4 / 5) {
+  .title {
+    font-size: clamp(2.5rem, 12vw, 3.75rem);
+  }
+
+  .card {
+    padding: 0.9rem 1rem;
+  }
+}

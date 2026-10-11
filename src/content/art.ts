@@ -268,6 +268,22 @@ export const art = {
 
   canopy: {
     ...loop("canopy", "Questions"),
+    /**
+     * Pushed in 10% and held low, so the Questions chapter can tilt the camera up through the
+     * branches (pan.y walks from here by `CANOPY_TRAVEL`, passes/canopy/timeline.ts) without the
+     * painting's edge ever showing, with room left for breath, pointer parallax and drift. The
+     * match cut lands on the nearest orange as mapped by exactly this framing (the chapter's first
+     * frame).
+     */
+    framing: { pan: { x: 0, y: -0.035 }, zoom: 1.1 },
+    rects: {
+      /**
+       * The open sky in the middle of the frame: the centre 50% that docs/PAINTINGS.md keeps clear of
+       * branches, a little taller than that (the placeholder's sky is wider but its fruit hangs at
+       * the sides). The cards and the title sit inside it.
+       */
+      gap: { x: 0.22, y: 0.2, w: 0.52, h: 0.6 },
+    },
     anchors: {
       /**
        * The canopy orange nearest the centre on the loop's first frame: the match cut lands the
