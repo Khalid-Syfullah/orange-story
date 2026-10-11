@@ -183,6 +183,20 @@ export function surfaceAt(p: number): "paint" | "flat" {
   return groundAt(p) === "paper" ? "flat" : "paint";
 }
 
+/**
+ * `?split=0.5` (any segment id with a local t, an empty value meaning 0): the first such query
+ * parameter, so a cut can be held at any t for stills and the scrub test (docs/CHECKS.md).
+ */
+export function segmentFromParams(params: URLSearchParams): { id: SegmentId; t: number } | null {
+  for (const s of segments) {
+    const raw = params.get(s.id);
+    if (raw === null) continue;
+    const t = raw === "" ? 0 : Number.parseFloat(raw);
+    if (Number.isFinite(t)) return { id: s.id, t: clamp01(t) };
+  }
+  return null;
+}
+
 /** Anchors (#model, #work, #terms, #questions, #apply) map to the segment they open. */
 export const ANCHORS: Readonly<Record<string, SegmentId>> = {
   model: "model",

@@ -9,8 +9,11 @@
 //   5. passes.draw  -> exactly one full-screen pass
 //   6. hub.emit     -> DOM layers write to their elements
 //
-// `?p=0.42` lands on that progress at start (deep links and dev); `#model` etc. land on a segment;
-// a reload lands where it was (the browser's restoration is read before the first frame).
+// `?p=0.42` lands on that progress at start (deep links and dev); `?split=0.5` (any segment id with
+// a local t) lands inside that segment; `#model` etc. land on a segment; a reload lands where it
+// was (the browser's restoration is read before the first frame). Dev only: `?clock=12` fixes the
+// shader clock so frames are reproducible (docs/CHECKS.md) and `?finish` waits for the GPU after
+// each draw so the HUD's frame time is the pass's real cost.
 import { tierFor } from "@/content/art";
 import type { FrameCtx } from "./frame";
 import { createContext, fitCanvas, type CanvasFit, type GLContext } from "./gl/context";
@@ -18,7 +21,7 @@ import { PassManager, type PassDef } from "./gl/passes";
 import { TextureManager } from "./gl/textures";
 import type { StageHub } from "./hub";
 import { createPointer } from "./pointer";
-import { ANCHORS, active, local, pAt, type SegmentId } from "./script";
+import { ANCHORS, active, local, pAt, segmentFromParams, type SegmentId } from "./script";
 import { createScrollClock, type ScrollClock } from "./scroll";
 import { readColorTokens } from "./tokens";
 
@@ -59,11 +62,24 @@ export function createEngine(opts: EngineOptions): Engine {
   // Deep links: ?p= and #anchor land at once (restoration semantics, no glide, no intro).
   const params = new URLSearchParams(window.location.search);
   const pParam = Number.parseFloat(params.get("p") ?? "");
+  const segParam = segmentFromParams(params);
   if (Number.isFinite(pParam)) scroll.setP(pParam, true);
+  else if (segParam) scroll.setP(pAt(segParam.id, segParam.t), true);
   else {
     const seg = segmentForHash(window.location.hash);
     if (seg) scroll.setP(pAt(seg), true);
   }
+  // Dev: a fixed shader clock (breath, hashed flickers and the kick hold still); `?finish` waits
+  // for the GPU after each draw (a one-pixel readback: in Chrome, finish() alone does not block on
+  // the draw) so the HUD's frame time is the pass's cost; `?repeat=8` draws the pass that many
+  // times a frame, so a cost under the readback's noise can be read off dt instead (it rises above
+  // 16.7 ms once the repeats exceed the budget).
+  const clockParam = Number.parseFloat(params.get("clock") ?? "");
+  const fixedClock = Number.isFinite(clockParam) ? clockParam : null;
+  const syncGPU = params.has("finish");
+  const repeatParam = Number.parseInt(params.get("repeat") ?? "", 10);
+  const repeat = Number.isFinite(repeatParam) && repeatParam > 1 ? Math.min(repeatParam, 64) : 1;
+  const syncPixel = new Uint8Array(4);
 
   // GL stack: created now and rebuilt after a context restore.
   const gl: GLContext | null = createContext(canvas);
@@ -143,8 +159,9 @@ export function createEngine(opts: EngineOptions): Engine {
     if (destroyed) return;
     const start = performance.now();
     scroll.tick(now);
-    const time = (now - t0) / 1000;
-    pointer.tick(scroll.vel, time);
+    const real = (now - t0) / 1000;
+    const time = fixedClock ?? real;
+    pointer.tick(scroll.vel, real);
 
     const p = scroll.p;
     const segment = active(p);
@@ -163,12 +180,13 @@ export function createEngine(opts: EngineOptions): Engine {
       dpr: fit.dpr,
       mouse,
       still: reduced ? 1 : 0,
-      kick: pointer.kick,
+      kick: fixedClock === null ? pointer.kick : 0,
       octaves,
       reduced,
       frame: frameCount,
       ms: lastMs,
       glOff,
+      synced: syncGPU,
     };
 
     if (gl && !gl.lost && passes && textures) {
@@ -185,6 +203,11 @@ export function createEngine(opts: EngineOptions): Engine {
       // Rule 14: skip dead work. Breath redraws every frame unless motion is reduced (uStill = 1).
       if (changed || (!reduced && passes.breathes(segment))) {
         passes.draw(frame);
+        for (let i = 1; i < repeat; i++) passes.draw(frame);
+        if (syncGPU) {
+          gl.gl.finish();
+          gl.gl.readPixels(0, 0, 1, 1, gl.gl.RGBA, gl.gl.UNSIGNED_BYTE, syncPixel);
+        }
         lastUploads = textures.uploads;
       }
       passes.warm();

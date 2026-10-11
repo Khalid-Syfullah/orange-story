@@ -34,7 +34,7 @@ Node 20.9 or newer (CI and the server use Node 22).
 - `/design` (development only, not linked): the type scale, swatches, buttons, tags and hairlines.
 - `/stage-test` (development only, not linked): a checkerboard drawn through `cover()` with GLSL rings and DOM labels at `uncover()` of the same points, for checking the painting-to-screen mapping by eye (`?pan=0.1,-0.05&zoom=1.3&aspect=9:16`).
 
-URL flags on any stage page: `?hud` shows p, segment, local t, frame time and texture uploads per second; `?nogl` hides the canvas and runs the DOM layers alone; `?p=0.42` lands on that progress; `#model`, `#work`, `#terms`, `#questions` and `#apply` land on their segments.
+URL flags on any stage page: `?hud` shows p, segment, local t, frame time and texture uploads per second; `?nogl` hides the canvas and runs the DOM layers alone; `?p=0.42` lands on that progress; `?split=0.5` (any segment id with a local t) lands inside that segment so a cut can be held at any t (on `/stage-test` it swaps in the story's passes with the chrome off, for bare stills); `?clock=12` fixes the shader clock so frames are reproducible; `?finish` waits for the GPU after each draw so the HUD's frame time is the pass's real cost (`?repeat=8` draws the pass that many times a frame, for costs under the sync's noise); `?tune=rindWidth:0.22,lagDist:0.15` retunes The Split's numbers live (the HUD lists them over the cut); `#model`, `#work`, `#terms`, `#questions` and `#apply` land on their segments.
 
 ## The pack
 

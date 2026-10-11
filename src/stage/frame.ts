@@ -34,4 +34,6 @@ export interface FrameCtx {
   ms: number;
   /** True when WebGL is off (`?nogl` or no context); DOM layers still run. */
   glOff: boolean;
+  /** Dev (`?finish`): the frame waited for the GPU after its draw, so `ms` includes the pass. */
+  synced: boolean;
 }

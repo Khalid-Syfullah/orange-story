@@ -221,6 +221,14 @@ export class PassManager {
     return true;
   }
 
+  /** How many of the textures the pass for a segment declares have real pixels (for the HUD). */
+  ready(segment: Segment): { ready: number; total: number } {
+    const handles = this.bySegment.get(segment.id)?.handles ?? [];
+    let ready = 0;
+    for (const h of handles) if (h.ready) ready++;
+    return { ready, total: handles.length };
+  }
+
   /** Whether the active pass wants a redraw every frame (breath). */
   breathes(segment: Segment): boolean {
     const bound = this.bySegment.get(segment.id);

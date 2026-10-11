@@ -3,7 +3,8 @@
 // Layers, in order (all in the painting's own coordinates so they stay glued to it through parallax,
 // the scroll push and the rest-state drift):
 //   1. the loop, sampled through dolly(cover(uv)) + parallax, with the ring's radial displacement
-//   2. halftone clouds in the open sky (three instances, masked to the sky by the loop's own blue)
+//   2. halftone clouds in the open sky (three instances, masked to the sky by the loop's own blue;
+//      the cloud shape and the dot screen are the shared chunk in ../clouds.ts)
 //   3. the halftone pour from the spout to the step below it
 //   4. the rainbow glint on the peel
 //   5. the print-in from the orange (a halftone screen that grows until the dots merge)
@@ -11,12 +12,14 @@
 //      driver so nothing switches on (rule 3)
 // Scroll-driven state is a function of uP/uT; time only feeds breath, the glint, the pour, the
 // grain and the two events (print-in, ring).
+import { CLOUDS_GLSL } from "../clouds";
 import { REST_GLSL } from "../rest";
 
 // HERO_LIB is everything but main(): the bridge pass reuses it so the film it hands over from is
 // exactly the hero (clouds, glint, pour, grain and all), never a copy of it.
 export const HERO_LIB = /* glsl */ `
 ${REST_GLSL}
+${CLOUDS_GLSL}
 uniform sampler2D uHero;
 uniform vec2 uHeroSize;
 uniform vec2 uPan;
@@ -43,33 +46,6 @@ vec2 toPaint(vec2 uv) { return cover(dollyAbout(uv, gO, gS), uHeroSize, uPan, gZ
 vec2 toScreenA(vec2 P) {
   vec2 u0 = uncover(P - gOff, uHeroSize, uPan, gZoom);
   return aspectUV(gO + (u0 - gO) * gS);
-}
-
-float smin(float a, float b, float k) {
-  float h = max(k - abs(a - b), 0.0) / k;
-  return min(a, b) - h * h * k * 0.25;
-}
-
-// One cloud: smooth-min circles bitten by fbm with a flat underside, as coverage 0..1.
-// 'pa' is a painting point in height units (x scaled by the painting's aspect), 'c' the left end of
-// the flat base, 'sc' the cloud's size in the same units.
-float cloud(vec2 pa, vec2 c, float sc, float seed, vec2 sway) {
-  vec2 q = (pa - c - sway) / sc;
-  if (q.x < -0.9 || q.x > 2.0 || q.y < -1.05 || q.y > 0.2) return 0.0;
-  float j = seed * 7.31;
-  float d = 1.0e3;
-  for (int i = 0; i < 5; i++) {
-    float fi = float(i);
-    vec2 cc = vec2(fi * 0.30 - 0.05 + (hash(j + fi) - 0.5) * 0.16,
-                   -0.20 - 0.18 * sin(fi * 1.9 + j) - 0.06 * hash(j + fi * 2.3));
-    float r = 0.20 + 0.12 * hash(j + fi * 3.1 + 5.0);
-    d = smin(d, length(q - cc) - r, 0.16);
-  }
-  d += (fbm(q * 3.4 + j, 3) - 0.5) * 0.34;
-  d = max(d, q.y);                                   // flat underside
-  float cov = smoothstep(0.02, -0.16, d);
-  cov *= mix(0.45, 1.0, smoothstep(0.0, -0.55, q.y)); // lit from above: denser dots on top
-  return cov;
 }
 
 // The pour: halftone rows leaving the spout, advancing 13 cells per second, hash-thinned, denser on
@@ -161,15 +137,13 @@ vec3 heroColor(vec2 uv, vec2 frag) {
     base = texture2D(uHero, pp).rgb;
   }
   vec3 col = base;
-  float sky = smoothstep(0.08, 0.22, base.b - max(base.r, base.g));
+  float sky = skyMask(base);
 
   // ---- 2. halftone clouds in painting coordinates ----------------------------------------------
   // Cells 6.5 px x dpr; coverage is sampled at the cell centre, dot radius sqrt(coverage) * 0.64.
   if (sky > 0.0) {
-    float cellPx = 6.5 * uDpr;
-    vec2 cid = floor(frag / cellPx);
-    vec2 cuv = vec2((cid.x + 0.5) * cellPx, uRes.y - (cid.y + 0.5) * cellPx) / uRes;
-    vec2 cpp = toPaint(cuv);
+    float cellPx = CLOUD_CELL * uDpr;
+    vec2 cpp = toPaint(cloudCellUV(floor(frag / cellPx), cellPx));
     vec2 pa = vec2(cpp.x * aspect, cpp.y);
     // Larger clouds are slower: sway periods 47 / 31 / 23 s, scroll drift falls with size.
     vec2 swayA = vec2(0.012 * (sin(tm * TAU / 47.0 + 1.0) + 0.5 * sin(tm * TAU / 29.5 + 2.0)), 0.002 * sin(tm * TAU / 37.0))
@@ -181,10 +155,7 @@ vec3 heroColor(vec2 uv, vec2 frag) {
     float cov = cloud(pa, vec2(0.47 * aspect, 0.15), 0.30, 1.0, swayA);
     cov = max(cov, cloud(pa, vec2(0.83 * aspect, 0.22), 0.13, 2.0, swayB));
     cov = max(cov, cloud(pa, vec2(0.33 * aspect, 0.50), 0.12, 3.0, swayC) * uCloud3);
-    float r = sqrt(cov) * 0.64 * (1.0 + 0.015 * uKick);
-    float aa = 0.75 / cellPx;
-    float dist = length(frag / cellPx - cid - 0.5);
-    float m = (1.0 - smoothstep(r - aa, r + aa, dist)) * smoothstep(0.0, 0.05, r) * sky;
+    float m = cloudDot(frag, cellPx, cov) * sky;
     col = mix(col, uMilk, m * 0.94);
   }
 
