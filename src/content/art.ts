@@ -248,7 +248,11 @@ export const art = {
 
   plan: still("plan", "1:1", "Last frame of drawing"),
 
-  coda: frames("coda", "16:9", 89, "The Terms (blue)"),
+  coda: {
+    ...frames("coda", "16:9", 89, "The Terms (blue)"),
+    /** A 2% push-in so pointer parallax and drift never show the frame's edge (as the hero). */
+    framing: { pan: { x: 0, y: 0 }, zoom: 1.02 },
+  },
 
   "share-orange": {
     ...still("share-orange", "1:1", "Last frame of coda"),

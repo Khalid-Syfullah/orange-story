@@ -79,8 +79,6 @@ export const TERMS_TUNE = {
   copyRamp: 60,
   titleLead: 12,
   copyEarly: 24,
-  /** Until the close burns it (phase 10), the copy leaves over this many units into the close. */
-  copyLeave: 60,
   /** Motion smear of the picture: the cap on one frame's displacement (CSS px). */
   smearMax: 24,
 } as const;
@@ -103,7 +101,7 @@ const smoothArea = (u: number) => {
  * zero over the last `settle` (0 for none): the normalised integral of that speed profile, so the
  * position has no kink anywhere. `ramp + settle` must not exceed 1.
  */
-function profile(x: number, ramp: number, settle: number): number {
+export function profile(x: number, ramp: number, settle: number): number {
   const k = clamp01(x);
   const a = ramp > 0 ? (k < ramp ? ramp * smoothArea(k / ramp) : 0.5 * ramp + (k - ramp)) : k;
   const from = 1 - settle;
@@ -304,20 +302,18 @@ export const COPY_FROM = TERMS_TUNE.retreatTo * DRAWING_UNITS - TERMS_TUNE.copyE
 /**
  * 0..1: a piece of the terms copy at p. It ramps in over `copyRamp` units as the window lands beside
  * it (the title `titleLead` units ahead of the rest, so pass `titleLead` for the title and 0 for the
- * rest); it holds through the panel and, until the close burns it with the paper (phase 10), leaves
- * over the close's first `copyLeave` units.
+ * rest) and holds through the panel. It does not leave on its own: the close burns it with the paper
+ * (TermsCopy.tsx multiplies this by `burnSurvival()` from passes/coda/timeline.ts).
  */
 export function copyAlpha(p: number, lead: number): number {
   const T = TERMS_TUNE;
   const x = drawingUnits(p);
-  const up = smooth(0, 1, (x - (COPY_FROM + T.titleLead - lead)) / T.copyRamp);
-  const out = 1 - smooth(0, 1, (p - closeSeg.start) / SCROLL_UNIT / T.copyLeave);
-  return up * out;
+  return smooth(0, 1, (x - (COPY_FROM + T.titleLead - lead)) / T.copyRamp);
 }
 
-/** True while the terms copy can be on screen at p (the drawing, the panel and the close's start). */
+/** True while the terms copy can be on screen at p (the drawing, the panel and the close that burns it). */
 export function copyNear(p: number): boolean {
-  return p > drawingSeg.start && p < closeSeg.start + (TERMS_TUNE.copyLeave + 4) * SCROLL_UNIT;
+  return p > drawingSeg.start && p < closeSeg.end;
 }
 
 /** The end of the panel segment, for passes that draw the panel at rest (the close, phase 10). */

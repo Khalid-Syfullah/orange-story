@@ -3,6 +3,7 @@
 // Later phases add their pass here (one fragment shader per chapter group is fine).
 import type { PassDef } from "../gl/passes";
 import { bridgePass } from "./bridge";
+import { closePass, codaPass } from "./coda";
 import { heroPass } from "./hero";
 import { modelPass } from "./model";
 import { parchmentPass } from "./parchment";
@@ -13,7 +14,8 @@ import { termsPass } from "./terms";
 import { workPass } from "./work";
 
 // The first pass to claim a segment draws it, so a pass that takes a segment from a more general one
-// comes before it here (terms takes `drawing` and `panel`, which the sheet no longer claims).
+// comes before it here (terms takes `drawing` and `panel`, which the sheet no longer claims; the
+// close takes `close` and the coda `coda` from the placeholder).
 export const storyPasses: readonly PassDef[] = [
   heroPass,
   bridgePass,
@@ -22,6 +24,8 @@ export const storyPasses: readonly PassDef[] = [
   workPass,
   parchmentPass,
   termsPass,
+  closePass,
+  codaPass,
   sheetPass,
   placeholderPass,
 ];

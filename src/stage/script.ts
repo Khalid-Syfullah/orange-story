@@ -66,8 +66,9 @@ export const segments: readonly Segment[] = [
   { id: "drawing", start: 0.42, end: 0.48, chapter: "terms", ground: "paper" },
   // The brushed-edge panel in the left margin beside the terms copy.
   { id: "panel", start: 0.48, end: 0.5, chapter: "terms", ground: "paper" },
-  // The close: the sheet burns from the bottom left into flat blue.
-  { id: "close", start: 0.5, end: 0.53, chapter: "terms", ground: { from: "paper", to: "sky", at: 0.5 } },
+  // The close: the sheet burns from the bottom left into flat blue. The chrome turns to milk as the
+  // front passes the frame's centre (passes/coda/timeline.ts burnTravel: about 0.56 of the close).
+  { id: "close", start: 0.5, end: 0.53, chapter: "terms", ground: { from: "paper", to: "sky", at: 0.56 } },
   // The coda frames: the picking rod, the orange floats free, the halo.
   { id: "coda", start: 0.53, end: 0.58, chapter: "terms", ground: "sky" },
   // Match cut on the fruit into the canopy.

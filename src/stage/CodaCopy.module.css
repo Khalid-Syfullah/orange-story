@@ -1,0 +1,89 @@
+/* The coda's copy: the large chapter title in column A under the top rule, the fit copy as one
+   column beside the orange (column B where that clears the fruit, else column A: its left and width
+   are written as CSS variables from passes/coda/timeline.ts once per frame size); milk on the coda's
+   blue (the `on-sky` ground on the container). Opacity and lift are written from the frame
+   subscription, so every piece starts hidden until the first frame. The glass is a backdrop-filter
+   over the column, masked per frame to the halo's annulus. */
+
+.coda {
+  position: absolute;
+  inset: 0;
+  color: var(--fg);
+  pointer-events: none;
+}
+
+.piece {
+  opacity: 0;
+  visibility: hidden;
+  will-change: opacity, transform;
+}
+
+.title {
+  position: absolute;
+  left: var(--col-a);
+  top: calc(var(--rule-top) + 4vh);
+  max-width: 8em;
+  /* Sized by height as well as width so the title stays in the open blue on short frames. */
+  font-size: clamp(2.75rem, min(1rem + 5.3vw, 11vh), 5.5rem);
+  text-shadow: 0 0 18px color-mix(in srgb, var(--sky) 65%, transparent);
+}
+
+.column {
+  position: absolute;
+  left: var(--coda-left, var(--col-b));
+  top: calc(var(--rule-top) + 7vh);
+  width: var(--coda-width, min(24vw, 23rem));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: clamp(1.25rem, 3.2vh, 2.25rem);
+  text-shadow: 0 0 18px color-mix(in srgb, var(--sky) 65%, transparent);
+}
+
+.text {
+  max-width: 23rem;
+  font-size: clamp(1.05rem, min(0.85rem + 0.5vw, 2.6vh), 1.35rem);
+}
+
+.foot {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.foot .piece.tag,
+.foot span {
+  text-shadow: none;
+}
+
+.side {
+  max-width: 22rem;
+  color: color-mix(in srgb, var(--fg) 88%, transparent);
+}
+
+.glass {
+  position: absolute;
+  z-index: 1;
+  opacity: 0;
+  visibility: hidden;
+  will-change: opacity;
+  pointer-events: none;
+}
+
+/* Tall phones: one column between the gutters. */
+@media (max-aspect-ratio: 4 / 5) {
+  .title {
+    max-width: calc(100% - var(--col-a) * 2);
+    font-size: clamp(2.5rem, 13vw, 4rem);
+  }
+
+  .column {
+    top: calc(var(--rule-top) + 6vh);
+  }
+
+  .text,
+  .side {
+    max-width: none;
+  }
+}
