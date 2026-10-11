@@ -71,6 +71,8 @@ body {
 }
 
 html {
+  /* Touch momentum and rubber-banding stop at the ends: p never leaves 0..1. */
+  overscroll-behavior-y: none;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
@@ -99,8 +101,10 @@ button {
 }
 
 :focus-visible {
-  outline: 1px solid var(--orange);
+  outline: 2px solid var(--orange);
   outline-offset: 3px;
+  /* On cobalt and on paper alike: a hairline of the other tone keeps the ring visible on orange fruit. */
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--bg) 70%, transparent);
 }
 
 /* ---- Type scale ------------------------------------------------------------------------- */

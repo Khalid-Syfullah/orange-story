@@ -1,5 +1,6 @@
 // WebGL 1 context creation and canvas sizing.
 //
+//   - preserveDrawingBuffer only under reduced motion (the 300 ms dissolve copies the last frame).
 //   - alpha false (the canvas is opaque, the page never shows through), antialias false (the
 //     full-screen triangle has no edges to smooth), high-performance.
 //   - OES_standard_derivatives when the driver has it; shaders see HAS_DERIVATIVES.
@@ -34,7 +35,7 @@ export function wantsNoGL(): boolean {
 }
 
 /** Create the context, or null when WebGL is unavailable or switched off. */
-export function createContext(canvas: HTMLCanvasElement): GLContext | null {
+export function createContext(canvas: HTMLCanvasElement, opts: { preserve?: boolean } = {}): GLContext | null {
   if (wantsNoGL()) return null;
   const attrs: WebGLContextAttributes = {
     alpha: false,
@@ -42,7 +43,7 @@ export function createContext(canvas: HTMLCanvasElement): GLContext | null {
     depth: false,
     stencil: false,
     premultipliedAlpha: false,
-    preserveDrawingBuffer: false,
+    preserveDrawingBuffer: opts.preserve === true,
     powerPreference: "high-performance",
     failIfMajorPerformanceCaveat: false,
   };

@@ -28,8 +28,8 @@ const rect = (u: UniformSetter, name: string, r: { x: number; y: number; w: numb
   u.set4f(name, r.x, r.y, r.w, r.h);
 
 /** The application painting's framing and the scrim box, for all three passes. */
-export function setAppUniforms(css: readonly [number, number], u: UniformSetter, scrim: number): void {
-  const framing = applicationFraming(css);
+export function setAppUniforms(css: readonly [number, number], u: UniformSetter, scrim: number, rise = 0): void {
+  const framing = applicationFraming(css, rise);
   u.set2f("uAppPan", framing.pan.x, framing.pan.y);
   u.set1f("uAppZoom", framing.zoom);
   const box = scrimBox(css);
@@ -80,7 +80,7 @@ export const risePass: PassDef = {
   ],
   uniforms(ctx, u) {
     const t = ctx.t;
-    setAppUniforms(ctx.css, u, scrimRise(t));
+    setAppUniforms(ctx.css, u, scrimRise(t), t);
     u.set1f("uFront", riseFront(t));
     u.set1f("uCloudX", riseCloud(t));
     rect(u, "uTree", art.sapling.rects.tree);

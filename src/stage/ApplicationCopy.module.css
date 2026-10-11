@@ -187,3 +187,60 @@
 .actions .error {
   margin-left: 0;
 }
+
+/* A tall phone: the picture is a band hung from the top (the woman, her hand and the sky); the form
+   fills the page under it in one column on a 16px gutter, tightened so the three fields and the
+   button fit. */
+:global(.pin[data-stack="true"]) .application {
+  text-shadow: none;
+}
+
+:global(.pin[data-stack="true"]) .wrap {
+  top: calc(var(--zone-top) - 1.25rem);
+  bottom: auto;
+  padding-top: 0;
+  align-items: flex-start;
+}
+
+:global(.pin[data-stack="true"]) .box,
+:global(.pin[data-stack="true"]) .form {
+  gap: 0.5rem;
+}
+
+:global(.pin[data-stack="true"]) .title {
+  font-size: clamp(1.4rem, 6.4vw, 2rem);
+}
+
+:global(.pin[data-stack="true"]) .subtitle {
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+:global(.pin[data-stack="true"]) .input {
+  padding-top: 0.3rem;
+  padding-bottom: 0.3rem;
+}
+
+:global(.pin[data-stack="true"]) .actions {
+  padding-top: 0.2rem;
+}
+
+/* The column rests on the page colour: a soft sky behind it so the type never lies on the faded gown. */
+.scrim {
+  display: none;
+}
+
+:global(.pin[data-stack="true"]) .scrim {
+  display: block;
+  position: absolute;
+  opacity: 0;
+  inset: -1.25rem 0 -1rem 0;
+  z-index: -1;
+  background: linear-gradient(
+    to bottom,
+    transparent 0,
+    color-mix(in srgb, var(--sky) 92%, transparent) 1.75rem,
+    color-mix(in srgb, var(--sky) 92%, transparent) 100%
+  );
+  pointer-events: none;
+}

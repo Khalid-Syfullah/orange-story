@@ -16,8 +16,14 @@ export interface FrameCtx {
   time: number;
   /** Drawing buffer size in device pixels. */
   res: readonly [number, number];
-  /** CSS size of the stage in CSS pixels. */
+  /** CSS size of the picture in CSS pixels: the whole stage, or on a tall phone its band (src/stage/band.ts). */
   css: readonly [number, number];
+  /** CSS size of the whole viewport (where copy stacks under the band). */
+  view: readonly [number, number];
+  /** The picture's share of the viewport height: 1, down to 0.6 on tall phones. */
+  band: number;
+  /** The page colour at p (the fade's target and the pin's background), 0..1 RGB. */
+  page: readonly [number, number, number];
   dpr: number;
   /** Smoothed pointer, -1..1 each axis, y down. */
   mouse: readonly [number, number];

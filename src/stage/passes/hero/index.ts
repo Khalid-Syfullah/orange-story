@@ -1,6 +1,7 @@
 // The hero pass: claims the `hero` segment. The shader is in frag.ts; the print-in and the ring
 // (the only time-driven events) are in events.ts; the framing in framing.ts. The bridge pass draws
 // the same film, so the uniforms the film needs are set by `setHeroUniforms`, shared by both.
+import { narrowFrame } from "../../band";
 import { art } from "@/content/art";
 import type { FrameCtx } from "../../frame";
 import type { PassDef } from "../../gl/passes";
@@ -11,8 +12,6 @@ import { heroFraming, phoneWeight } from "./framing";
 
 const hero = art.hero;
 
-/** Below this viewport aspect (w/h) the third, lower cloud is hidden (tall phones). */
-const TALL_ASPECT = 0.8;
 
 /** The scroll push-in about the orange that the hero ends on: 5%. The bridge holds it. */
 export const HERO_PUSH_END = 0.05;
@@ -41,7 +40,7 @@ export function setHeroUniforms(ctx: FrameCtx, u: UniformSetter, push: number, h
   u.set1f("uIntro", events.intro);
   u.set1f("uRingAge", events.ringAge);
   u.set1f("uPhone", phoneWeight(ctx.css));
-  u.set1f("uCloud3", ctx.css[0] / ctx.css[1] < TALL_ASPECT ? 0 : 1);
+  u.set1f("uCloud3", narrowFrame(ctx.css) ? 0 : 1);
 }
 
 export const heroPass: PassDef = {

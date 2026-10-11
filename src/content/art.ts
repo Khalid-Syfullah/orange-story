@@ -188,12 +188,15 @@ export const art = {
     /** Each beat has its own pan; a small drift (painting units) is walked across the beat by scroll. */
     framing: { pan: { x: 0, y: 0 }, zoom: 1.04 },
     drift: { x: -0.012, y: 0.004 },
+    /** Phone pans (painting units, added on tall phones): the window is 0.4 of the width, so it centres on the hands and the fruit. */
+    phonePan: { x: 0.04, y: 0 },
   },
 
   grove: {
     ...still("grove", "16:9", "Model beat 2"),
     framing: { pan: { x: 0.01, y: 0 }, zoom: 1.04 },
     drift: { x: 0.012, y: -0.004 },
+    phonePan: { x: 0.05, y: 0 },
   },
 
   share: {
@@ -205,6 +208,8 @@ export const art = {
      * `framing` (the share beat does not drift), so the cut between the two keyframes holds still.
      */
     lastFraming: { pan: { x: 0, y: 0 }, zoom: 1.04 },
+    /** The man and the fruit he holds; the last keyframe takes the same pan, so the cut holds still on a phone too. */
+    phonePan: { x: 0.06, y: 0 },
     /**
      * Second keyframe: the orange cut in half, the halves held a hand's width apart.
      * The Split (phase 6) opens on exactly this frame.
@@ -252,6 +257,8 @@ export const art = {
     ...frames("coda", "16:9", 89, "The Terms (blue)"),
     /** A 2% push-in so pointer parallax and drift never show the frame's edge (as the hero). */
     framing: { pan: { x: 0, y: 0 }, zoom: 1.02 },
+    /** The woman, the rod and the tree in the first frames, the floating orange in the last. */
+    phonePan: { x: 0.06, y: 0 },
   },
 
   "share-orange": {
@@ -276,6 +283,8 @@ export const art = {
      * frame).
      */
     framing: { pan: { x: 0, y: -0.035 }, zoom: 1.1 },
+    /** The nearest fruit (x 0.34) sits in the left third of the narrow window the match cut lands in. */
+    phonePan: { x: -0.1, y: 0 },
     rects: {
       /**
        * The open sky in the middle of the frame: the centre 50% that docs/PAINTINGS.md keeps clear of
@@ -333,6 +342,8 @@ export const art = {
 
   finale: {
     ...loop("finale", "Finale"),
+    /** The tree in the middle with the watering can in reach; the rise ends on this pan (passes/application). */
+    phonePan: { x: -0.03, y: 0 },
     anchors: {
       /** Spout of the watering can held by the woman on the left. */
       spout: { x: 0.3, y: 0.6 },
@@ -349,6 +360,8 @@ export const art = {
     drift?: Point;
     /** Framing of the extra `last` keyframe. */
     lastFraming?: Framing;
+    /** Added to the framing's pan on tall phones, in proportion to how tall (src/stage/framing.ts phoned). */
+    phonePan?: Point;
     /** Named points in painting coordinates (0..1, y down). */
     anchors?: Record<string, Point>;
     /** Named radii as fractions of the painting's width. */

@@ -214,7 +214,8 @@
   background: none;
   color: inherit;
   cursor: pointer;
-  opacity: 0.38;
+  /* 72%: the inactive labels stay AA (4.5:1) against the sky and the paper. */
+  opacity: 0.72;
   transition: opacity 420ms var(--ease);
 }
 
@@ -234,5 +235,11 @@
 @media (max-width: 640px) {
   .rail {
     display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menuOverlay {
+    animation: none;
   }
 }

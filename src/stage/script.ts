@@ -213,3 +213,29 @@ export const ANCHORS: Readonly<Record<string, SegmentId>> = {
   questions: "questions",
   apply: "application",
 };
+
+/**
+ * Under reduced motion every transition between chapters collapses to its end frame (t = 1) with a
+ * 300 ms dissolve (docs/CHECKS.md): from the moment the scroll enters one of these segments the
+ * stage draws its last frame. The chapters' own segments (the model's beats, the Work, the Terms
+ * copy over the panel, the coda, the Questions, the application) keep scrolling: they are content.
+ */
+export const REDUCED_HOLD: readonly SegmentId[] = [
+  "bridge",
+  "split",
+  "parchment",
+  "sheet",
+  "drawing",
+  "close",
+  "matchcut",
+  "moire",
+  "rise",
+];
+
+const HOLD_EPS = 1e-6;
+
+/** The progress the stage draws at under reduced motion: a transition's end frame, else `p` itself. */
+export function reducedHold(p: number): number {
+  const s = active(p);
+  return REDUCED_HOLD.includes(s.id) && s.end < 1 ? s.end - HOLD_EPS : p;
+}

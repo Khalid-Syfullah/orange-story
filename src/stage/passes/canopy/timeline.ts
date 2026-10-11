@@ -9,8 +9,9 @@
 //
 // Geometry is in CSS px of the frame, y down, unless a name says frame heights (the unit the cuts'
 // bands and lags are measured in: x scaled by the aspect).
+import { narrowFrame, stackState } from "../../band";
 import { art, type Framing, type Rect } from "@/content/art";
-import { coverScale, sizeFromAspect, uncover, type Size } from "../../framing";
+import { coverScale, phoned, sizeFromAspect, uncover, type Size } from "../../framing";
 import { local, SCROLL_UNIT, segment } from "../../script";
 import { codaOrange, haloAt } from "../coda/timeline";
 import { profile } from "../terms/timeline";
@@ -157,7 +158,7 @@ export function questionsUnits(p: number): number {
  * frame's framing (the one the match cut lands on); after it, the last.
  */
 export function canopyFraming(p: number): Framing {
-  const f = art.canopy.framing;
+  const f = phoned(art.canopy.framing, art.canopy.phonePan);
   const k = clamp01(questionsUnits(p) / QUESTIONS_UNITS);
   return { pan: { x: f.pan.x, y: f.pan.y + T.canopyParallax * T.travel * k }, zoom: f.zoom };
 }
@@ -165,7 +166,7 @@ export function canopyFraming(p: number): Framing {
 /** The nearest canopy orange on screen on the chapter's first frame (CSS px: centre and radius), breath and parallax aside. */
 export function canopyOrange(css: Size): { x: number; y: number; r: number } {
   const a = art.canopy.anchors.nearestOrange;
-  const framing = art.canopy.framing;
+  const framing = phoned(art.canopy.framing, art.canopy.phonePan);
   const s = uncover(a, css, CANOPY_TEX, framing);
   const cs = coverScale(css, CANOPY_TEX);
   return { x: s.x * css[0], y: s.y * css[1], r: (art.canopy.radii.nearestOrange * css[0] * framing.zoom) / cs[0] };
@@ -174,7 +175,7 @@ export function canopyOrange(css: Size): { x: number; y: number; r: number } {
 /** The canopy's sky gap on screen at the chapter's first frame (CSS px), through the same cover fit. */
 export function canopyGap(css: Size): { left: number; right: number; top: number; bottom: number } {
   const g: Rect = art.canopy.rects.gap;
-  const framing = art.canopy.framing;
+  const framing = phoned(art.canopy.framing, art.canopy.phonePan);
   const a = uncover({ x: g.x, y: g.y }, css, CANOPY_TEX, framing);
   const b = uncover({ x: g.x + g.w, y: g.y + g.h }, css, CANOPY_TEX, framing);
   return { left: a.x * css[0], right: b.x * css[0], top: a.y * css[1], bottom: b.y * css[1] };
@@ -361,11 +362,18 @@ const colA = (w: number) => Math.max(32, 0.08 * w);
  * loose), on a tall phone one column between the gutters.
  */
 export function layoutAt(css: Size): Layout {
-  const [w, h] = css;
+  const [w] = css;
   const a = colA(w);
-  if (w / h < 0.8) {
-    const width = w - 2 * a;
-    return { narrow: true, titleLeft: a, titleWidth: width, cardLeft: Array.from({ length: CARD_COUNT }, () => a), cardWidth: width };
+  if (narrowFrame(css)) {
+    // On a tall phone the cards are panels on a 16px gutter; the title keeps the text margin.
+    const g = stackState.stacked ? 16 : a;
+    return {
+      narrow: true,
+      titleLeft: a,
+      titleWidth: w - 2 * a,
+      cardLeft: Array.from({ length: CARD_COUNT }, () => g),
+      cardWidth: w - 2 * g,
+    };
   }
   const gap = canopyGap(css);
   const left = Math.max(a, gap.left);

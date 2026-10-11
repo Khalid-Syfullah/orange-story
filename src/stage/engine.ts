@@ -15,13 +15,14 @@
 // shader clock so frames are reproducible (docs/CHECKS.md) and `?finish` waits for the GPU after
 // each draw so the HUD's frame time is the pass's real cost.
 import { tierFor } from "@/content/art";
+import { bandFor, pageAt, setBand, ZONE_IN_BAND } from "./band";
 import type { FrameCtx } from "./frame";
 import { createContext, fitCanvas, type CanvasFit, type GLContext } from "./gl/context";
 import { PassManager, type PassDef } from "./gl/passes";
 import { TextureManager } from "./gl/textures";
 import type { StageHub } from "./hub";
 import { createPointer } from "./pointer";
-import { ANCHORS, active, local, pAt, segmentFromParams, type SegmentId } from "./script";
+import { ANCHORS, active, local, pAt, reducedHold, segmentFromParams, type SegmentId } from "./script";
 import { createScrollClock, type ScrollClock } from "./scroll";
 import { readColorTokens } from "./tokens";
 
@@ -29,8 +30,10 @@ export interface EngineOptions {
   canvas: HTMLCanvasElement;
   /** The hero <video> in the stage markup (null on pages without it). */
   video: HTMLVideoElement | null;
-  /** The sticky pin; the canvas follows its CSS size. */
+  /** The sticky pin; the canvas follows its CSS size (the band of it, on a tall phone). */
   pin: HTMLElement;
+  /** Under reduced motion: the 2D canvas that holds the last frame while a 300 ms dissolve runs. */
+  ghost?: HTMLCanvasElement | null;
   passes: readonly PassDef[];
   hub: StageHub;
 }
@@ -44,6 +47,16 @@ export interface Engine {
   /** Octaves for texture fields: 2 on phones, 4 otherwise. */
   readonly octaves: number;
   destroy(): void;
+}
+
+/** Under reduced motion a jump in the effective progress bigger than this starts the dissolve. */
+const JUMP_P = 0.004;
+const DISSOLVE_MS = 300;
+
+/** A colour as #rrggbb (the pin's `--page`). */
+function hexOf(c: readonly [number, number, number]): string {
+  const h = (x: number) => Math.round(Math.min(1, Math.max(0, x)) * 255).toString(16).padStart(2, "0");
+  return `#${h(c[0])}${h(c[1])}${h(c[2])}`;
 }
 
 /** Phones and small tablets drop texture-field fbm to 2 octaves (motion fields keep 4 in GLSL). */
@@ -66,8 +79,12 @@ export function createEngine(opts: EngineOptions): Engine {
   if (Number.isFinite(pParam)) scroll.setP(pParam, true);
   else if (segParam) scroll.setP(pAt(segParam.id, segParam.t), true);
   else {
+    // A reload or a Back/Forward lands where the browser restores the scroll (the same p, no
+    // intro), whatever anchor the URL carries from an earlier jump; a fresh visit to #terms lands on it.
+    const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+    const restored = nav?.type === "reload" || nav?.type === "back_forward";
     const seg = segmentForHash(window.location.hash);
-    if (seg) scroll.setP(pAt(seg), true);
+    if (seg && !restored) scroll.setP(pAt(seg), true);
   }
   // Dev: a fixed shader clock (breath, hashed flickers and the kick hold still); `?finish` waits
   // for the GPU after each draw (a one-pixel readback: in Chrome, finish() alone does not block on
@@ -82,13 +99,30 @@ export function createEngine(opts: EngineOptions): Engine {
   const syncPixel = new Uint8Array(4);
 
   // GL stack: created now and rebuilt after a context restore.
-  const gl: GLContext | null = createContext(canvas);
+  const gl: GLContext | null = createContext(canvas, { preserve: reduced });
   const glOff = gl === null;
   if (glOff) canvas.classList.add("gl--off");
   let textures: TextureManager | null = null;
   let passes: PassManager | null = null;
   let fit: CanvasFit = { width: 1, height: 1, dpr: 1 };
-  let css: [number, number] = [pin.clientWidth || window.innerWidth, pin.clientHeight || window.innerHeight];
+  // The layout: `view` is the whole viewport, `css` the picture's frame in it (a band 0.6 of the
+  // height on tall phones, src/stage/band.ts), written to the pin as variables the copy reads.
+  let view: [number, number] = [1, 1];
+  let band = 1;
+  let css: [number, number] = [1, 1];
+  const layout = () => {
+    view = [pin.clientWidth || window.innerWidth, pin.clientHeight || window.innerHeight];
+    band = bandFor(view[0], view[1]);
+    setBand(band);
+    css = [view[0], Math.max(1, Math.round(view[1] * band))];
+    const stacked = band < 0.999;
+    pin.dataset.stack = stacked ? "true" : "false";
+    pin.style.setProperty("--band-px", stacked ? `${css[1]}px` : "100%");
+    pin.style.setProperty("--zone-top", stacked ? `${Math.round(css[1] * ZONE_IN_BAND)}px` : "0px");
+    pin.style.setProperty("--view-h", `${view[1]}px`);
+  };
+  layout();
+  let pageKey = "";
 
   const buildGL = () => {
     if (!gl) return;
@@ -121,7 +155,7 @@ export function createEngine(opts: EngineOptions): Engine {
   // Resize: the canvas follows the pin; the clock re-measures the page.
   let resized = true;
   const onResize = () => {
-    css = [pin.clientWidth || window.innerWidth, pin.clientHeight || window.innerHeight];
+    layout();
     if (gl && !gl.lost) fit = fitCanvas(gl, css[0], css[1]);
     scroll.measure();
     resized = true;
@@ -130,19 +164,67 @@ export function createEngine(opts: EngineOptions): Engine {
   if (ro) ro.observe(pin);
   else window.addEventListener("resize", onResize);
 
+  // History: a jump from the menu, the rail, the pill or the mark is an entry of its own, carrying
+  // the progress it left from (and an anchor in the URL when the segment has one), so Back and
+  // Forward glide to where the reader was. A hash change alone (typing #terms) also sets the target.
+  const stateP = () => {
+    const st = window.history.state as { p?: unknown } | null;
+    return st && typeof st.p === "number" ? st.p : null;
+  };
+  const remember = (to: number, hash: string) => {
+    try {
+      window.history.replaceState({ p: scroll.p }, "", window.location.href);
+      const url = `${window.location.pathname}${window.location.search}${hash ? `#${hash}` : ""}`;
+      window.history.pushState({ p: to }, "", url);
+    } catch {
+      // History can be unavailable (sandboxed frames); the jump itself still works.
+    }
+  };
+  const anchorOf = (id: SegmentId): string => Object.keys(ANCHORS).find((k) => ANCHORS[k] === id) ?? "";
   const onHash = () => {
+    if (stateP() !== null) return;
     const seg = segmentForHash(window.location.hash);
     if (seg) scroll.jumpTo(pAt(seg) * scroll.max);
   };
+  const onPop = () => {
+    const p = stateP();
+    if (p !== null) scroll.setP(p);
+    else {
+      const seg = segmentForHash(window.location.hash);
+      scroll.setP(seg ? pAt(seg) : 0);
+    }
+  };
   window.addEventListener("hashchange", onHash);
+  window.addEventListener("popstate", onPop);
 
   const controls = {
     scrollToSegment(id: SegmentId, t = 0) {
+      remember(pAt(id, t), t === 0 ? anchorOf(id) : "");
       scroll.setP(pAt(id, t));
     },
     setP(p: number, immediate?: boolean) {
+      if (!immediate) remember(p, "");
       scroll.setP(p, immediate);
     },
+  };
+
+  // The dissolve: the canvas still holds the last frame (the context keeps its drawing buffer under
+  // reduced motion), so it is copied to the ghost, which fades out over 300 ms above the new frame.
+  const ghost = opts.ghost ?? null;
+  const ghostCtx = ghost ? ghost.getContext("2d") : null;
+  let lastDrew = false;
+  const dissolve = () => {
+    if (!ghost || !ghostCtx || !gl || gl.lost || !lastDrew) return;
+    if (ghost.width !== canvas.width || ghost.height !== canvas.height) {
+      ghost.width = canvas.width;
+      ghost.height = canvas.height;
+    }
+    ghostCtx.drawImage(canvas, 0, 0);
+    ghost.style.transition = "none";
+    ghost.style.opacity = "1";
+    void ghost.offsetWidth;
+    ghost.style.transition = `opacity ${DISSOLVE_MS}ms linear`;
+    ghost.style.opacity = "0";
   };
 
   // The loop.
@@ -163,10 +245,22 @@ export function createEngine(opts: EngineOptions): Engine {
     const time = fixedClock ?? real;
     pointer.tick(scroll.vel, real);
 
-    const p = scroll.p;
+    // Reduced motion: a transition shows its end frame (t = 1) from the moment the scroll enters
+    // it, and the change dissolves over 300 ms (the ghost holds the frame that was on screen).
+    const p = reduced ? reducedHold(scroll.p) : scroll.p;
+    if (reduced && Math.abs(p - lastP) > JUMP_P && frameCount > 4) dissolve();
     const segment = active(p);
     const t = local(segment.id, p);
     const mouse: [number, number] = [pointer.x, pointer.y];
+
+    const page = pageAt(p, colors);
+    if (band < 0.999) {
+      const key = hexOf(page);
+      if (key !== pageKey) {
+        pageKey = key;
+        pin.style.setProperty("--page", key);
+      }
+    }
 
     const frame: FrameCtx = {
       p,
@@ -177,6 +271,9 @@ export function createEngine(opts: EngineOptions): Engine {
       time,
       res: [fit.width, fit.height],
       css,
+      view,
+      band,
+      page,
       dpr: fit.dpr,
       mouse,
       still: reduced ? 1 : 0,
@@ -190,7 +287,8 @@ export function createEngine(opts: EngineOptions): Engine {
     };
 
     if (gl && !gl.lost && passes && textures) {
-      passes.preload(p);
+      // Rule 14: what is near only changes when p does (or a pass finishes compiling).
+      if (p !== lastP || frameCount < 8 || frameCount % 30 === 0) passes.preload(p);
       textures.tick();
       const changed =
         resized ||
@@ -200,8 +298,9 @@ export function createEngine(opts: EngineOptions): Engine {
         Math.abs(mouse[1] - lastMouse[1]) > 1e-4 ||
         textures.uploads !== lastUploads ||
         pointer.kick > 0.01;
-      // Rule 14: skip dead work. Breath redraws every frame unless motion is reduced (uStill = 1).
-      if (changed || (!reduced && passes.breathes(segment))) {
+      // Rule 14: skip dead work. Breath redraws unless motion is reduced (uStill = 1); at rest it is
+      // 0.4% of zoom over seconds, so every second frame (30 Hz) draws it and the rest cost nothing.
+      if (changed || (!reduced && passes.breathes(segment) && frameCount % 2 === 0)) {
         passes.draw(frame);
         for (let i = 1; i < repeat; i++) passes.draw(frame);
         if (syncGPU) {
@@ -209,6 +308,7 @@ export function createEngine(opts: EngineOptions): Engine {
           gl.gl.readPixels(0, 0, 1, 1, gl.gl.RGBA, gl.gl.UNSIGNED_BYTE, syncPixel);
         }
         lastUploads = textures.uploads;
+        lastDrew = true;
       }
       passes.warm();
     }
@@ -239,6 +339,7 @@ export function createEngine(opts: EngineOptions): Engine {
       cancelAnimationFrame(raf);
       hub.detach();
       window.removeEventListener("hashchange", onHash);
+      window.removeEventListener("popstate", onPop);
       if (ro) ro.disconnect();
       else window.removeEventListener("resize", onResize);
       canvas.removeEventListener("webglcontextlost", onLost);

@@ -87,3 +87,19 @@
     max-width: none;
   }
 }
+
+/* A tall phone: the picture is a band; the title and the fit copy take turns in the zone under it. */
+:global(.pin[data-stack="true"]) .title {
+  top: calc(var(--zone-top) + 1.25rem);
+  text-shadow: none;
+}
+
+:global(.pin[data-stack="true"]) .column {
+  top: calc(var(--zone-top) - 0.5rem);
+  gap: 1rem;
+  text-shadow: none;
+}
+
+:global(.pin[data-stack="true"]) .text {
+  font-size: 1.1rem;
+}

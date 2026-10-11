@@ -51,6 +51,7 @@ export function HeroCopy() {
   const lowRef = useRef<HTMLDivElement>(null);
   const topWritten = useRef<Written>({ opacity: "", transform: "", visibility: "" });
   const lowWritten = useRef<Written>({ opacity: "", transform: "", visibility: "" });
+  const lowTop = useRef("");
 
   const onFrame = useCallback(
     (f: FrameCtx) => {
@@ -71,6 +72,14 @@ export function HeroCopy() {
       const inTitle = Math.max(smooth(0.55, 1, intro), failSafe);
       const inLow = Math.max(smooth(0.7, 1, intro), failSafe);
 
+      // The paragraph sits right under the title block, wherever the block ends at this size; on a
+      // tall phone it stacks at the foot of the page instead (the stylesheet).
+      const top = topRef.current;
+      const low = lowRef.current;
+      if (top && low && f.band >= 0.999 && f.frame % 15 === 0) {
+        const at = `${Math.round(top.offsetTop + top.offsetHeight + 12)}px`;
+        if (lowTop.current !== at) low.style.top = lowTop.current = at;
+      }
       write(topRef.current, topWritten.current, inTitle * (1 - outTitle), outTitle * LIFT + (1 - inTitle) * 10);
       write(lowRef.current, lowWritten.current, inLow * (1 - outLow), outLow * LIFT + (1 - inLow) * 10);
     },

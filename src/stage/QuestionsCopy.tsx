@@ -23,6 +23,7 @@ import { handwriting } from "@/content/handwriting";
 import { questions } from "@/content/copy";
 import type { FrameCtx } from "./frame";
 import { penProgress } from "./handwriting";
+import { ZONE_IN_BAND } from "./band";
 import { useFrame } from "./hub";
 import {
   CANOPY_TUNE,
@@ -104,6 +105,10 @@ export function QuestionsCopy() {
     const w = written.current;
     const [W, H] = f.css;
     const u = questionsUnits(f.p);
+    // A tall phone: the picture is a band, so the title and the cards stand in one slot under it
+    // (their windows already follow one another) and the constellation is left out.
+    const stack = f.band < 0.999;
+    const slotTop = Math.round(H * ZONE_IN_BAND) - 8;
     const near = u > -2 && u < QUESTIONS_UNITS + 2;
     const state = near ? "on" : "off";
     if (w.root !== state) {
@@ -134,7 +139,7 @@ export function QuestionsCopy() {
       const out = rampOut(u, it.outAt);
       const head = rampIn(u, it.inAt) * out;
       const h = titleEl.offsetHeight;
-      const y = it.y(u) * H;
+      const y = stack ? slotTop + h / 2 : it.y(u) * H;
       const lift = (1 - rampIn(u, it.inAt)) * CANOPY_TUNE.rise - (1 - out) * CANOPY_TUNE.rise;
       const pos = `translate3d(${layout.titleLeft.toFixed(1)}px, ${(y - h / 2 + lift).toFixed(1)}px, 0)`;
       if (w.titleY !== pos) titleEl.style.transform = w.titleY = pos;
@@ -154,7 +159,7 @@ export function QuestionsCopy() {
     }
 
     // The word's own clock and each stroke's drawn length.
-    const g = writeProgress(u);
+    const g = f.reduced ? 1 : writeProgress(u);
     HW.strokes.forEach((stroke, i) => {
       const el = strokeRefs.current[i];
       if (!el) return;
@@ -183,7 +188,7 @@ export function QuestionsCopy() {
       write(c.title, wc.title, head, liftHead);
       write(c.body, wc.body, body, liftBody);
       const h = c.root.offsetHeight;
-      const y = it.y(u) * H;
+      const y = stack ? slotTop + h / 2 : it.y(u) * H;
       const pos = `translate3d(${layout.cardLeft[i].toFixed(1)}px, ${(y - h / 2).toFixed(1)}px, 0)`;
       if (wc.pos !== pos) c.root.style.transform = wc.pos = pos;
       alpha[i + 1] = head;
@@ -195,6 +200,16 @@ export function QuestionsCopy() {
       const refs = lines.current[i];
       const wl = w.lines[i];
       if (!refs.line || !refs.a || !refs.b) continue;
+      if (stack) {
+        if (wl.opacity !== "0|0") {
+          wl.opacity = "0|0";
+          wl.geo = "";
+          refs.line.setAttribute("opacity", "0");
+          refs.a.setAttribute("opacity", "0");
+          refs.b.setAttribute("opacity", "0");
+        }
+        continue;
+      }
       const a = box[i];
       const b = box[i + 1];
       const fromLeft = layout.narrow || i === 0 || (i - 1) % 2 === 1;

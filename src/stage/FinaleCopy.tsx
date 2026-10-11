@@ -59,7 +59,9 @@ export function FinaleCopy() {
     const key = `${f.css[0]}x${f.css[1]}`;
     if (sizeKey.current !== key) {
       sizeKey.current = key;
-      sub.style.top = `${(wordmarkLayout(f.css).bottom + 6).toFixed(1)}px`;
+      // On a tall phone the subtitle is copy, so it stacks under the picture's band.
+      sub.style.top =
+        f.band < 0.999 ? `${f.css[1] + 14}px` : `${(wordmarkLayout(f.css).bottom + 6).toFixed(1)}px`;
     }
     const t = local("finale", f.p);
     write(sub, written.current.sub, t > 0 ? subtitleAlpha(t) : 0);

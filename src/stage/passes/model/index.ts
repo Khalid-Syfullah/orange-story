@@ -4,6 +4,7 @@
 //
 // `share.last` is the texture manager's `shareLast`: the model ends held on it, and The Split
 // (phase 6) opens on the same texture with the same framing (`art.share.lastFraming`).
+import { phoned } from "../../framing";
 import { art, bridgePanAt } from "@/content/art";
 import type { PassDef } from "../../gl/passes";
 import { heroFraming } from "../hero/framing";
@@ -32,12 +33,16 @@ export const modelPass: PassDef = {
     u.set2f("uReelPan", pan.x, pan.y);
 
     const x = modelUnits(ctx.p);
-    const graft = beatPan(art.graft.framing.pan, art.graft.drift, beatProgress(x, BEAT_SPAN.graft));
-    const grove = beatPan(art.grove.framing.pan, art.grove.drift, beatProgress(x, BEAT_SPAN.grove));
+    const graftF = phoned(art.graft.framing, art.graft.phonePan);
+    const groveF = phoned(art.grove.framing, art.grove.phonePan);
+    const shareF = phoned(art.share.framing, art.share.phonePan);
+    const lastF = phoned(art.share.lastFraming, art.share.phonePan);
+    const graft = beatPan(graftF.pan, art.graft.drift, beatProgress(x, BEAT_SPAN.graft));
+    const grove = beatPan(groveF.pan, art.grove.drift, beatProgress(x, BEAT_SPAN.grove));
     u.set3f("uF1", graft.x, graft.y, art.graft.framing.zoom);
     u.set3f("uF2", grove.x, grove.y, art.grove.framing.zoom);
-    u.set3f("uF3", art.share.framing.pan.x, art.share.framing.pan.y, art.share.framing.zoom);
-    u.set3f("uF4", art.share.lastFraming.pan.x, art.share.lastFraming.pan.y, art.share.lastFraming.zoom);
+    u.set3f("uF3", shareF.pan.x, shareF.pan.y, shareF.zoom);
+    u.set3f("uF4", lastF.pan.x, lastF.pan.y, lastF.zoom);
 
     const cut = cutAt(x);
     u.set1f("uImgA", cut.a);

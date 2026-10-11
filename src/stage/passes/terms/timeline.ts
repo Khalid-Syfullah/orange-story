@@ -13,6 +13,7 @@
 // frame to the panel; "the picture" is the drawing's square, centred on the window (the sampling
 // follows it, so there is never a second copy) with its own side, which eases on a later curve than
 // the window's size: the picture zooms inside the cutout, not with it.
+import { narrowFrame, stackState } from "../../band";
 import type { Size } from "../../framing";
 import { local, SCROLL_UNIT, segment } from "../../script";
 
@@ -185,9 +186,10 @@ export function termsLayout(css: Size): TermsLayout {
   const a = colA(w);
   const T = TERMS_TUNE;
   let out: TermsLayout;
-  if (w / h < 0.8) {
+  if (narrowFrame(css)) {
     // One column: the panel under the top rule, the copy under the panel.
-    const side = Math.max(120, Math.min(w - 2 * a, 0.34 * h));
+    // On a tall phone the frame is the picture's band: the panel takes more of it, the copy runs on below.
+    const side = Math.max(120, Math.min(w - 2 * a, (stackState.stacked ? 0.46 : 0.34) * h));
     const top = RULE_TOP + 0.03 * h;
     out = {
       stacked: true,

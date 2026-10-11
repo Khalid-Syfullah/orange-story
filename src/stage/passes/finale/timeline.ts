@@ -28,6 +28,8 @@ export const FINALE_TUNE = {
   fontBase: 32,
   fontVw: 0.09,
   fontMax: 176,
+  /** The wordmark is never taller than this share of the frame, so the subtitle under it clears the crown (1440x900: 126 px, not 161). */
+  fontHeightShare: 0.14,
   tracking: -0.03,
   boxEm: 1.15,
   /** The wordmark's centre, share of the frame's height, and the lowest it may sit under the top rule. */
@@ -82,7 +84,10 @@ export interface WordmarkLayout {
 
 /** The wordmark's size and place for a frame (the `display-xxl` size, centred in the sky above the tree). */
 export function wordmarkLayout(css: readonly [number, number]): WordmarkLayout {
-  const fontPx = Math.min(T.fontMax, Math.max(T.fontMin, T.fontBase + T.fontVw * css[0]));
+  const fontPx = Math.max(
+    T.fontMin,
+    Math.min(T.fontMax, T.fontBase + T.fontVw * css[0], T.fontHeightShare * css[1]),
+  );
   const height = fontPx * T.boxEm;
   const centreY = Math.max(T.centreY * css[1], T.topRule + height / 2 + 4);
   return { fontPx, height, centreY, bottom: centreY + height / 2 };

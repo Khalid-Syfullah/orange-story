@@ -193,6 +193,8 @@ export class PassManager {
     u.set1f("uStill", frame.still);
     u.set1f("uKick", frame.kick);
     u.set1i("uOctaves", frame.octaves);
+    u.set1f("uBand", frame.band);
+    u.set3f("uPage", frame.page[0], frame.page[1], frame.page[2]);
     for (const token of COLOR_TOKENS) {
       const c = this.colors[token];
       u.set3f(uniformNameFor(token), c[0], c[1], c[2]);

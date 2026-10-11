@@ -7,8 +7,9 @@
 // of `rise` (p 0.90-0.96). A scroll unit is 1/10000 of the story (script.ts SCROLL_UNIT).
 //
 // Geometry is in CSS px of the frame, y down, unless a name says painting units or frame heights.
+import { narrowFrame, stackState } from "../../band";
 import { art, type Framing, type Point } from "@/content/art";
-import { coverScale, sizeFromAspect, uncover, type Size } from "../../framing";
+import { coverScale, phoneAmount, sizeFromAspect, uncover, type Size } from "../../framing";
 import { local, SCROLL_UNIT, segment } from "../../script";
 import { lineTerm, LINE_MAX, questionsUnits } from "../canopy/timeline";
 
@@ -80,6 +81,9 @@ export const APP_TUNE = {
   retractFrom: 0.3,
   retractTo: 0.98,
   stagger: 0.62,
+  /** The phone's camera over to the sapling: from and to, shares of the rise. */
+  panFrom: 0.04,
+  panTo: 0.9,
   /** The sapling's print-in front: R(t) from `frontFrom` to `frontTo` in the front's units (painting heights), accelerating. */
   frontFrom: -0.15,
   frontTo: 0.5,
@@ -141,14 +145,25 @@ export function appUnits(p: number): number {
  * the fingertip sits at `fingerX` of the frame's width at every viewport (the window slides over
  * the painting, never past its edges). Vertically the painting is centred.
  */
-export function applicationFraming(css: Size): Framing {
+export function applicationFraming(css: Size, rise = 0): Framing {
   const vis = coverScale(css, APP_TEX)[0] / T.zoom;
   const finger = art.application.anchors.fingertip.x;
   // On a frame so tall that the window is narrower than her reach, the fingertip moves right so the
   // whole figure stays in it (a phone shows her at the left, not cut off by its edge).
   const fx = T.fingerX + (T.fingerXNarrow - T.fingerX) * clamp01((0.6 - vis) / 0.3);
   const left = Math.min(Math.max(finger - fx * vis, 0), 1 - vis);
-  return { pan: { x: left - 0.5 + 0.5 * vis, y: 0 }, zoom: T.zoom };
+  const x = left - 0.5 + 0.5 * vis;
+  // On a tall phone the window cannot hold both her and the sapling, so the rise carries it over:
+  // the pan walks from the figure to the finale's own pan (art.finale.phonePan), where the tree
+  // stands in the middle and the finale loop takes over on the same alignment.
+  const k = phoneAmount() * risePan(rise);
+  return { pan: { x: x + (art.finale.phonePan.x - x) * k, y: 0 }, zoom: T.zoom };
+}
+
+/** How far the rise's camera has travelled, 0..1: it starts as the sapling begins to print and settles before the front ends. */
+export function risePan(t: number): number {
+  const k = clamp01((t - T.panFrom) / (T.panTo - T.panFrom));
+  return k * k * (3 - 2 * k) * 0.7 + k * 0.3;
 }
 
 const sine = (x: number) => Math.sin(x * Math.PI * 2);
@@ -170,8 +185,8 @@ export interface RestInput {
  * same arithmetic as the shader's `cover(uv) + restOffset` inverted, so a DOM mark on an anchor
  * holds on it through the breath, the pointer parallax and the drift. `css` is the frame.
  */
-export function pinned(point: Point, css: Size, rest: RestInput): Point {
-  const base = applicationFraming(css);
+export function pinned(point: Point, css: Size, rest: RestInput, rise = 0): Point {
+  const base = applicationFraming(css, rise);
   const zoom = base.zoom * (1 + 0.004 * restBreath(rest.tm) + 0.015 * rest.kick);
   const off = {
     x: -rest.mouse[0] * 0.0045 + 0.0022 * sine(rest.tm * 0.17),
@@ -181,8 +196,8 @@ export function pinned(point: Point, css: Size, rest: RestInput): Point {
 }
 
 /** The fingertip on screen (CSS px), `uncover(art.application.fingertip)`. */
-export function fingertip(css: Size, rest: RestInput): { x: number; y: number } {
-  const s = pinned(art.application.anchors.fingertip, css, rest);
+export function fingertip(css: Size, rest: RestInput, rise = 0): { x: number; y: number } {
+  const s = pinned(art.application.anchors.fingertip, css, rest, rise);
   return { x: s.x * css[0], y: s.y * css[1] };
 }
 
@@ -202,9 +217,13 @@ const colA = (w: number) => Math.max(32, 0.08 * w);
 
 /** The form's column in the sky on the right (right-aligned to the gutter), or the phone's one column. */
 export function formLayout(css: Size): FormLayout {
-  const [w, h] = css;
+  const [w] = css;
   const a = colA(w);
-  if (w / h < 0.8) return { narrow: true, left: a, width: w - 2 * a };
+  if (narrowFrame(css)) {
+    // On a tall phone the form is a column on the 16px gutter, under the picture's band.
+    const g = stackState.stacked ? 16 : a;
+    return { narrow: true, left: g, width: w - 2 * g };
+  }
   const width = Math.min(440, Math.max(340, w * 0.3));
   return { narrow: false, left: w - a - width, width };
 }
@@ -213,7 +232,8 @@ export function formLayout(css: Size): FormLayout {
 export function scrimBox(css: Size): readonly [number, number, number, number] {
   const [w] = css;
   const l = formLayout(css);
-  if (l.narrow) return [0, 0.16, 1, 1];
+  // On a tall phone the form is under the picture's band, not over it: no scrim.
+  if (l.narrow) return stackState.stacked ? [0, 3, 1, 4] : [0, 0.16, 1, 1];
   return [(l.left - 70) / w, 0.1, (l.left + l.width + 70) / w, 0.92];
 }
 

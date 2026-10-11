@@ -11,8 +11,9 @@
 // past the far corner: at t = 0 no pixel is within reach of the char band (the frame is the panel at
 // rest, the terms pass's last frame) and at t = 1 every pixel is past the lag (the frame is the
 // coda's first).
+import { narrowFrame } from "../../band";
 import { art } from "@/content/art";
-import { coverScale, sizeFromAspect, uncover, type Size } from "../../framing";
+import { coverScale, phoned, sizeFromAspect, uncover, type Size } from "../../framing";
 import { local, SCROLL_UNIT, segment } from "../../script";
 import { profile } from "../terms/timeline";
 
@@ -253,7 +254,7 @@ export function codaAnchor(): { x: number; y: number; r: number } {
 /** The floating orange on screen (CSS px, centre and radius), breath and parallax aside. */
 export function codaOrange(css: Size): { x: number; y: number; r: number } {
   const a = codaAnchor();
-  const framing = art.coda.framing;
+  const framing = phoned(art.coda.framing, art.coda.phonePan);
   const s = uncover({ x: a.x, y: a.y }, css, CODA_TEX, framing);
   const cs = coverScale(css, CODA_TEX);
   return { x: s.x * css[0], y: s.y * css[1], r: (a.r * css[0] * framing.zoom) / cs[0] };
@@ -294,9 +295,9 @@ const colB = (w: number) => Math.max(32, 0.24 * w);
  * phones take one column between the gutters.
  */
 export function codaCopyColumn(css: Size): { left: number; width: number } {
-  const [w, h] = css;
+  const [w] = css;
   const T = CODA_TUNE;
-  if (w / h < 0.8) {
+  if (narrowFrame(css)) {
     const a = colA(w);
     return { left: a, width: w - 2 * a };
   }

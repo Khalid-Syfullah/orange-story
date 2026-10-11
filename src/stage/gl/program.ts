@@ -5,7 +5,7 @@
 // lines of source, and the builder returns null so the pass manager can fall back to a flat fill
 // instead of drawing garbage.
 import type { GLContext } from "./context";
-import { LIB_GLSL, VERTEX_GLSL } from "./lib.glsl";
+import { EPILOGUE_GLSL, LIB_GLSL, VERTEX_GLSL } from "./lib.glsl";
 
 /** Sets uniforms by name, skipping GL calls when the value has not changed. */
 export interface UniformSetter {
@@ -120,7 +120,8 @@ function fragmentHeader(derivatives: boolean): string {
 
 /** Build the full fragment source: header, library, then the pass (as source string 1 for #line). */
 export function assembleFragment(passSource: string, derivatives: boolean): string {
-  return `${fragmentHeader(derivatives)}\n${LIB_GLSL}\n#line 1 1\n${passSource}\n`;
+  // The pass's main becomes passMain so the library's epilogue can follow it (the phone band's fade).
+  return `${fragmentHeader(derivatives)}\n${LIB_GLSL}\n#define main passMain\n#line 1 1\n${passSource}\n#undef main\n${EPILOGUE_GLSL}\n`;
 }
 
 function numbered(src: string): string {

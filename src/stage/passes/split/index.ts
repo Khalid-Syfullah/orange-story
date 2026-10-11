@@ -7,7 +7,7 @@
 // The end state (t = 1: the plate at scale 1 about the drifted seam point, no lag, no pith) is what
 // The Work (phase 7) continues from; `splitOrigin` and `splitPlateScale` give it those numbers.
 import { art, type Point } from "@/content/art";
-import { sizeFromAspect, uncover, type Size } from "../../framing";
+import { phoned, sizeFromAspect, uncover, type Size } from "../../framing";
 import type { PassDef } from "../../gl/passes";
 import { SPLIT_FRAG } from "./frag";
 import { SPLIT_TUNE_KEYS, splitTune, tuneUniform } from "./tune";
@@ -23,7 +23,7 @@ export const splitPass: PassDef = {
     { uniform: "uPlate", asset: "plate" },
   ],
   uniforms(_ctx, u) {
-    const f = share.lastFraming;
+    const f = phoned(share.lastFraming, share.phonePan);
     u.set3f("uFrameA", f.pan.x, f.pan.y, f.zoom);
     u.set2f("uSeam", share.anchors.seam.x, share.anchors.seam.y);
     // Every number of the table, as uniforms (the registry skips values that did not change).
@@ -57,7 +57,7 @@ export function splitPlateScale(t: number): number {
  */
 export function splitOrigin(css: Size, t: number): Point {
   const { driftX, driftY } = splitTune();
-  const o = uncover(share.anchors.seam, css, sizeFromAspect(share.aspect), share.lastFraming);
+  const o = uncover(share.anchors.seam, css, sizeFromAspect(share.aspect), phoned(share.lastFraming, share.phonePan));
   const push = splitPush(t);
   return { x: o.x + driftX * push, y: o.y + driftY * push };
 }

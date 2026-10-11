@@ -76,3 +76,18 @@
     max-width: none;
   }
 }
+
+/* A tall phone: one slot under the picture's band, a 16px gutter, one card at a time. */
+:global(.pin[data-stack="true"]) .card {
+  top: calc(var(--zone-top) - 0.5rem);
+  left: var(--stack-gutter);
+  width: calc(100% - var(--stack-gutter) * 2);
+  padding: 0.85rem 1rem;
+  gap: 0.55rem;
+}
+
+:global(.pin[data-stack="true"]) .panel {
+  background: color-mix(in srgb, var(--ink) 30%, var(--sky));
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}

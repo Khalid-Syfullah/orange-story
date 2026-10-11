@@ -119,3 +119,15 @@
     top: calc(var(--rule-mid) + 0.6rem);
   }
 }
+
+/* A tall phone: the picture is a band ending on the pedestal; the subtitle sits just under it and
+   the footer line low on the page, both on the sky. */
+:global(.pin[data-stack="true"]) .subtitle {
+  text-shadow: none;
+}
+
+:global(.pin[data-stack="true"]) .foot {
+  top: auto;
+  bottom: 3.25rem;
+  text-shadow: none;
+}

@@ -68,6 +68,30 @@ export const chrome = {
     menu: "Chapter menu",
     progress: "Scroll progress",
   },
+  /**
+   * What the stage's canvas shows, one description per segment of the script (src/stage/script.ts),
+   * for the canvas's `role="img"` label. The words on screen are real text in the page; these
+   * describe the painting behind them.
+   */
+  scenes: {
+    hero: "A painting of a giant orange on a stepped marble plinth under a cobalt sky, three women in Greek drapery attending it, one tilting a brass watering can.",
+    bridge: "The giant orange from the opening painting becomes a real orange growing on a branch, held by two hands.",
+    model: "Paintings of hands grafting a branch, a hand reaching for fruit in a grove, and a man in a green coat holding an orange up to the light.",
+    split: "An orange is cut in half and the cut opens into a tall painting of the same orange wrapped in scaffold.",
+    work: "A tall painting of the giant orange wrapped in timber scaffold, a man polishing its peel and a woman reading a blueprint on a lower stage.",
+    parchment: "The camera pushes into the blueprint she holds until the parchment fills the frame.",
+    sheet: "A sheet of parchment paper.",
+    drawing: "A construction drawing of the orange on the sheet turns from eye level to a plan seen from above.",
+    panel: "The drawing rests as a small brushed-edge panel in the margin of the sheet.",
+    close: "The sheet burns away from the bottom left into flat blue.",
+    coda: "A woman picks an orange from a potted tree with a rod; the orange floats free in a blue field and a halo grows around it.",
+    matchcut: "The floating orange becomes one of the oranges hanging in a canopy of leaves.",
+    questions: "Looking up through the branches of an orange tree, oranges and leaves round an open patch of blue sky.",
+    moire: "The canopy turns into a coarse halftone screen, and a new painting prints in.",
+    application: "A woman in a white gown stands on marble steps, her raised finger pointing at the clouds in a blue sky.",
+    rise: "A young orange sapling grows from the marble in the blue sky.",
+    finale: "A young orange tree with five gilded oranges; a woman waters it from a brass can and a man ties up a branch.",
+  },
 } as const;
 
 // ---------------------------------------------------------------------------------------------

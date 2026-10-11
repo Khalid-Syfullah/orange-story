@@ -49,8 +49,8 @@ export function Hud() {
       const lines = [
         `p ${f.p.toFixed(4)}  seg ${f.segment.id}  t ${f.t.toFixed(3)}`,
         `pass ${pass}  ${f.synced ? "frame" : "cpu"} ${ema.toFixed(2)} ms${f.synced ? " (gpu synced)" : ""}  dt ${f.dt.toFixed(1)} ms`,
-        `vel ${(f.vel >= 0 ? "+" : "") + f.vel.toFixed(1)} px/f  mode ${engine?.scroll.mode ?? "-"}  reduced ${f.reduced ? 1 : 0}  still ${f.still}  kick ${f.kick.toFixed(2)}${clock !== null ? `  clock fixed ${clock}s` : ""}`,
-        `dpr ${f.dpr.toFixed(2)}  css ${f.css[0]}x${f.css[1]}  buffer ${f.res[0]}x${f.res[1]} (${mpx.toFixed(2)} Mpx)  oct ${f.octaves}`,
+        `vel ${(f.vel >= 0 ? "+" : "") + f.vel.toFixed(1)} px/f  lag ${engine ? (engine.scroll.target - engine.scroll.current).toFixed(1) : "-"} px  mode ${engine?.scroll.mode ?? "-"}  reduced ${f.reduced ? 1 : 0}  still ${f.still}  kick ${f.kick.toFixed(2)}${clock !== null ? `  clock fixed ${clock}s` : ""}`,
+        `dpr ${f.dpr.toFixed(2)}  css ${f.css[0]}x${f.css[1]}  buffer ${f.res[0]}x${f.res[1]} (${mpx.toFixed(2)} Mpx)  oct ${f.octaves}  band ${f.band.toFixed(2)}  view ${f.view[0]}x${f.view[1]}`,
         `tex ${stats.textures}  ready ${ready.ready}/${ready.total}  uploads ${uploadsPerSecond.toFixed(0)}/s (${uploads})  frames ${stats.decoded}/${stats.frames} decoded  mouse ${f.mouse[0].toFixed(2)},${f.mouse[1].toFixed(2)}`,
       ];
       if (pass === "split") lines.push("tune (?tune=key:value,...)", ...splitTuneLines());

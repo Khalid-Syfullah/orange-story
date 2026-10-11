@@ -127,7 +127,7 @@ vec3 heroColor(vec2 uv, vec2 frag) {
                + vec2(-uHeroT * 0.012 / (0.3 + 0.12 * 2.0), 0.0);
     float cov = cloud(pa, vec2(0.47 * aspect, 0.15), 0.30, 1.0, swayA);
     cov = max(cov, cloud(pa, vec2(0.83 * aspect, 0.22), 0.13, 2.0, swayB));
-    cov = max(cov, cloud(pa, vec2(0.33 * aspect, 0.50), 0.12, 3.0, swayC) * uCloud3);
+    cov = max(cov, cloud(pa, vec2(0.405 * aspect, 0.455), 0.12, 3.0, swayC) * uCloud3);
     float m = cloudDot(frag, cellPx, cov) * sky;
     col = mix(col, uMilk, m * 0.94);
   }

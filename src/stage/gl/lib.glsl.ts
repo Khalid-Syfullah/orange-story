@@ -14,6 +14,26 @@ attribute vec2 aPos;
 void main() { gl_Position = vec4(aPos, 0.0, 1.0); }
 `;
 
+/**
+ * Appended after every pass: the pass's `main` is renamed `passMain` (program.ts) and this `main`
+ * runs it, then, on a tall phone (uBand < 1, where the canvas is the band hung from the top of the
+ * viewport), fades the base of the picture into the page colour over its lower 34%. The fade is
+ * printed, not ramped (rule 2): a Bayer threshold bites the ramp, with its amplitude following the
+ * ramp's own shape so the first and last rows of the fade are exact.
+ */
+export const EPILOGUE_GLSL = `
+void main() {
+  passMain();
+  if (uBand < 0.999) {
+    float y = (uRes.y - gl_FragCoord.y) / uRes.y;
+    float f = clamp((y - 0.66) / 0.34, 0.0, 1.0);
+    f = f * f * (3.0 - 2.0 * f);
+    f = clamp(f + (bayer4(gl_FragCoord.xy) - 0.5) * 0.10 * sin(3.14159265 * f), 0.0, 1.0);
+    gl_FragColor.rgb = mix(gl_FragColor.rgb, uPage, f);
+  }
+}
+`;
+
 /** Shared uniform declarations and helpers. Unused uniforms are optimized away per program. */
 export const LIB_GLSL = `
 // ---- shared uniforms, set once per frame -----------------------------------------------------
@@ -27,6 +47,8 @@ uniform vec2  uMouse;    // smoothed pointer, -1..1 on each axis with y down; 0 
 uniform float uStill;    // 1 under reduced motion: breath, parallax and drift must stop
 uniform float uKick;     // exp decay from the last scroll stop: 1 at the stop, ~0.05 after 1.2 s
 uniform int   uOctaves;  // fbm octaves for texture fields: 4 on desktop, 2 on phones
+uniform float uBand;     // the picture's share of the viewport height: 1, down to 0.6 on tall phones
+uniform vec3  uPage;     // the page colour the band's base fades into (see EPILOGUE_GLSL)
 
 // ---- colour tokens from src/app/globals.css, read at start-up ---------------------------------
 uniform vec3 uSky, uSkySoft, uMilk, uInk, uPress, uOrange, uLeaf, uMarble, uPaper;

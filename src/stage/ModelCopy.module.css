@@ -93,3 +93,14 @@
     top: calc(var(--rule-top) + 4vh);
   }
 }
+
+/* A tall phone: the picture is a band; the beat's copy stacks under it on the page colour. */
+:global(.pin[data-stack="true"]) .beat {
+  top: calc(var(--zone-top) + 0.25rem);
+  width: calc(100% - var(--col-a) * 2);
+  gap: 0.75rem;
+}
+
+:global(.pin[data-stack="true"]) .piece {
+  text-shadow: none;
+}

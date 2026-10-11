@@ -6,6 +6,7 @@
 //
 // The match cut (passes/canopy) continues from the coda's last frame: the orange at codaOrange()
 // with the halo at haloAt(), both from ./timeline.ts, drawn with setCodaUniforms() below.
+import { phoned } from "../../framing";
 import { art } from "@/content/art";
 import type { PassDef } from "../../gl/passes";
 import type { UniformSetter } from "../../gl/program";
@@ -22,7 +23,7 @@ const anchor = codaAnchor();
 
 /** The coda picture's uniforms: its framing, the orange's anchor and the halo's growth. */
 export function setCodaUniforms(u: UniformSetter, halo: number): void {
-  const framing = art.coda.framing;
+  const framing = phoned(art.coda.framing, art.coda.phonePan);
   u.set2f("uCodaPan", framing.pan.x, framing.pan.y);
   u.set1f("uCodaZoom", framing.zoom);
   u.set2f("uAnchor", anchor.x, anchor.y);

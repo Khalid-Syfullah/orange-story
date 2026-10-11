@@ -4,6 +4,7 @@
 // canvas texture, and from then on the loop plays at rest to p = 1. Timing is in ./timeline.ts, the
 // shader in ./frag.ts, the canvas in ./wordmark.ts; the subtitle and the footer are DOM
 // (FinaleCopy.tsx).
+import { phoned } from "../../framing";
 import { art } from "@/content/art";
 import type { PassDef } from "../../gl/passes";
 import { riseFront, riseCloud, scrimRise } from "../application/timeline";
@@ -30,13 +31,14 @@ export const finalePass: PassDef = {
   uniforms(ctx, u, textures) {
     const t = ctx.t;
     // The rise as it ended, for the frame the loop takes over from.
-    setAppUniforms(ctx.css, u, scrimRise(1));
+    setAppUniforms(ctx.css, u, scrimRise(1), 1);
     u.set1f("uFront", riseFront(1));
     u.set1f("uCloudX", riseCloud(1));
     u.set4f("uTree", sapling.rects.tree.x, sapling.rects.tree.y, sapling.rects.tree.w, sapling.rects.tree.h);
     u.set2f("uFoot", sapling.anchors.trunkFoot.x, sapling.anchors.trunkFoot.y);
 
-    u.set2f("uFinPan", fin.framing.pan.x, fin.framing.pan.y);
+    const finF = phoned(fin.framing, fin.phonePan);
+    u.set2f("uFinPan", finF.pan.x, finF.pan.y);
     u.set1f("uFinZoom", FINALE_TUNE.zoom);
     u.set2f("uASpout", fin.anchors.spout.x, fin.anchors.spout.y);
     u.set2f("uARoots", fin.anchors.roots.x, fin.anchors.roots.y);

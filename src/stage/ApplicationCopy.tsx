@@ -122,6 +122,8 @@ export function ApplicationCopy() {
   const [errors, setErrors] = useState<Errors>({});
   const rootRef = useRef<HTMLDivElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const scrimRef = useRef<HTMLSpanElement>(null);
+  const scrimWritten = useRef("");
   const boxRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const successRef = useRef<HTMLParagraphElement>(null);
@@ -195,6 +197,12 @@ export function ApplicationCopy() {
         lift[i] = (1 - inn) * APP_TUNE.rise - (1 - out) * APP_TUNE.rise;
         write(pieces.current[i], w.pieces[i], alpha[i], lift[i]);
       }
+      // The phone's soft sky behind the column follows its pieces (the stylesheet shows it there only).
+      const scrim = scrimRef.current;
+      if (scrim) {
+        const a = Math.max(...alpha).toFixed(3);
+        if (scrimWritten.current !== a) scrim.style.opacity = scrimWritten.current = a;
+      }
       // The form takes the pointer only while its fields are on screen.
       const live = Math.min(alpha[3], alpha[4], alpha[5], alpha[PIECE_COUNT - 1]) > 0.5 || (alpha[PIECE_COUNT - 1] > 0.5 && status === "success") ? "on" : "off";
       if (w.live !== live) {
@@ -204,7 +212,7 @@ export function ApplicationCopy() {
 
       // The constellation: fingertip -> star 0 -> star 1 -> star 2.
       const rest = { tm: f.time * (1 - f.still), mouse: f.mouse, kick: f.kick };
-      const tip = fingertip(f.css, rest);
+      const tip = fingertip(f.css, rest, tr);
       for (let j = 0; j < LINE_COUNT; j++) {
         const refs = stars.current[j];
         const wl = w.lines[j];
@@ -352,6 +360,7 @@ export function ApplicationCopy() {
       </svg>
 
       <div ref={wrapRef} className={styles.wrap} style={{ left: "62%", width: "30%" }}>
+        <span ref={scrimRef} className={styles.scrim} aria-hidden="true" />
         <div ref={boxRef} className={styles.box}>
           <div
             ref={(el) => {

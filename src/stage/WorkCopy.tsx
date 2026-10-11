@@ -28,6 +28,15 @@ import styles from "./WorkCopy.module.css";
 /** How far a piece lifts as it arrives and leaves (px). */
 const LIFT = 14;
 
+/** The phone's card windows: card i owns the i-th third of the chapter; the last stays to the push. */
+function stackWindow(i: number): CardWindow {
+  const third = WORK_UNITS / work.cards.length;
+  return {
+    inAt: i === 0 ? WORK_TUNE.cardFirstAt : i * third,
+    outAt: i === work.cards.length - 1 ? Infinity : (i + 1) * third,
+  };
+}
+
 interface Written {
   opacity: string;
   transform: string;
@@ -75,10 +84,13 @@ export function WorkCopy() {
     const leave = cardLeaveAt(f.p);
     // Only while the chapter (and its neighbours' ramps) are near: the cards are hidden elsewhere.
     const near = x > -100 && x < WORK_UNITS + PARCHMENT_TUNE.cardLeave + 20;
+    // A tall phone: the picture is a band and the copy stacks under it, one card at a time in the
+    // same slot, each taking a third of the chapter (the plate's own anchors would crowd the band).
+    const stack = f.band < 0.999;
     for (let i = 0; i < cards.current.length; i++) {
       const refs = cards.current[i];
       const w = written.current[i];
-      const win = windows.current.list[i];
+      const win = stack ? stackWindow(i) : windows.current.list[i];
       if (!refs.root || !win) continue;
       const out = near ? rampOut(x, win.outAt) * leave : 0;
       const titleIn = near ? rampIn(x, win.inAt) : 0;
@@ -92,6 +104,13 @@ export function WorkCopy() {
       write(refs.body, w.body, bodyIn * out, lift);
       // Pinned to its plate y, at 0.6x the plate's speed; the card's centre sits on that y. Through
       // the push it drifts with the dolly about the parchment, at the same parallax.
+      if (stack) {
+        if (w.y !== "stack") {
+          w.y = "stack";
+          refs.root.style.transform = "";
+        }
+        continue;
+      }
       const cy = cardScreenY(CARD_ANCHORS[i], workT, f.css);
       let dx = 0;
       let dy = 0;

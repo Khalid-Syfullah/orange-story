@@ -16,15 +16,37 @@
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
-  background: var(--sky);
+  /* The page colour: the sky, or on a tall phone what the engine writes (src/stage/band.ts) so the
+     area under the picture's band is the colour the band fades into. */
+  background: var(--page, var(--sky));
 }
 
-.gl {
+/* A tall phone (src/stage/band.ts): the picture is a band hung from the top, its base fading into the
+   page colour, and the copy stacks under it from --zone-top. The hairlines sit on a 16px gutter and
+   the middle rule on the band's base. */
+.pin[data-stack="true"] {
+  --hair-left: var(--gutter-min);
+  --hair-right: calc(100% - var(--gutter-min));
+  --rule-mid: var(--band-px);
+  --stack-gutter: var(--gutter-min);
+}
+
+/* The canvas is the picture: the whole pin, or on a tall phone the band hung from its top. */
+.gl,
+.ghost {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
   display: block;
   width: 100%;
-  height: 100%;
+  height: var(--band-px, 100%);
+}
+
+/* Reduced motion: the last frame, fading out over the new one for 300 ms (engine.ts dissolve). */
+.ghost {
+  z-index: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* `?nogl` or no WebGL context: the pin's background stands in for the painting. */
@@ -67,4 +89,14 @@
   line-height: 1.45;
   white-space: pre;
   pointer-events: none;
+}
+
+/* Reduced motion: a change in the copy (the transitions collapse to their end frames, engine.ts) is
+   a 300 ms dissolve, never a slide; the canvas dissolves through the ghost above it. */
+@media (prefers-reduced-motion: reduce) {
+  .layers :is(h1, h2, h3, p, span, article, section, div, form, button, a, label, input, textarea) {
+    transition:
+      opacity 300ms linear,
+      visibility 300ms linear;
+  }
 }

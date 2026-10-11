@@ -104,3 +104,21 @@
     padding: 0.9rem 1rem;
   }
 }
+
+/* A tall phone: the picture is a band; the title and each card take the same slot under it. */
+:global(.pin[data-stack="true"]) .questions {
+  text-shadow: none;
+}
+
+:global(.pin[data-stack="true"]) .title {
+  font-size: clamp(2.25rem, 11vw, 3.25rem);
+}
+
+:global(.pin[data-stack="true"]) .card {
+  gap: 0.5rem;
+  padding: 0.85rem 1rem;
+}
+
+:global(.pin[data-stack="true"]) .panel {
+  background: color-mix(in srgb, var(--ink) 18%, transparent);
+}

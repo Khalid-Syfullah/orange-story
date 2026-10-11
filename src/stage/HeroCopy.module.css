@@ -21,7 +21,7 @@
 }
 
 .top {
-  top: calc(var(--rule-top) + 3.5vh);
+  top: calc(var(--rule-top) + 1.5vh);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -31,7 +31,7 @@
 
 /* Sized by height as well as width so the block clears the attendant standing lower left. */
 .title {
-  font-size: clamp(2.75rem, min(1rem + 4.2vw, 8.4vh), 4.75rem);
+  font-size: clamp(2.75rem, min(1rem + 4.2vw, 7.6vh), 4.75rem);
   font-weight: 300;
 }
 
@@ -51,12 +51,14 @@
 }
 
 .low {
-  bottom: 6vh;
+  /* In the open sky straight under the button (HeroCopy.tsx writes `top` from the title block's own
+     bottom), well above the attendant who stands lower left. */
+  top: calc(var(--rule-top) + 30vh);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 0.75rem;
-  width: min(20vw, 24rem);
+  width: min(28vw, 24rem);
   min-width: 15rem;
 }
 
@@ -80,4 +82,29 @@
     min-width: 0;
     bottom: 5vh;
   }
+}
+
+/* A tall phone: the picture is a band; the title block and the paragraph stack under it. */
+:global(.pin[data-stack="true"]) .top {
+  top: calc(var(--zone-top) - 1.5rem);
+  gap: 0.75rem;
+}
+
+:global(.pin[data-stack="true"]) .title {
+  font-size: clamp(2.5rem, 11.5vw, 3.5rem);
+}
+
+:global(.pin[data-stack="true"]) .subtitle {
+  font-size: 1.05rem;
+}
+
+:global(.pin[data-stack="true"]) .low {
+  top: auto !important;
+  bottom: 3.25rem;
+  gap: 0.5rem;
+}
+
+:global(.pin[data-stack="true"]) .top,
+:global(.pin[data-stack="true"]) .low {
+  text-shadow: none;
 }

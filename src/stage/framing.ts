@@ -5,6 +5,7 @@
 // All coordinates are 0..1 with y DOWN. `res` is the viewport (or canvas) size, `tex` the
 // painting's size: only their aspects matter.
 import type { Framing, Point } from "@/content/art";
+import { BAND_MIN, stackState } from "./band";
 
 export type Size = readonly [number, number];
 
@@ -41,4 +42,21 @@ export function dollyAbout(uv: Point, o: Point, s: number): Point {
 /** A painting's size from its aspect (only the ratio matters to cover/uncover). */
 export function sizeFromAspect(aspect: number, height = 1000): Size {
   return [aspect * height, height];
+}
+
+/**
+ * How far the phone layout applies, 0..1: 1 on the tallest phones (the band at its minimum), 0 on
+ * anything the picture fills. A shot's phone pan (art.ts `phonePan`) is added in this proportion,
+ * so a tablet turning upright eases into it and a desktop never sees it.
+ */
+export function phoneAmount(): number {
+  return Math.min(1, Math.max(0, (1 - stackState.band) / (1 - BAND_MIN)));
+}
+
+/** A framing with the shot's phone pan added: the pan that keeps the key action in a narrow window. */
+export function phoned(framing: Framing, phonePan: Point | undefined): Framing {
+  if (!phonePan) return framing;
+  const k = phoneAmount();
+  if (k === 0) return framing;
+  return { pan: { x: framing.pan.x + phonePan.x * k, y: framing.pan.y + phonePan.y * k }, zoom: framing.zoom };
 }
