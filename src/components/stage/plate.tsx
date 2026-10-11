@@ -6,7 +6,9 @@ import { isMotionValue, type MotionValue } from "motion/react";
 import { Color, PlaneGeometry, Vector2, Vector3, type Group, type Mesh, type PerspectiveCamera, type ShaderMaterial, type Vector4 } from "three";
 
 import { hasPlate, plateEntry, platePaint, plateWorldSize, rigIsPart, type Pair, type PlateEntry, type PlateId, type ResolvedPaint } from "@/art/manifest";
-import { revealCircle } from "@/components/transitions/choreography";
+import { remap } from "@/lib/progress";
+import { revealCircle } from "./transitions/choreography";
+import { stageTransitionMode } from "./transitions/modes";
 import { transitionOf } from "@/scroll/helpers";
 import { SCENE_PAINT } from "@/scroll/script";
 import { colors } from "@/styles/tokens";
@@ -134,7 +136,29 @@ export interface PlateMotion {
    * soft edge `soft` wide. The fingers of a hand drawn a second time in front of what they hold.
    */
   crop?: { box: readonly [number, number, number, number]; soft: number };
+  /** A multiplier of the halftone's dot cell (default: the manifest's `paint.cell`): a cloud passing the lens takes a finer dot. */
+  cell?: number;
+  /** How much of a halftone plate is dots (1, default) rather than its soft painted version (0): a cloud out of focus near the lens is mostly soft. */
+  dots?: Num;
+  /** The drawing is on a sheet of paper (the plan): cream under it, with a fibre and a deckled edge. */
+  paper?: boolean;
+  /** Fill in from a point instead of fading up: the fruiting tree spreading out from the graft, clump by clump. */
+  grow?: PlateGrow;
   name?: string;
+}
+
+/**
+ * A plate that fills in: `amount` 0 (none of it) to 1 (all of it), spreading out from a point, or
+ * closing in on it from the plate's edges (`inward`), clump by clump, each part either there or not but
+ * for a soft edge `soft` (a share of the fill, default 0.05). The point is a world point (`from`, x and
+ * y: its place on the plate as it stands) or a point of the image (`at`, fractions from its left and top).
+ */
+export interface PlateGrow {
+  amount: Num;
+  from?: Pair;
+  at?: Pair;
+  inward?: boolean;
+  soft?: number;
 }
 
 export interface PlateProps extends PlatePlacement, PlateMotion {
@@ -179,27 +203,35 @@ const tmpDirection = new Vector3();
 const tmpBuffer = new Vector2();
 
 /**
- * Sets a material's reveal circle for progress p (drawing-buffer pixels, as `gl_FragCoord`).
- * Returns false when the plate is entirely cut away.
+ * Sets a material's reveal circle for progress p (drawing-buffer pixels, as `gl_FragCoord`). Returns how
+ * much of the plate to show: 0 when it is entirely cut away, else 1; in the calm transitions there is
+ * no circle, the old picture and the new one simply cross-fade over the transition.
  */
-function applyReveal(material: ShaderMaterial, reveal: PlateReveal | undefined, p: number, gl: { getDrawingBufferSize(target: Vector2): Vector2 }, width: number, height: number): boolean {
+function applyReveal(material: ShaderMaterial, reveal: PlateReveal | undefined, p: number, gl: { getDrawingBufferSize(target: Vector2): Vector2 }, width: number, height: number): number {
   const u = material.uniforms;
-  if (!u.revealSide) return true; // a material without the reveal uniforms
+  if (!u.revealSide) return 1; // a material without the reveal uniforms
   if (!reveal) {
     u.revealSide.value = 0;
-    return true;
+    return 1;
   }
-  const circle = revealCircle(transitionOf(reveal.transition), p, width, height);
+  const def = transitionOf(reveal.transition);
   const inside = reveal.side !== "outside";
+  if (stageTransitionMode() === "calm") {
+    u.revealSide.value = 0;
+    const t = remap(p, def.start, def.end);
+    const fade = t * t * (3 - 2 * t);
+    return inside ? fade : 1 - fade;
+  }
+  const circle = revealCircle(def, p, width, height);
   const far = Math.max(Math.hypot(circle.x, circle.y), Math.hypot(width - circle.x, circle.y), Math.hypot(circle.x, height - circle.y), Math.hypot(width - circle.x, height - circle.y));
-  if (inside && circle.radius + circle.softness <= 0) return false;
-  if (!inside && circle.radius - circle.softness >= far) return false;
+  if (inside && circle.radius + circle.softness <= 0) return 0;
+  if (!inside && circle.radius - circle.softness >= far) return 0;
   gl.getDrawingBufferSize(tmpBuffer);
   const sx = tmpBuffer.x / Math.max(1, width);
   const sy = tmpBuffer.y / Math.max(1, height);
   u.revealSide.value = inside ? 1 : -1;
   (u.revealCircle.value as Vector4).set(circle.x * sx, tmpBuffer.y - circle.y * sy, circle.radius * sy, Math.max(1, circle.softness * sy));
-  return true;
+  return 1;
 }
 
 /** Sets a material's clearing for this frame (drawing-buffer pixels, as `gl_FragCoord`). */
@@ -268,7 +300,7 @@ export function usePlateFrame(
   const backdrop = props.backdrop ?? entry.role === "backdrop";
   const sway = resolveSway(props.sway, entry, props.name ?? entry.id);
 
-  useInvalidateOnChange([props.x, props.y, props.z, props.scale, props.scaleX, props.scaleY, props.rotate, props.turnY, props.opacity, props.blur, props.height, props.uvRepeat?.[0], props.uvRepeat?.[1], props.uvOffset?.[0], props.uvOffset?.[1], props.clearing?.amount, props.clearing?.left, props.clearing?.right, props.clearing?.top, props.clearing?.bottom]);
+  useInvalidateOnChange([props.x, props.y, props.z, props.scale, props.scaleX, props.scaleY, props.rotate, props.turnY, props.opacity, props.blur, props.dots, props.grow?.amount, props.height, props.uvRepeat?.[0], props.uvRepeat?.[1], props.uvOffset?.[0], props.uvOffset?.[1], props.clearing?.amount, props.clearing?.left, props.clearing?.right, props.clearing?.top, props.clearing?.bottom]);
   React.useEffect(() => () => clock.drop(key), [clock, key]);
 
   useFrame((state) => {
@@ -277,8 +309,8 @@ export function usePlateFrame(
     if (!g || !m) return;
     const p = progress?.get() ?? 0;
     const material = m.material as ShaderMaterial;
-    const opacity = read(props.opacity, 1) * (props.opacityScale ?? 1) * (layer ? layer.presence(p) : 1);
-    const shown = props.visible !== false && opacity > 0.001 && applyReveal(material, props.reveal, p, state.gl, state.size.width, state.size.height);
+    const opacity = read(props.opacity, 1) * (props.opacityScale ?? 1) * (layer ? layer.presence(p) : 1) * (props.visible !== false ? applyReveal(material, props.reveal, p, state.gl, state.size.width, state.size.height) : 0);
+    const shown = props.visible !== false && opacity > 0.001 && (props.grow === undefined || read(props.grow.amount, 1) > 0);
     g.visible = shown;
     if (!shown) {
       clock.drop(key);
@@ -348,8 +380,28 @@ export function usePlateFrame(
     }
     // The halftone's dot grid, in plate space: the same world size on any screen.
     if (u.cells) {
-      const cell = halftoneCell(u.mode.value as number) * (entry.paint?.cell ?? 1);
+      const cell = halftoneCell(u.mode.value as number) * (props.cell ?? entry.paint?.cell ?? 1);
       (u.cells.value as Vector2).set(w / cell, h / cell);
+      u.dots.value = read(props.dots, 1);
+    }
+    // Filling in from a point: a point of the image, or a world point's place on the plate as it stands now (uv, from the bottom).
+    if (u.grow) {
+      const grow = props.grow;
+      const value = u.grow.value as Vector4;
+      if (grow && !backdrop) {
+        let ix = grow.at?.[0] ?? 0.5;
+        let iy = grow.at?.[1] ?? 0.5;
+        if (grow.from) {
+          const [px, py] = props.position ?? entry.position;
+          const [ax, ay] = props.anchor ?? entry.anchor;
+          const s = read(props.scale, 1) || 1;
+          ix = (grow.from[0] - px - read(props.x, 0)) / (w * s) + ax;
+          iy = ay - (grow.from[1] - py - read(props.y, 0)) / (h * s);
+        }
+        const amount = read(grow.amount, 1);
+        // All of it there: off (the same picture, without the work).
+        value.set(amount >= 1 ? -1 : amount, ix, 1 - iy, (grow.soft ?? 0.05) * (grow.inward ? -1 : 1));
+      } else value.x = -1;
     }
     extra?.(material, p);
   });
@@ -433,6 +485,7 @@ export function Plate({ id, tint, tintAmount, backTint, life, crop, children, ..
       else (m.uniforms.crop.value as Vector4).set(0, 0, 0, 0);
       m.uniforms.cropSoft.value = crop?.soft ?? 0.01;
     }
+    if (m.uniforms.paper) m.uniforms.paper.value = props.paper ? 1 : 0;
     if (m.uniforms.backTint) {
       const back = m.uniforms.backTint.value as Vector4;
       if (backTint) {

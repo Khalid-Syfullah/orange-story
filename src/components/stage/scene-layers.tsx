@@ -23,7 +23,7 @@ import { PruneArt } from "./prune-art";
 import { PluckArt } from "./pluck-art";
 import { mountedScenes, scenePresence } from "./presence";
 import { ShareArt } from "./share-art";
-import { SiteArt } from "./site-art";
+import { SiteScene } from "./site-art";
 import { StarsArt } from "./stars-art";
 import { WorkArt } from "./work-art";
 import { SceneLayerContext, type SceneLayer } from "./stage-context";
@@ -52,7 +52,7 @@ export const SCENE_ART: Partial<Record<SceneId, React.ComponentType<SceneArtProp
   share: ShareArt,
   work: WorkArt,
   blueprint: BlueprintArt,
-  site: SiteArt,
+  site: SiteScene,
   prune: PruneArt,
   fall: FallArt,
   faq: FaqArt,

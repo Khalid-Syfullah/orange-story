@@ -14,6 +14,13 @@
  *   npm run motion:capture -- --reverse               also scrub each one back up and compare: exact reversal
  *   npm run motion:capture -- --url http://host:port  film a server that is already running (default: build, then serve on 3200)
  *   npm run motion:capture -- --no-build              serve the build that is there
+ *   npm run motion:capture -- --transitions           every scene boundary and in-scene transition instead
+ *                                                     (`storyBoundaries` in src/scroll/boundaries.ts), with a
+ *                                                     table of them (`boundaries.md`)
+ *   npm run motion:capture -- --phone                 on a phone (412 x 915, the stacked layout and its scroll map)
+ *   npm run motion:capture -- --query quality=low     extra query parameters for the page (repeatable)
+ *   npm run motion:capture -- --compare a:b --out c   no filming: every stretch found in folders a and b, side by
+ *                                                     side (a left, b right), as a preview and a contact sheet in c
  *
  * Idle time is held still (`?idle=off`): breathing, sway, the glow and the transitions' drift stop,
  * and the page's CSS animations and transitions are frozen, so every frame is a function of progress
@@ -31,7 +38,7 @@
 
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -60,11 +67,15 @@ const REVERSE = args.includes("--reverse");
 const BUILD = !args.includes("--no-build");
 const PORT = Number(option("port", "3200"));
 const GIVEN_URL = option("url", "");
+const TRANSITIONS = args.includes("--transitions");
+const PHONE = args.includes("--phone");
+const QUERY = ["idle=off", ...options("query")].join("&");
+const COMPARE = option("compare", "");
 
-const VIEWPORT = { width: 1440, height: 900 };
-const FRAME = { width: 720, height: 450 };
-const THUMB = { width: 288, height: 180 };
-const PREVIEW = { width: 480, height: 300 };
+const VIEWPORT = PHONE ? { width: 412, height: 915 } : { width: 1440, height: 900 };
+const FRAME = PHONE ? { width: 270, height: 600 } : { width: 720, height: 450 };
+const THUMB = PHONE ? { width: 120, height: 266 } : { width: 288, height: 180 };
+const PREVIEW = PHONE ? { width: 216, height: 480 } : { width: 480, height: 300 };
 const PREVIEW_FPS = 12;
 const LOOP_SECONDS = 13;
 /** Long enough for the hero's intro (`INTRO.total` in `hero-intro.ts`) to have played. */
@@ -81,12 +92,17 @@ const FREEZE_CSS = "*, *::before, *::after { transition-duration: 0s !important;
  */
 const STAGE_ONLY_CSS = ['[data-layer="text"]', '[data-layer="hairlines"]', "[data-chrome]"].map((layer) => `html[data-capture-stage] [data-stage] ${layer}, html[data-capture-stage] [data-stage] ${layer} *`).join(", ") + " { visibility: hidden !important; }";
 
-/** The story script, read from the TypeScript source (the same numbers the stage plays). */
+/** The story script, read from the TypeScript source (the same numbers the stage plays), with its boundaries and the phone's scroll map. */
 async function loadScript() {
   const require = createRequire(path.join(ROOT, "package.json"));
   const { createJiti } = require("jiti");
   const jiti = createJiti(import.meta.url, { alias: { "@": SRC } });
-  return jiti.import(path.join(SRC, "scroll/script.ts"));
+  const [script, boundaries, mobile] = await Promise.all([
+    jiti.import(path.join(SRC, "scroll/script.ts")),
+    jiti.import(path.join(SRC, "scroll/boundaries.ts")),
+    jiti.import(path.join(SRC, "scroll/mobile.ts")),
+  ]);
+  return { ...script, boundaries, scrollMap: mobile.scrollMapFor(PHONE) };
 }
 
 async function waitForServer(url, ms = 60_000) {
@@ -137,9 +153,12 @@ async function geometry(page) {
   });
 }
 
-/** Scrolls the window so the story sits at progress p (desktop: scroll and progress are the same number). */
+/** The layout's scroll map (desktop: scroll and progress are the same number; a phone's bends at the scene boundaries). */
+let scrollMap = { toScroll: (p) => p };
+
+/** Scrolls the window so the story sits at progress p. */
 async function scrollTo(page, g, p) {
-  await page.evaluate((y) => window.scrollTo(0, y), Math.round(g.top + p * g.span));
+  await page.evaluate((y) => window.scrollTo(0, y), Math.round(g.top + scrollMap.toScroll(p) * g.span));
 }
 
 /** One frame: a screenshot, downscaled to `FRAME`, as JPEG. */
@@ -241,8 +260,14 @@ async function saveStretch(name, title, frames, backs = []) {
   await preview(frames, path.join(OUT, `${name}.webp`));
 }
 
-/** What to film: the scenes asked for (all of them by default), or the stretches given with `--range`. */
+/** What to film: the scenes asked for (all of them by default), the stretches given with `--range`, or every boundary (`--transitions`). */
 function stretches(script) {
+  if (TRANSITIONS) {
+    return script.boundaries.storyBoundaries().map((b) => {
+      const [start, end] = script.boundaries.captureRange(b);
+      return { name: b.name, start, end, finale: false, boundary: b };
+    });
+  }
   if (RANGES.length) {
     return RANGES.map((r, i) => {
       const [a, b, label] = r.split(":");
@@ -257,22 +282,98 @@ function stretches(script) {
   return scenes.map((s) => ({ name: `${String(s.index).padStart(2, "0")}-${s.id}`, start: s.start, end: s.end, finale: s.id === "finale" }));
 }
 
+/** The boundaries filmed with `--transitions`, as a table (`boundaries.md` in the output folder). */
+async function writeBoundaries(script, plan) {
+  const S = script.SCREEN;
+  const f = (p) => (p === null || p === undefined ? "" : `${p.toFixed(4)} (${(p / S).toFixed(2)})`);
+  const lines = [
+    `# Scene boundaries and transitions (${path.basename(OUT)})`,
+    "",
+    "From `storyBoundaries()` (`src/scroll/boundaries.ts`), which reads `src/scroll/script.ts`. Progress, with screens of scrolling in brackets. A crossfade fades over `CROSSFADE_SCREENS` to each side of the boundary; a covering transition covers the whole screen from `covered` to `clearing`.",
+    "",
+    "| Stretch | Scenes | Kind | Start | Covered | Clearing | End | Screens | Filmed |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+  ];
+  for (const s of plan) {
+    const b = s.boundary;
+    const scenes = b.from === b.to ? b.from : `${b.from} to ${b.to}`;
+    lines.push(`| ${s.name} | ${scenes} | ${b.kind} | ${f(b.start)} | ${f(b.covered)} | ${f(b.clearing)} | ${f(b.end)} | ${((b.end - b.start) / S).toFixed(2)} | ${s.start.toFixed(4)} to ${s.end.toFixed(4)} |`);
+  }
+  await writeFile(path.join(OUT, "boundaries.md"), `${lines.join("\n")}\n`);
+}
+
+/** The frames of a stretch saved in a folder, in order. */
+async function framesIn(dir) {
+  const names = (await readdir(dir)).filter((n) => /^frame-\d+\.jpg$/.test(n)).sort();
+  return Promise.all(names.map((n) => readFile(path.join(dir, n))));
+}
+
+/**
+ * `--compare a:b`: every stretch filmed in both folders, side by side, a on the left and b on the
+ * right: an animated preview and a contact sheet of every sixth frame, in the output folder.
+ */
+async function compare(spec) {
+  const [a, b] = spec.split(":").map((d) => path.resolve(ROOT, d));
+  await mkdir(OUT, { recursive: true });
+  const names = (await readdir(a, { withFileTypes: true })).filter((d) => d.isDirectory()).map((d) => d.name).sort();
+  for (const name of names) {
+    if (!existsSync(path.join(b, name))) continue;
+    const [left, right] = await Promise.all([framesIn(path.join(a, name)), framesIn(path.join(b, name))]);
+    const count = Math.min(left.length, right.length);
+    if (!count) continue;
+    const meta = await sharp(left[0]).metadata();
+    const w = PREVIEW.width;
+    const h = Math.round((w * meta.height) / meta.width);
+    const tag = (text) => label(text, w, h);
+    const pairs = await Promise.all(
+      Array.from({ length: count }, async (_, i) => {
+        const [l, r] = await Promise.all([
+          sharp(left[i]).resize(w, h).composite([{ input: tag(`${path.basename(a)}  ${String(i).padStart(2, "0")}`) }]).png().toBuffer(),
+          sharp(right[i]).resize(w, h).composite([{ input: tag(`${path.basename(b)}  ${String(i).padStart(2, "0")}`) }]).png().toBuffer(),
+        ]);
+        return sharp({ create: { width: w * 2 + 6, height: h, channels: 3, background: "#15130F" } })
+          .composite([
+            { input: l, left: 0, top: 0 },
+            { input: r, left: w + 6, top: 0 },
+          ])
+          .png()
+          .toBuffer();
+      }),
+    );
+    await sharp(pairs, { join: { animated: true } })
+      .webp({ quality: 70, loop: 0, delay: pairs.map(() => Math.round(1000 / PREVIEW_FPS)) })
+      .toFile(path.join(OUT, `${name}.webp`));
+    // The sheet: every sixth pair, top to bottom.
+    const picked = pairs.filter((_, i) => i % 6 === 0 || i === count - 1);
+    const rowH = h + 4;
+    await sharp({ create: { width: w * 2 + 6, height: picked.length * rowH, channels: 3, background: "#15130F" } })
+      .composite(picked.map((input, i) => ({ input, left: 0, top: i * rowH })))
+      .png()
+      .toFile(path.join(OUT, `${name}.png`));
+    console.log(`${name}: ${count} frames side by side`);
+  }
+  console.log(`Saved ${path.relative(ROOT, OUT)}/`);
+}
+
 async function main() {
+  if (COMPARE) return compare(COMPARE);
   const script = await loadScript();
+  scrollMap = script.scrollMap;
   const plan = stretches(script);
   await mkdir(OUT, { recursive: true });
+  if (TRANSITIONS) await writeBoundaries(script, plan);
 
   const server = GIVEN_URL ? { url: GIVEN_URL.replace(/\/$/, ""), stop: () => {} } : await startServer();
   const browser = await chromium.launch({ channel: "chromium" });
   const reversal = [];
   try {
-    const page = await browser.newPage({ viewport: VIEWPORT, deviceScaleFactor: 1 });
+    const page = await browser.newPage({ viewport: VIEWPORT, deviceScaleFactor: 1, ...(PHONE ? { isMobile: true, hasTouch: true } : {}) });
     const pending = new Set();
     page.on("request", (r) => pending.add(r));
     page.on("requestfinished", (r) => pending.delete(r));
     page.on("requestfailed", (r) => pending.delete(r));
     page.on("pageerror", (e) => console.warn(`page error: ${e.message}`));
-    await page.goto(`${server.url}/?idle=off`, { waitUntil: "load" });
+    await page.goto(`${server.url}/?${QUERY}`, { waitUntil: "load" });
     await page.addStyleTag({ content: `${FREEZE_CSS}\n${STAGE_ONLY_CSS}` });
     await page.waitForSelector("[data-stage] canvas");
     await quiet(page, pending, 400, 15_000);

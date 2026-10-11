@@ -25,21 +25,18 @@ import { validateScript } from "@/scroll/validate";
 import { Beat } from "./beat";
 import { goToApply, registerLiveStory } from "./go-to-apply";
 import { QUESTION_BEATS } from "./question-list";
-import { SitePanel } from "./site-panel";
 import { StoryOutline } from "./story-outline";
 import { useStoryLocation } from "./story-location";
-import { TransitionLayer } from "./transition-layer";
 import { DESKTOP_GRID_LINES, STACKED_GRID_LINES } from "@/styles/tokens";
 
 /**
  * The pinned stage: one section `STAGE_VH` tall, scrolled natively, with a sticky full-viewport
  * frame holding the layers, bottom to top:
- * 1. the WebGL canvas with the scene plates;
- * 2. the transition canvas;
- * 3. the hairlines (and the progress lines that run along them);
- * 4. the DOM text layer: every beat of the script, each in its slot (the five question cards as
+ * 1. the WebGL canvas: the scene plates and the transitions between them (inside the painting);
+ * 2. the hairlines (and the progress lines that run along them);
+ * 3. the DOM text layer: every beat of the script, each in its slot (the five question cards as
  *    one pinned deck with its connector line, `QuestionDeck`);
- * 5. the chrome (mark, menu, Apply, ruler, percent counter).
+ * 4. the chrome (mark, menu, Apply, ruler, percent counter).
  *
  * Everything reads the one `progress` motion value, written by the scroll engine
  * (`src/scroll/stage-scroll.ts`). With reduced motion the stage is not shown at all and the engine
@@ -150,12 +147,8 @@ export function StoryStage({ year }: { year: number }) {
         >
           <div ref={frame} className="sticky top-0 h-svh w-full overflow-hidden bg-sky">
             <div aria-hidden data-layer="scene" className="pointer-events-none absolute inset-0">
-              {live ? <StageCanvas progress={progress} /> : null}
+              {live ? <StageCanvas progress={progress} velocity={velocity} /> : null}
             </div>
-
-            {live ? <SitePanel progress={progress} /> : null}
-
-            <TransitionLayer progress={progress} live={live} />
 
             <div data-layer="hairlines" className={cn("pointer-events-none absolute inset-0 transition-colors duration-300", onMilk ? "text-ink" : "text-white")}>
               <Hairlines progress={progress} cues={HAIRLINES} position="absolute" lines={stacked ? STACKED_GRID_LINES : DESKTOP_GRID_LINES} />

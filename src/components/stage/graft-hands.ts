@@ -441,7 +441,7 @@ export const GRAFT_MOTION: SceneMotion = {
     { name: "knot 2 · opacity", at: (p) => knotAt(p)[1] },
     { name: "knot 3 · opacity", at: (p) => knotAt(p)[2] },
     { name: "knot · size", at: knotScale },
-    { name: "fruiting tree · opacity", at: fruitAt },
+    { name: "fruiting tree · filled in", at: fruitAt },
   ],
   marks(p) {
     const marks = noMarks();

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { sceneIndexAt } from "@/scroll/helpers";
 import { SCENES, SCREEN, TRANSITIONS } from "@/scroll/script";
 
-import { coveredHandover, CROSSFADE_SCREENS, mountedScenes, presenceRange, scenePresence } from "./presence";
+import { coveredHandover, crossfadeOf, mountedScenes, presenceRange, scenePresence, swapPointOf } from "./presence";
 
 const STEP = 1e-4;
 const samples = Array.from({ length: Math.round(1 / STEP) + 1 }, (_, i) => i * STEP);
@@ -17,7 +17,7 @@ describe("scene presence", () => {
 
   it("swaps scenes at the boundary, under full cover, where a transition hands one to the next", () => {
     const handovers = TRANSITIONS.filter((t) => t.layer === "canvas" && t.from !== t.to && t.peak);
-    expect(handovers.map((t) => t.id)).toEqual(["sand", "unfold", "dust", "fabric"]);
+    expect(handovers.map((t) => t.id)).toEqual(["sand", "cloud", "unfold", "dust", "fabric"]);
     for (const t of handovers) {
       expect(coveredHandover(t.from, t.to)).toBe(true);
       const boundary = SCENES.find((s) => s.id === t.to)!.start;
@@ -30,17 +30,23 @@ describe("scene presence", () => {
     }
   });
 
-  it("crossfades plain boundaries, the incoming scene first", () => {
-    const fade = CROSSFADE_SCREENS * SCREEN;
+  it("crossfades plain boundaries, the incoming scene first (behind a pass, where and for as long as it says)", () => {
+    const leaves = TRANSITIONS.find((t) => t.id === "leaves")!;
+    expect(crossfadeOf("ascent", "graft")).toBeCloseTo(leaves.swap! * SCREEN, 9);
+    expect(swapPointOf("ascent", "graft")).toBe(leaves.swapAt);
+    expect(crossfadeOf("ascent", "graft", true)).toBeCloseTo(0.2 * SCREEN, 9);
+    expect(crossfadeOf("pluck", "share")).toBeCloseTo(0.2 * SCREEN, 9);
     for (let i = 1; i < SCENES.length; i++) {
       const prev = SCENES[i - 1];
       const next = SCENES[i];
       if (coveredHandover(prev.id, next.id)) continue;
-      expect(presenceRange(next).inStart).toBeCloseTo(next.start - fade, 9);
-      expect(scenePresence(next, next.start - fade)).toBe(0);
-      expect(scenePresence(next, next.start + fade)).toBe(1);
-      expect(scenePresence(prev, next.start - 1e-6)).toBe(1);
-      expect(scenePresence(prev, next.start + fade)).toBe(0);
+      const fade = crossfadeOf(prev.id, next.id);
+      const at = swapPointOf(prev.id, next.id);
+      expect(presenceRange(next).inStart).toBeCloseTo(at - fade, 9);
+      expect(scenePresence(next, at - fade)).toBe(0);
+      expect(scenePresence(next, at + fade)).toBe(1);
+      expect(scenePresence(prev, at - 1e-6)).toBe(1);
+      expect(scenePresence(prev, at + fade)).toBe(0);
     }
   });
 

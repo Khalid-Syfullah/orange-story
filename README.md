@@ -65,7 +65,7 @@ npm run test:story                # builds, serves on port 3100, runs e2e/story.
 | `src/scroll/` | Also the scroll engine (`stage-scroll.ts`), helpers, validation, phones (`mobile.ts`) and navigation |
 | `src/components/story/` | The pinned stage, the text beats, the question deck, the form, the reduced-motion page, the screen reader outline |
 | `src/components/stage/` | The WebGL stage: plates, materials, camera rig and path, and one art component plus a pure plan per scene |
-| `src/components/transitions/` | Sand, paper unfold, rising dust, rainbow ring and fabric sky: choreography and shaders |
+| `src/components/stage/transitions/` | The transitions, drawn on the stage itself: the leaves, the sand, the cloud, the paper unfold, the rising dust, the ring and the fabric sky, with their toolkit (lens layers, particles, paper hinges, cloth, the smear) and a pure plan each (`docs/TRANSITIONS.md`) |
 | `src/components/chrome/` | Mark, chapter menu, ruler, percent counter, hairlines |
 | `src/components/motion/` | Text effects: per-letter reveal, typewriter, blur fade, smoke |
 | `src/components/ui/` | shadcn/ui components (button, tag, form fields, sheet, tooltip) |

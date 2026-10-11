@@ -17,12 +17,16 @@ import { ADAPTIVE, adaptDpr, newFrameBudget, qualityOverride, stageDpr } from ".
 import { SceneLayers } from "./scene-layers";
 import { StageProgressContext } from "./stage-context";
 import { StageSurface } from "./stage-surface";
+import type { TransitionMode } from "./transitions/modes";
+import { ForcedTransitionMode, TransitionStage } from "./transitions/transition-stage";
 
 /**
  * The persistent WebGL canvas behind everything: the scenes' painted plates in depth, filmed by the
- * camera rig. It renders on demand: once per progress change, plus every frame while an idle effect
- * (sway, twinkle) is on screen. The pixel ratio is capped (`quality.ts`) and lowered further on a
- * device that cannot keep up (`AdaptiveQuality`). Loaded on the client only (see the stage).
+ * camera rig, and the transitions between them (`TransitionStage`: the media in front of the lens and
+ * in the world). It renders on demand: once per progress change, plus every frame while an idle effect
+ * (sway, twinkle) is on screen or a smear is settling. The pixel ratio is capped (`quality.ts`) and
+ * lowered further on a device that cannot keep up (`AdaptiveQuality`). Loaded on the client only (see
+ * the stage).
  */
 
 /**
@@ -76,7 +80,7 @@ function RenderOnProgress({ progress }: { progress: MotionValue<number> }) {
 
 const FIRST = CAMERA[0];
 
-export default function StageCanvas({ progress }: { progress: MotionValue<number> }) {
+export default function StageCanvas({ progress, velocity, transitionMode }: { progress: MotionValue<number>; velocity?: MotionValue<number> | null; transitionMode?: TransitionMode }) {
   // A lower pixel ratio on a phone, and lower still on a device that cannot keep up.
   const stacked = useStacked();
   const range = React.useMemo(() => stageDpr(stacked), [stacked]);
@@ -107,7 +111,10 @@ export default function StageCanvas({ progress }: { progress: MotionValue<number
         <PauseWhenHidden />
         <CameraRig progress={progress} />
         <IdleClockProvider>
-          <SceneLayers progress={progress} />
+          <ForcedTransitionMode value={transitionMode ?? null}>
+            <SceneLayers progress={progress} />
+            <TransitionStage progress={progress} velocity={velocity} />
+          </ForcedTransitionMode>
         </IdleClockProvider>
       </StageProgressContext>
     </Canvas>

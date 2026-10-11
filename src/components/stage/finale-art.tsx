@@ -15,7 +15,9 @@ import {
   armBobAt,
   astronomerOffset,
   CAN_TIP,
+  CLOUD_FORMS_FROM,
   CLOUD_SCALE,
+  cloudIn,
   CUT_POINT,
   cutFruitAt,
   SPOUT,
@@ -24,6 +26,7 @@ import {
   finaleCloudShift,
   loopWeight,
   manAt,
+  OLD_CLOUD_HOLDS,
   oldCloudOpacity,
   oldCloudShift,
   shearsAt,
@@ -90,24 +93,30 @@ const WATER_DEPTH = plateEntry("finale/water-1").depth;
 /** The keepers are livelier than the rest of the cast: they breathe and shift their weight through their loop. */
 const KEEPER_LIFE = 1.3;
 
-/** A cloud that drifts right on idle time, and a little further with the scroll. */
-function Cloud({ id, clearing }: { id: (typeof CLOUDS)[number]; clearing: PlateClearing }) {
+/**
+ * A cloud that drifts right on idle time, and a little further with the scroll. It blows in once the
+ * scenes have changed, forming from its upwind side (`cloudIn`), instead of fading up where it stands.
+ */
+function Cloud({ id, index, clearing }: { id: (typeof CLOUDS)[number]; index: number; clearing: PlateClearing }) {
   const entry = plateEntry(id);
   const scene = useSceneLayer();
-  const progress = useStageProgress();
+  const stage = useStageProgress();
+  const none = useMotionValue(1);
+  const progress = stage ?? none;
   const clock = useIdleClock();
   const key = React.useMemo(() => ({}), []);
   const idle = useMotionValue(driftX(entry.position[0], entry.depth, clock.time(), CLOUD_SCALE));
+  const blown = useTransform(progress, (p) => cloudIn(p, index));
 
   React.useEffect(() => () => clock.drop(key), [clock, key]);
   useFrame(() => {
-    const p = progress?.get() ?? 1;
+    const p = progress.get();
     if ((scene?.presence(p) ?? 1) > 0.001) clock.hold(key);
     else clock.drop(key);
     idle.set(driftX(entry.position[0], entry.depth, clock.time(), CLOUD_SCALE) + finaleCloudShift(p, entry.depth));
   });
 
-  return <Plate id={id} x={idle} layer={LAYER.cloud} sway={false} clearing={clearing} />;
+  return <Plate id={id} x={idle} grow={{ amount: blown, at: CLOUD_FORMS_FROM, soft: 0.14 }} layer={LAYER.cloud} sway={false} clearing={clearing} />;
 }
 
 /** The motion values of one falling orange. */
@@ -244,7 +253,7 @@ export function FinaleArt({ scene }: SceneArtProps) {
   const depth = sinkDepth(useStacked());
   const sink = useTransform(progress, (p) => astronomerOffset(p, depth));
   const cloudX = useTransform(progress, oldCloudShift);
-  const cloudAlpha = useTransform(progress, oldCloudOpacity);
+  const cloudLeft = useTransform(progress, oldCloudOpacity);
   const treeY = useTransform(progress, (p) => treeAt(p).y);
   const treeShake = useTreeShake(progress);
   // Behind the wordmark (inside the closing frame) the tree, the keepers and the clouds recede into
@@ -259,14 +268,14 @@ export function FinaleArt({ scene }: SceneArtProps) {
   return (
     <>
       <Plate id="hero/sky" layer={LAYER.sky} />
-      {CLOUDS.map((id) => (
-        <Cloud key={id} id={id} clearing={haze} />
+      {CLOUDS.map((id, i) => (
+        <Cloud key={id} id={id} index={i} clearing={haze} />
       ))}
 
       {/* What the stargazer scene leaves behind, leaving: the stars up and away, the astronomer and his platform down. */}
       <Twinkle sprite="stars/star" points={nodes} reveal={reveal} y={lift} opacity={starsAlpha} additive layer={LAYER.stars} name="constellation" />
       <StarEdges layer={LAYER.edges} y={lift} opacity={starsAlpha} />
-      <Plate id="stars/cloud" x={cloudX} opacity={cloudAlpha} layer={LAYER.oldCloud} sway={false} />
+      <Plate id="stars/cloud" x={cloudX} grow={{ amount: cloudLeft, at: OLD_CLOUD_HOLDS, soft: 0.14 }} layer={LAYER.oldCloud} sway={false} />
       <Plate id="stars/platform" y={sink} layer={LAYER.platform} />
       <Plate id="stars/astronomer" y={sink} layer={LAYER.astronomer} life={astronomer} />
 

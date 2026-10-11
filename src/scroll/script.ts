@@ -245,7 +245,7 @@ export const BEATS: readonly BeatDef[] = [
     leave: "fade",
     copy: "terms.block",
     from: at("site", 0.46), // once the top-down view has shrunk into the left half
-    to: at("site", 0.94), // leaves as the dust rises
+    to: at("site", 0.9), // gone before the wind gets up (the dust)
   }),
   beat({
     id: "terms-title",
@@ -333,8 +333,38 @@ function beatOf(id: BeatId): BeatDef {
 
 const LAST_QUESTION = beatOf("question-5");
 const QUESTIONS_TITLE = beatOf("questions-title");
+const LAST_CARD = beatOf("card-3");
 
+/**
+ * Every transition, sorted by start (`docs/TRANSITIONS.md` has the design of each). The ones drawn on
+ * the stage canvas (`layer: "canvas"`) take turns: the leaves the camera passes through on its way to
+ * the branch and back out of the tree, the sand, the cloud, the paper, the dust, the ring, the cloth.
+ * A covering one (`peak`) fills the whole screen across its scenes' boundary, so the scenes swap and
+ * the camera reframes unseen; a pass (`swap`) only crosses the boundary, the scenes cross-fading
+ * behind it while it is densest.
+ */
 export const TRANSITIONS: readonly TransitionDef[] = [
+  {
+    id: "leaves",
+    kind: "leaves",
+    from: "ascent",
+    to: "graft",
+    start: at("ascent", 0.86), // the camera's last move up to the branch, through the leaves on its twigs
+    end: at("graft", 0.09),
+    layer: "canvas",
+    // The scenes swap behind the two leaves on the camera's path, while they fill the lens.
+    swap: 0.012,
+    swapAt: at("ascent", 0.94),
+  },
+  {
+    id: "foliage",
+    kind: "leaves",
+    from: "graft",
+    to: "pluck",
+    start: at("graft", 0.62), // the camera pulls back out of the tree as it fills with fruit (GRAFT.pullOut)
+    end: at("pluck", 0.06),
+    layer: "canvas",
+  },
   {
     id: "viewfinder-share",
     kind: "viewfinder",
@@ -358,13 +388,24 @@ export const TRANSITIONS: readonly TransitionDef[] = [
     layer: "canvas",
   },
   {
+    id: "cloud",
+    kind: "cloud",
+    from: "work",
+    to: "blueprint",
+    start: round6(LAST_CARD.out + 0.03 * SCREEN), // once the last card has gone, a cloud drifts in front of the builder
+    end: at("blueprint", 0.11), // and the pan across to the scaffold carries it off
+    // Where the nearest cloud's solid core fills the frame (`cloud-plan.ts`; the unit test checks it on a laptop, an ultrawide and a phone).
+    peak: around(at("blueprint", 0), 0.015),
+    layer: "canvas",
+  },
+  {
     id: "unfold",
     kind: "unfold",
     from: "blueprint",
     to: "site",
-    start: at("blueprint", 0.82), // once the plan has opened (BLUEPRINT.panels)
-    end: at("site", 0.19), // the sheet opens over about three quarters of a screen, before the camera rises (SITE.rise)
-    peak: around(at("site", 0), 0.08),
+    start: at("blueprint", 0.84), // the plan has opened (BLUEPRINT.panels): the camera dives into its paper
+    end: at("site", 0.15), // its pages have turned away, before the camera rises (SITE.rise)
+    peak: around(at("site", 0), 0.05),
     layer: "canvas",
   },
   {
@@ -372,7 +413,7 @@ export const TRANSITIONS: readonly TransitionDef[] = [
     kind: "dust",
     from: "site",
     to: "prune",
-    start: at("site", 0.92),
+    start: at("site", 0.905), // once the terms have left, the wind gets up
     end: at("prune", 0.09),
     peak: around(at("prune", 0), 0.04),
     layer: "canvas",
@@ -402,9 +443,10 @@ export const TRANSITIONS: readonly TransitionDef[] = [
     kind: "fabric",
     from: "faq",
     to: "stars",
-    start: at("faq", 0.97),
-    end: at("stars", 0.2),
-    peak: around(at("stars", 0), 0.05),
+    start: at("faq", 0.952), // the cloth's hem drops into the top of the frame
+    end: at("stars", 0.12), // and its top edge slides out at the bottom: it falls faster as it goes
+    // Where the falling cloth covers the whole frame (its physics, `fabric-plan.ts`; the unit test checks it).
+    peak: [round6(at("stars", 0) - 0.02 * SCREEN), round6(at("stars", 0) + 0.024 * SCREEN)],
     layer: "canvas",
   },
   {
@@ -457,6 +499,16 @@ const [SAND_COVERED, SAND_CLEARING] = peakOf("sand");
 const [UNFOLD_COVERED, UNFOLD_CLEARING] = peakOf("unfold");
 const [DUST_COVERED, DUST_CLEARING] = peakOf("dust");
 const [FABRIC_COVERED, FABRIC_CLEARING] = peakOf("fabric");
+
+/**
+ * The paper unfold's two pages (`src/components/stage/transitions/unfold.tsx`), once the camera has
+ * reframed under the plan's paper: the right page turns toward the camera over the middle crease and
+ * lands on the left half, then the doubled left half turns away over the left crease, out past the lens.
+ */
+export const UNFOLD_PAGES = {
+  first: [UNFOLD_CLEARING, round6(UNFOLD_CLEARING + 0.38 * SCREEN)] as ProgressRange,
+  second: [round6(UNFOLD_CLEARING + 0.2 * SCREEN), transitionOf("unfold").end] as ProgressRange,
+} as const;
 
 /**
  * The ascent's own timings (progress). The art in `src/components/stage/ascent-tree.ts` choreographs
@@ -753,6 +805,8 @@ export const FINALE = {
   stars: [at("finale", 0), at("finale", 0.3)] as ProgressRange,
   /** The cloud that kept the bottom right clear slides away to the right. */
   cloud: [at("finale", 0), at("finale", 0.4)] as ProgressRange,
+  /** The finale's own clouds blow in from the left, forming as they come, once the scenes have changed (one after another). */
+  cloudsIn: [at("finale", 0.025), at("finale", 0.19)] as ProgressRange,
   /** The tree rises from the bottom center. */
   tree: [at("finale", 0.18), at("finale", 0.4)] as ProgressRange,
   /** The woman walks in from the left and settles. */
@@ -1011,14 +1065,14 @@ const CLOUDS_HIGH: Vec3 = [0, 8.5, 13.5];
 const WORK_BUILDER = framedKey("workBuilder");
 const BLUEPRINT_BUILDER = framedKey("blueprintBuilder");
 const ARCHITECT = framedKey("architect");
-/** Into the open plan, in her hands, as the paper unfold covers the screen. */
-const OPEN_PLAN = unionBox(plateBox("blueprint/plan-1"), plateBox("blueprint/plan-4"));
-const INTO_PLAN = shot({
-  box: { x0: OPEN_PLAN.x0 + PLAN_HELD[0], x1: OPEN_PLAN.x1 + PLAN_HELD[0], y0: OPEN_PLAN.y0 + PLAN_HELD[1], y1: OPEN_PLAN.y1 + PLAN_HELD[1], z: -PLAN_DEPTH },
-  width: 1.15,
-  at: [0.5, 0.5],
-  fov: 34,
-});
+/**
+ * Into the open plan, in her hands: the camera dives in until its paper fills the frame, the two middle
+ * panels side by side with the crease between them in the middle (the paper unfold takes over from
+ * there). On a phone, nearer: the paper's height fills the taller frame.
+ */
+const MIDDLE_PANELS = unionBox(plateBox("blueprint/plan-2"), plateBox("blueprint/plan-3"));
+export const PLAN_MIDDLE: WorldBox = { x0: MIDDLE_PANELS.x0 + PLAN_HELD[0], x1: MIDDLE_PANELS.x1 + PLAN_HELD[0], y0: MIDDLE_PANELS.y0 + PLAN_HELD[1], y1: MIDDLE_PANELS.y1 + PLAN_HELD[1], z: -PLAN_DEPTH };
+const INTO_PLAN = withPhone({ box: PLAN_MIDDLE, width: 1.25, at: [0.5, 0.5], fov: 34 }, { height: 1.08, at: [0.5, 0.5] });
 
 const SITE_BUILDER = framedKey("siteBuilder");
 /** The whole site at ground level, the sea behind it: where the rise to straight above starts. */
@@ -1107,7 +1161,7 @@ export const CAMERA: readonly CameraKey[] = [
   shotKey("blueprint", at("blueprint", 0.12), "hold", BLUEPRINT_BUILDER),
   shotKey("blueprint", BLUEPRINT.toArchitect[0], "pan", BLUEPRINT_BUILDER),
   shotKey("blueprint", BLUEPRINT.panels[0], "push", ARCHITECT),
-  shotKey("blueprint", UNFOLD_COVERED, "reframe", INTO_PLAN, ARCHITECT.pan),
+  shotKey("blueprint", UNFOLD_COVERED, "reframe", INTO_PLAN),
   // Site: a builder at work at ground level; pull back to the whole site by the sea, rise to
   // top-down, then pull out as the view shrinks into the left half.
   shotKey("site", UNFOLD_CLEARING, "hold", SITE_BUILDER),
@@ -1215,9 +1269,12 @@ export const PROGRESS_LINES: readonly ProgressLineCue[] = [
 
 const UNFOLD = transitionOf("unfold");
 
-/** Milk-white moments: the paper unfold, and the top-down site with its milk panel. Sky elsewhere. */
+/**
+ * Milk-white moments: the plan's paper filling the frame until its last page sweeps the left half
+ * (where the ruler is) clear, and the top-down site with its milk page. Sky elsewhere.
+ */
 export const TONES: readonly ToneCue[] = [
-  { tone: "milk", start: round6(UNFOLD_COVERED - 0.25 * SCREEN), end: UNFOLD.end },
+  { tone: "milk", start: round6(UNFOLD_COVERED - 0.2 * SCREEN), end: round6((UNFOLD_PAGES.second[0] + UNFOLD_PAGES.second[1]) / 2) },
   { tone: "milk", start: SITE.topDownIn[1], end: SITE.end }, // once the sand and tiles have replaced the sea
 ];
 

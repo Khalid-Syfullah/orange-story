@@ -1,6 +1,9 @@
 import { ease, remap } from "@/lib/progress";
+import { CROSSFADE_SCREENS } from "@/scroll/boundaries";
 import { SCENES, SCREEN, TRANSITIONS } from "@/scroll/script";
 import type { SceneDef, SceneId } from "@/scroll/types";
+
+import { stageTransitionMode } from "./transitions/modes";
 
 /**
  * Which scenes are on stage at a progress, and how much (pure, no React). Scene art multiplies its
@@ -15,7 +18,7 @@ import type { SceneDef, SceneId } from "@/scroll/types";
  */
 
 /** A plain boundary crossfades over this many screens to each side. */
-export const CROSSFADE_SCREENS = 0.2;
+export { CROSSFADE_SCREENS };
 
 export interface PresenceRange {
   /** Starts to arrive (or -Infinity: present from the start). */
@@ -35,30 +38,51 @@ export function coveredHandover(from: SceneId, to: SceneId): boolean {
   return TRANSITIONS.some((t) => t.layer === "canvas" && t.from === from && t.to === to && t.peak !== undefined);
 }
 
-function computeRange(scene: SceneDef): PresenceRange {
+/** A pass that hands `from` to `to` without covering the screen, with its own cross-fade. */
+const passOf = (from: SceneId, to: SceneId) => TRANSITIONS.find((t) => t.layer === "canvas" && t.from === from && t.to === to && t.peak === undefined && t.swap !== undefined);
+
+/**
+ * How long (progress, to each side) `from` and `to` cross-fade: a pass's own `swap`, or the plain
+ * crossfade (also behind a pass in the calm version, which has no leaves to hide a quick swap).
+ */
+export function crossfadeOf(from: SceneId, to: SceneId, calm = false): number {
+  return (calm ? CROSSFADE_SCREENS : (passOf(from, to)?.swap ?? CROSSFADE_SCREENS)) * SCREEN;
+}
+
+/** Where `from` and `to` cross-fade: a pass's `swapAt` (its densest moment), or their boundary. */
+export function swapPointOf(from: SceneId, to: SceneId): number {
+  const next = SCENES[(indexById.get(to) ?? 0)];
+  return passOf(from, to)?.swapAt ?? next.start;
+}
+
+function computeRange(scene: SceneDef, calm: boolean): PresenceRange {
   const index = indexById.get(scene.id) ?? 0;
   const prev = SCENES[index - 1];
   const next = SCENES[index + 1];
-  const fade = CROSSFADE_SCREENS * SCREEN;
   const range: PresenceRange = { inStart: -Infinity, inEnd: -Infinity, outStart: Infinity, outEnd: Infinity };
   if (prev) {
     const covered = coveredHandover(prev.id, scene.id);
-    range.inStart = covered ? scene.start : scene.start - fade;
-    range.inEnd = covered ? scene.start : scene.start + fade;
+    const fade = crossfadeOf(prev.id, scene.id, calm);
+    const at = swapPointOf(prev.id, scene.id);
+    range.inStart = covered ? scene.start : at - fade;
+    range.inEnd = covered ? scene.start : at + fade;
   }
   if (next) {
     const covered = coveredHandover(scene.id, next.id);
-    range.outStart = scene.end;
-    range.outEnd = covered ? scene.end : scene.end + fade;
+    const at = swapPointOf(scene.id, next.id);
+    range.outStart = covered ? scene.end : at;
+    range.outEnd = covered ? scene.end : at + crossfadeOf(scene.id, next.id, calm);
   }
   return range;
 }
 
-const ranges = new Map<SceneId, PresenceRange>(SCENES.map((s) => [s.id, computeRange(s)]));
+const ranges = new Map<SceneId, PresenceRange>(SCENES.map((s) => [s.id, computeRange(s, false)]));
+const calmRanges = new Map<SceneId, PresenceRange>(SCENES.map((s) => [s.id, computeRange(s, true)]));
 
-export function presenceRange(scene: SceneDef | SceneId): PresenceRange {
+/** A scene's presence ranges (the calm version's: `calm`). */
+export function presenceRange(scene: SceneDef | SceneId, calm = stageTransitionMode() === "calm"): PresenceRange {
   const id = typeof scene === "string" ? scene : scene.id;
-  const range = ranges.get(id);
+  const range = (calm ? calmRanges : ranges).get(id);
   if (!range) throw new Error(`Unknown scene "${id}"`);
   return range;
 }

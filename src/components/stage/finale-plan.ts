@@ -67,9 +67,28 @@ export function oldCloudShift(p: number): number {
   return OLD_CLOUD_SLIDE * glide(p, FINALE.cloud);
 }
 
+/** How much of the old cloud is left (1 to 0): it breaks up from its upwind side over the second half of its slide (`OLD_CLOUD_HOLDS`). */
 export function oldCloudOpacity(p: number): number {
   const [a, b] = FINALE.cloud;
   return 1 - glide(p, [a + (b - a) * 0.5, b]);
+}
+
+/** The point of the old cloud it holds on to longest as it breaks up (its downwind side, image fractions). */
+export const OLD_CLOUD_HOLDS = [0.92, 0.5] as const;
+
+/** The point of a finale cloud it forms from as it blows in (its upwind side, image fractions). */
+export const CLOUD_FORMS_FROM = [0.06, 0.55] as const;
+
+/**
+ * How far finale cloud `index` has blown in, 0 to 1: none of it as the scenes change (so no cloud fades
+ * up where it stands), then it comes in on the wind from its upwind side, its edge breaking into the
+ * halftone's dots as it forms; one after another over `FINALE.cloudsIn`.
+ */
+export function cloudIn(p: number, index: number): number {
+  const [a, b] = FINALE.cloudsIn;
+  const span = b - a;
+  const start = a + span * 0.15 * index;
+  return glide(p, [start, start + span * 0.7]);
 }
 
 /** The finale's clouds stand with the keepers: their drift (`driftX` in `work-sky.ts`) is scaled to a keeper's height. */
@@ -417,7 +436,10 @@ const channels: MotionChannel[] = [
   { name: "stars · lift", at: starsLift },
   { name: "stars · opacity", at: starsOpacity },
   { name: "old cloud · slide", at: oldCloudShift },
-  { name: "old cloud · opacity", at: oldCloudOpacity },
+  { name: "old cloud · left of it", at: oldCloudOpacity },
+  { name: "cloud 1 · blown in", at: (p) => cloudIn(p, 0) },
+  { name: "cloud 2 · blown in", at: (p) => cloudIn(p, 1) },
+  { name: "cloud 3 · blown in", at: (p) => cloudIn(p, 2) },
   { name: "tree · rise", at: (p) => treeAt(p).y },
   { name: "tree · haze", at: treeHazeAt },
   { name: "woman · walk", at: (p) => womanAt(p).x },

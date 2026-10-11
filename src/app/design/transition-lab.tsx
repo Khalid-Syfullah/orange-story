@@ -5,34 +5,38 @@ import dynamic from "next/dynamic";
 import { animate, useMotionValue, type AnimationPlaybackControls, type MotionValue } from "motion/react";
 
 import { designPage, storyScenes } from "@/content/copy";
-import { Hairlines, type FrameRect } from "@/components/chrome/hairlines";
-import { PlaceholderStill } from "@/components/stage/placeholder-still";
-import { scenePresence } from "@/components/stage/presence";
+import { Hairlines } from "@/components/chrome/hairlines";
+import { setStageAspect } from "@/components/stage/camera-path";
+import { transitionPhase } from "@/components/stage/transitions/choreography";
+import { TRANSITION_MODES, type TransitionMode } from "@/components/stage/transitions/modes";
 import { Beat } from "@/components/story/beat";
-import { revealCircle, transitionPhase } from "@/components/transitions/choreography";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { lerp, remap } from "@/lib/progress";
-import { useElementSize } from "@/lib/use-element-size";
 import { progressToScreens, transitionOf } from "@/scroll/helpers";
-import { HAIRLINES, TRANSITIONS } from "@/scroll/script";
+import { HAIRLINES, SCREEN, TRANSITIONS } from "@/scroll/script";
 import { StoryContext, type Story } from "@/scroll/story-scroll";
 import type { TransitionDef, TransitionId } from "@/scroll/types";
 
 import { demoTransitionPlates } from "./demo-script";
 
 /**
- * Dev-only: every transition of the story on one slider, on its real range from the scroll script,
- * between placeholder plates of the scenes it joins. The canvas transitions draw on the same
- * transition canvas as the stage; the viewfinders on the hairlines; the smoke on the real beats.
+ * Dev-only: every transition of the story on one slider, on the real stage (the same canvas, camera,
+ * scenes and media as the story), over its real range from the scroll script and a little either side.
+ * The media can be seen in each of their versions: full, light (a phone, the lowest quality tier) and
+ * calm (reduced motion). The viewfinders draw on the hairlines over it, the smoke on the real beats.
  */
 
-const TransitionCanvas = dynamic(() => import("@/components/transitions/transition-canvas"), { ssr: false });
+const StageCanvas = dynamic(() => import("@/components/stage/stage-canvas"), { ssr: false });
 
 const labels = designPage.transitionLab;
 const STEPS = 1000;
 /** Seconds for a full play-through (a steady scroll). */
 const PLAY_SECONDS = 3.2;
+/** Screens shown before and after a transition's own range. */
+const MARGIN = 0.1;
+
+const spanOf = (def: TransitionDef): [number, number] => [Math.max(0, def.start - MARGIN * SCREEN), Math.min(1, def.end + MARGIN * SCREEN)];
 
 function phaseLabel(def: TransitionDef, p: number): string {
   const { t, enter, exit } = transitionPhase(def, p);
@@ -43,60 +47,6 @@ function phaseLabel(def: TransitionDef, p: number): string {
   if (enter < 1) return frame ? labels.phases.closing : labels.phases.covering;
   if (exit <= 0) return frame ? labels.phases.closed : labels.phases.covered;
   return labels.phases.opening;
-}
-
-/** The two placeholder plates: the new one swaps in at the boundary, or inside the ring. */
-function DemoPlates({ def, progress }: { def: TransitionDef; progress: MotionValue<number> }) {
-  const [from, to] = demoTransitionPlates(def);
-  const [measure, size] = useElementSize<HTMLDivElement>();
-  const fromRef = React.useRef<HTMLDivElement>(null);
-  const toRef = React.useRef<HTMLDivElement>(null);
-  const twoPlates = from !== to;
-
-  React.useEffect(() => {
-    const draw = (p: number) => {
-      const old = fromRef.current;
-      const next = toRef.current;
-      if (!old || !next) return;
-      if (def.kind === "ring") {
-        if (!size.width || !size.height) return; // not measured yet
-        // Inside the ring the new scene, outside it the old one (as plates with `reveal` on the stage).
-        const c = revealCircle(def, p, size.width, size.height);
-        const mask = `radial-gradient(circle at ${c.x.toFixed(1)}px ${c.y.toFixed(1)}px, #000 ${Math.max(0, c.radius - c.softness).toFixed(1)}px, transparent ${(c.radius + c.softness).toFixed(1)}px)`;
-        next.style.maskImage = mask;
-        next.style.setProperty("-webkit-mask-image", mask);
-        next.style.opacity = "1";
-        old.style.opacity = "1";
-        return;
-      }
-      // As on the stage: the scenes swap at their boundary, under the transition's full cover.
-      old.style.opacity = String(scenePresence(from, p));
-      next.style.opacity = String(scenePresence(to, p));
-    };
-    draw(progress.get());
-    return progress.on("change", draw);
-  }, [def, from, to, progress, size]);
-
-  return (
-    <div ref={measure} className="absolute inset-0">
-      <div ref={fromRef} className="absolute inset-0">
-        <PlaceholderStill scene={from} className="size-full" />
-      </div>
-      <div ref={toRef} className="absolute inset-0" style={{ opacity: 0 }}>
-        {twoPlates ? <PlaceholderStill scene={to} className="size-full" /> : null}
-      </div>
-    </div>
-  );
-}
-
-function TargetBox({ rect }: { rect: FrameRect }) {
-  return (
-    <span
-      aria-hidden
-      className="absolute border border-dashed border-white/30"
-      style={{ left: `${rect.x * 100}%`, top: `${rect.y * 100}%`, width: `${rect.width * 100}%`, height: `${rect.height * 100}%` }}
-    />
-  );
 }
 
 /** The smoke runs on the real beats it lists, inside a stand-in story driven by the slider. */
@@ -116,28 +66,35 @@ function SmokeBeats({ def, progress }: { def: TransitionDef; progress: MotionVal
 
 export function TransitionLab() {
   const [id, setId] = React.useState<TransitionId>("sand");
+  const [mode, setMode] = React.useState<TransitionMode>("full");
   const [value, setValue] = React.useState(0);
   const def = transitionOf(id);
-  const progress = useMotionValue(def.start);
+  const span = React.useMemo(() => spanOf(def), [def]);
+  const progress = useMotionValue(span[0]);
   const playback = React.useRef<AnimationPlaybackControls | null>(null);
   const readout = React.useRef<HTMLSpanElement>(null);
   const phase = React.useRef<HTMLSpanElement>(null);
   const [from, to] = demoTransitionPlates(def);
-  const canvasDefs = React.useMemo(() => (def.layer === "canvas" ? [def] : []), [def]);
+
+  // The stage films the lab's box (16 by 10, the reference shape).
+  React.useEffect(() => {
+    setStageAspect(1.6);
+    return () => setStageAspect(0);
+  }, []);
 
   const seek = React.useCallback(
     (t: number) => {
       setValue(t);
-      progress.set(lerp(def.start, def.end, t));
+      progress.set(lerp(span[0], span[1], t));
     },
-    [def, progress],
+    [span, progress],
   );
 
   const choose = (next: TransitionDef) => {
     playback.current?.stop();
     setId(next.id);
     setValue(0);
-    progress.set(next.start);
+    progress.set(spanOf(next)[0]);
   };
 
   const play = () => {
@@ -169,6 +126,15 @@ export function TransitionLab() {
         ))}
       </div>
 
+      <div role="group" aria-label={labels.mode} className="flex flex-wrap items-center gap-1.5">
+        <span className="type-label mr-2">{labels.mode}</span>
+        {TRANSITION_MODES.map((m) => (
+          <Button key={m} size="sm" variant={m === mode ? "secondary" : "outline"} aria-pressed={m === mode} onClick={() => setMode(m)}>
+            {labels.modes[m]}
+          </Button>
+        ))}
+      </div>
+
       <div className="flex flex-wrap items-center gap-6">
         <label id="transition-lab-label" className="type-label shrink-0">
           {labels.slider}
@@ -194,18 +160,12 @@ export function TransitionLab() {
       </div>
 
       <div
-        className="theme-sky relative aspect-video w-full overflow-hidden bg-background [container-type:inline-size]"
+        className="theme-sky relative aspect-[16/10] w-full overflow-hidden bg-background [container-type:inline-size]"
         style={{ "--grid-top": "5.3cqw" } as React.CSSProperties}
       >
-        <DemoPlates key={def.id} def={def} progress={progress} />
-        {def.layer === "hairlines" && def.target ? (
-          <>
-            <TargetBox rect={def.target} />
-            <Hairlines progress={progress} cues={HAIRLINES} position="absolute" className="text-white" />
-          </>
-        ) : null}
+        <StageCanvas progress={progress} transitionMode={mode} />
+        {def.layer === "hairlines" ? <Hairlines progress={progress} cues={HAIRLINES} position="absolute" className="text-white" /> : null}
         {def.layer === "text" ? <SmokeBeats def={def} progress={progress} /> : null}
-        <TransitionCanvas progress={progress} transitions={canvasDefs} />
       </div>
 
       <div className="type-meta grid gap-1 normal-case text-muted-foreground md:grid-cols-[1fr_auto] md:gap-6">

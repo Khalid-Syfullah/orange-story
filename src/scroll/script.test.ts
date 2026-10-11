@@ -114,8 +114,26 @@ describe("the story script", () => {
     expect(cards[2].out).toBeLessThanOrEqual(blueprint.start - 0.2 * SCREEN);
   });
 
-  it("names every transition from the storyboard", () => {
-    expect(new Set(TRANSITIONS.map((t) => t.kind))).toEqual(new Set(["sand", "unfold", "dust", "ring", "fabric", "viewfinder", "smoke"]));
+  it("names every transition from the storyboard, and the passes through leaves and cloud (docs/TRANSITIONS.md)", () => {
+    expect(new Set(TRANSITIONS.map((t) => t.kind))).toEqual(new Set(["sand", "unfold", "dust", "ring", "fabric", "viewfinder", "smoke", "leaves", "cloud"]));
+  });
+
+  it("paces every scene transition over 0.6 to 1.2 screens, a full cover over at most 0.2", () => {
+    for (const t of TRANSITIONS.filter((x) => x.layer === "canvas")) {
+      const screens = (t.end - t.start) / SCREEN;
+      expect(screens, t.id).toBeGreaterThanOrEqual(0.6 - 1e-6);
+      expect(screens, t.id).toBeLessThanOrEqual(1.2 + 1e-6);
+      if (t.peak) expect((t.peak[1] - t.peak[0]) / SCREEN, t.id).toBeLessThanOrEqual(0.2 + 1e-6);
+    }
+  });
+
+  it("keeps the words off a transition: they leave before it covers the screen and arrive after it clears", () => {
+    for (const t of TRANSITIONS.filter((x) => x.layer === "canvas")) {
+      for (const beat of BEATS) {
+        const overlaps = beat.in < t.end && beat.out > t.start;
+        expect(overlaps, `${beat.id} and ${t.id}`).toBe(false);
+      }
+    }
   });
 
   it("moves the hairlines out at every chapter change", () => {

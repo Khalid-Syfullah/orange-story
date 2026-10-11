@@ -34,7 +34,7 @@ const SCENE_ORDER: readonly SceneId[] = [
 
 const SLOTS: readonly SlotId[] = ["center-left", "bottom-left", "right", "top-left", "top-center", "center"];
 const MOVES: readonly CameraMove[] = ["hold", "push", "pull", "pan", "dolly-up", "dolly-down", "reframe"];
-const KINDS: readonly TransitionKind[] = ["sand", "unfold", "dust", "ring", "fabric", "viewfinder", "smoke"];
+const KINDS: readonly TransitionKind[] = ["sand", "unfold", "dust", "ring", "fabric", "leaves", "cloud", "viewfinder", "smoke"];
 
 export class ScriptError extends Error {
   readonly problems: readonly string[];
@@ -148,6 +148,7 @@ function checkTransitions(script: StoryScript, problems: string[]) {
         problems.push(`${name} must fully cover the screen at the scene boundary (${fmt(next.start)})`);
     }
     for (const id of t.beats ?? []) if (!script.beats.some((b) => b.id === id)) problems.push(`${name} names an unknown beat "${id}"`);
+    if (t.swapAt !== undefined && !(t.swapAt >= t.start && t.swapAt <= t.end)) problems.push(`${name} swaps its scenes outside its own range (${fmt(t.swapAt)})`);
     if (t.origin && !t.origin.every((v) => inUnit(v))) problems.push(`${name} starts outside the stage (origin ${t.origin.join(", ")})`);
   });
   // One transition canvas: its transitions take turns.

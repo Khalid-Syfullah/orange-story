@@ -407,36 +407,6 @@
   }
 }
 
-/* Leaf shadows on the milk panel: two blurred layers drifting and turning very slowly (idle, time-based). */
-@keyframes leaf-drift-a {
-  from {
-    transform: translate3d(-4%, 3%, 0) rotate(-2deg) scale(1);
-  }
-  to {
-    transform: translate3d(5%, -4%, 0) rotate(3deg) scale(1.06);
-  }
-}
-@keyframes leaf-drift-b {
-  from {
-    transform: translate3d(5%, -2%, 0) rotate(4deg) scale(1.1);
-  }
-  to {
-    transform: translate3d(-6%, 4%, 0) rotate(-3deg) scale(1);
-  }
-}
-@utility leaf-drift-a {
-  animation: leaf-drift-a 41s ease-in-out infinite alternate;
-  @media (prefers-reduced-motion: reduce) {
-    animation: none;
-  }
-}
-@utility leaf-drift-b {
-  animation: leaf-drift-b 53s ease-in-out infinite alternate;
-  @media (prefers-reduced-motion: reduce) {
-    animation: none;
-  }
-}
-
 /* Sparkles in a question card's corner: a four-point star that brightens, grows and turns a little,
    on its own slow beat (idle, time-based). Each sparkle sets its own duration and delay. */
 @keyframes sparkle-twinkle {

@@ -120,11 +120,14 @@ export interface BeatDef {
   parts?: readonly string[];
 }
 
-export type TransitionKind = "sand" | "unfold" | "dust" | "ring" | "fabric" | "viewfinder" | "smoke";
+export type TransitionKind = "sand" | "unfold" | "dust" | "ring" | "fabric" | "leaves" | "cloud" | "viewfinder" | "smoke";
 
 export type TransitionId =
+  | "leaves"
+  | "foliage"
   | "viewfinder-share"
   | "sand"
+  | "cloud"
   | "unfold"
   | "dust"
   | "ring"
@@ -145,8 +148,15 @@ export interface TransitionDef {
    * viewfinder frame is fully closed. Absent for sweeps (the ring) and text effects (smoke).
    */
   peak?: ProgressRange;
-  /** What draws it: the transition canvas, the hairline layer, or the text layer. */
+  /** What draws it: the stage canvas (its lens and its scenes), the hairline layer, or the text layer. */
   layer: "canvas" | "hairlines" | "text";
+  /**
+   * A transition that hands one scene to the next without covering the screen (leaves passing the
+   * lens): how long, in screens to each side, the two scenes cross-fade behind it, and where (`swapAt`,
+   * progress: its densest moment; default the scenes' boundary).
+   */
+  swap?: number;
+  swapAt?: number;
   /** Viewfinder: the rectangle (fractions of the stage) the frame closes around. */
   target?: FrameRect;
   /** Viewfinder: extra space around the target, in px. */

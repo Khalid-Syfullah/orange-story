@@ -52,6 +52,7 @@ function PlanPanel({ index, progress, ride }: { index: number; progress: MotionV
       tint={PLAN_SHADE}
       tintAmount={shade}
       backTint={PAPER_BACK}
+      paper
       sway={false}
       ride={ride}
     />

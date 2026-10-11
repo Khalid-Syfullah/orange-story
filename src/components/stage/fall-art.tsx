@@ -8,6 +8,7 @@ import { OVER_COLUMN, OVER_TREE, useGardenerLife } from "./prune-art";
 import { onTree } from "./prune-plan";
 import type { SceneArtProps } from "./scene-layers";
 import { useStageProgress } from "./stage-context";
+import { RingRipple } from "./transitions/ring-ripple";
 import { useTextHaze } from "./use-text-haze";
 
 /** The old picture leaves where the ring has passed; the orchard shows only inside it. */
@@ -24,9 +25,9 @@ const MIDDLE: readonly [number, number] = [0.5, 0.5];
  * branch comes free and falls, tumbling, and the tree springs back; he lowers the shears, bows his
  * head after the fruit and drifts right and out of frame. The orange falls in a true flight, the
  * camera following and pushing in until it fills the center; it strikes the sky as if it were water,
- * pressed flat, and the rainbow ring (the `ring` transition) sweeps out from it: the old picture is
- * cut away outside the ring and the orchard rows (left and right, two depths each, sky between them)
- * show only inside it, while the orange, with no reveal, stays in front throughout, goes soft and
+ * pressed flat, and a ripple runs out from it (`RingRipple`, the `ring` transition): the old picture is
+ * carried away at its leading crest and the orchard rows (left and right, two depths each, sky between
+ * them) show behind it, while the orange, with no reveal, stays in front throughout, goes soft and
  * sinks. All scrubbed by progress, so it plays backwards exactly.
  */
 export function FallArt({ scene }: SceneArtProps) {
@@ -86,6 +87,9 @@ export function FallArt({ scene }: SceneArtProps) {
       <Plate id="prune/gardener" x={drift} reveal={OLD} life={gardener} clearing={haze} />
       <Plate id="prune/gardener-arms-1" x={drift} rotate={armsTurn} opacity={open} layer={1} reveal={OLD} ride={gardener.ride("prune/gardener-arms-1")} clearing={haze} />
       <Plate id="prune/gardener-arms-2" x={drift} rotate={armsTurn} opacity={closed} layer={2} reveal={OLD} ride={gardener.ride("prune/gardener-arms-2")} clearing={haze} />
+
+      {/* The ripple of the strike, behind the orange, over both pictures. */}
+      <RingRipple />
 
       {/* The orange: no reveal, so it stays in front while the ring sweeps past it. */}
       <Plate

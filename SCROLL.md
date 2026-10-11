@@ -18,7 +18,7 @@ The whole story is data in `src/scroll/script.ts`: chapters, scenes, text beats,
 | Art manifest (every plate, its file, size and place in depth) | `public/art/manifest.json`, read by `src/art/manifest.ts` |
 | Stage canvas: plates, morph, twinkle, sway, camera rig, scene presence, adaptive quality | `src/components/stage/` |
 | Art receding behind text (`useTextHaze`, `SLOT_AREAS`) | `src/components/stage/text-haze.ts`, `src/components/stage/use-text-haze.ts` |
-| Transitions: choreography, shaders, the transition canvas | `src/components/transitions/` |
+| Transitions: drawn on the stage (lens layers, particles, paper hinges, cloth, the smear), a pure plan each, their design (`docs/TRANSITIONS.md`) | `src/components/stage/transitions/` |
 | Smoke-out for text | `src/components/motion/smoke-out.tsx` |
 | Framing: the world scale's figures framed by targets, worked out into camera keys (`FRAMING`, `framedKey`, `phonePan`); the fit to a tall screen (`camera-fit.ts`); the report (`npm run framing`) | `src/scroll/framing.ts`, `src/scroll/camera-fit.ts`, `scripts/framing-report.mjs`, `scripts/framing/core.mjs` |
 | The living, painted stage: the canvas, the figure treatment, the halftone layer (`paint.ts`), rigs (`rig.ts`), idle life (`life.ts`), scrubbed acting (`acting.ts`, ranges in `ACTING`), figures and their parts (`figure-life.ts`), the shared uniforms and textures (`materials.ts`, `stage-surface.tsx`) | `src/components/stage/` |
@@ -38,7 +38,7 @@ What phase 21 tuned, in one place (all of it lives in `src/scroll/script.ts`):
 | Plain beats | 1.3 screens: 0.3 to arrive, 0.7 fully on screen, 0.3 to leave; 0.3 screen between beats in a slot | The reference pacing. Every beat stays on screen at least one screen (checked). |
 | Service cards | chained from the sand's end: 1.3, 1.3 and 1.6 screens, 0.3 apart | The last one has left before the blueprint starts to fade in (unit test). |
 | Question cards | 1.3 screens each, end to end; 0.35 to arrive, 0.6 held, 0.35 to leave | The reference beat; the camera climbs during each arrival and holds while the card is read. |
-| Paper unfold | covers over 0.51 screen, opens over 0.73 | Was 0.39 and 0.39: the sheet flipped open too fast. |
+| Transitions | 0.6 to 1.2 screens each; a scripted full cover of at most a tenth of a screen, which reads as 0.15 to 0.2 screen with the medium's soft edges (the paper unfold: covered after 0.48 screen, open over 0.59) | Phase 26: a cover held for a quarter to a third of a screen was an empty, flat frame (`docs/TRANSITIONS.md`). |
 | Camera | a monotone cubic through the keys (see Camera) | The story curve front-loaded every move: 76% of it in the first quarter and 96% by half way, so long moves lurched and then sat still. |
 | Framing | the figure scenes' keys are worked out from targets (`src/scroll/framing.ts`, see Framing) | Phase 24: the figures stood full length in the middle of wide shots (the statue 26% of the height, each onlooker 15%); now they fill the frame and are cropped by it. |
 | Stage pixel ratio | 1 to 1.5 (1.25 on a phone), stepping down to 0.75 on a device that cannot keep up | `quality.ts` |
@@ -49,12 +49,10 @@ What phase 21 tuned, in one place (all of it lives in `src/scroll/script.ts`):
 
 The site is one `<section>` that is `STAGE_VH` tall (5400vh), scrolled natively. Inside it a sticky frame, exactly one viewport tall, holds every layer, bottom to top:
 
-1. the WebGL canvas with the scene plates;
-2. the milk panel of the building site (DOM, under the transitions);
-3. the transition canvas (sand, paper unfold, dust, rainbow ring, fabric sky), shown and rendered only while one of them runs;
-4. the hairlines, and the progress lines that run along them;
-5. the DOM text layer: every beat of the script, each in its slot;
-6. the chrome: mark, chapter menu, "Apply", ruler, percent counter.
+1. the WebGL canvas: the scene plates and, drawn with them, the transitions (the leaves, the sand, the cloud, the paper unfold, the dust and the site's milk page, the ring, the fabric sky);
+2. the hairlines, and the progress lines that run along them;
+3. the DOM text layer: every beat of the script, each in its slot;
+4. the chrome: mark, chapter menu, "Apply", ruler, percent counter.
 
 `progress` is 0 when the top of the section meets the top of the viewport and 1 when its bottom meets the bottom. A 5400vh stage gives 53 screens of scrolling (the frame itself is one screen), so one screen of scrolling is `SCREEN` = 1/53, about 0.0189 of progress. Lengths below are given in screens, the unit of the reference pacing.
 
@@ -204,35 +202,42 @@ Gaps between beats in the same slot, in screens:
 
 ## Transitions
 
-Covering transitions (sand, unfold, dust, fabric) straddle a scene boundary and cover the screen fully across it ("Full" below), so the scenes swap where nobody can see, and the camera may reframe there. The rainbow ring sweeps from the falling orange to the orchard inside the fall scene. The smoke is a text effect on the last question and the questions title. The two viewfinders are drawn by the hairlines: the lines close into a square around a target rectangle (the halves in scene 5, the wordmark in scene 14); the finale one never opens again.
+Every scene change is an event inside the painting, designed in `docs/TRANSITIONS.md` (what happens, the camera, the link, the layers, the lighter and calm versions). Covering transitions (sand, cloud, unfold, dust, fabric) straddle a scene boundary and cover the screen fully across it ("Full" below), so the scenes swap where nobody can see, and the camera may reframe there. The leaves pass the lens as the camera rises to the branch (the scenes cross-fade behind their densest moment, "swap at"), and fall past it as the tree fills with fruit. The ring ripples out from the falling orange to the orchard inside the fall scene. The smoke is a text effect on the last question and the questions title. The two viewfinders are drawn by the hairlines: the lines close into a square around a target rectangle (the halves in scene 5, the wordmark in scene 14); the finale one never opens again.
 
 | Transition | Kind | Scenes | Start | Full | End | Screens | Layer |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| `leaves` | leaves | ascent to graft | 0.0730 | swap at 0.0770 | 0.0845 | 0.61 | canvas |
+| `foliage` | leaves | graft to pluck | 0.1110 | none | 0.1336 | 1.20 | canvas |
 | `viewfinder-share` | viewfinder | share | 0.2110 | 0.2190 to 0.2244 | 0.2295 | 0.98 | hairlines |
 | `sand` | sand | share to work | 0.2196 | 0.2312 to 0.2328 | 0.2396 | 1.06 | canvas |
-| `unfold` | unfold | blueprint to site | 0.3888 | 0.3985 to 0.4015 | 0.4152 | 1.40 | canvas |
-| `dust` | dust | site to prune | 0.4736 | 0.4792 to 0.4808 | 0.4868 | 0.70 | canvas |
+| `cloud` | cloud | work to blueprint | 0.3327 | 0.3377 to 0.3383 | 0.3448 | 0.65 | canvas |
+| `unfold` | unfold | blueprint to site | 0.3901 | 0.3991 to 0.4009 | 0.4120 | 1.16 | canvas |
+| `dust` | dust | site to prune | 0.4724 | 0.4792 to 0.4808 | 0.4868 | 0.76 | canvas |
 | `ring` | ring | fall | 0.5878 | none | 0.6032 | 0.81 | canvas |
 | `smoke` | smoke | faq | 0.7489 | none | 0.7555 | 0.35 | text |
-| `fabric` | fabric | faq to stars | 0.7638 | 0.7671 to 0.7689 | 0.7780 | 0.75 | canvas |
+| `fabric` | fabric | faq to stars | 0.7613 | 0.7676 to 0.7685 | 0.7740 | 0.67 | canvas |
 | `viewfinder-finale` | viewfinder | finale | 0.9490 | 0.9847 to 1.0000 | 1.0000 | 2.70 | hairlines |
 
-How each one plays, all scrubbed by progress and so exactly reversible. Every effect draws nothing at its start (the old scene, untouched) and nothing at its end (the new scene, untouched); the covering ones cover every pixel across "Full". The unit test (`src/components/transitions/choreography.test.ts`) proves those three points from the same bounds the shaders use.
+How each one plays, all scrubbed by progress (its physics on story time, a function of progress) and so exactly reversible. Every medium draws nothing at its start (the old scene, untouched) and nothing at its end (the new scene, untouched); the covering ones cover every pixel across "Full" (a little longer on screen, with their soft edges). The unit tests (`src/components/stage/transitions/transitions.test.ts`) prove it from the same bounds the shaders use, on five stage shapes from a phone to a 2 by 1 browser.
 
-- **Sand.** Deep blue sand blows in from the left on a ragged, wind-streaked front, loose grains flying ahead of it, and covers everything. While it covers, its grains keep drifting on idle time. Then it blows on to the right, uncovering The Work from the left.
-- **Paper unfold.** The white spreads from the middle until the frame is milk paper (the chrome turns ink), over half a screen once the plan has opened. Then the next scene opens out of the white like a folded sheet, over three quarters of a screen: the middle column's top panel lifts and falls open, then the left and right columns swing out from behind it, each shaded while it tilts; the creases fade as the sheet settles flat, just before the camera starts to rise.
-- **Rising dust.** Blue rises from the bottom behind a billowing, lit edge, white specks lifting in it and ahead of it, until it covers the screen; then it lifts off the top, uncovering the gardener from the bottom up.
-- **Rainbow ring.** A soft spectral band (violet inside, red outside) expands from `origin` (the falling orange) past the farthest corner. Inside it the new scene shows: a plate passes `reveal={{ transition: "ring" }}` to show only inside the ring (and `side: "outside"` to show only outside it), so the orchard rows appear inside the ring while the falling orange, which has no `reveal`, stays in front throughout.
-- **Fabric sky.** The sky turns to rippling cloth, spreading from the middle toward the trees, while a cloud billows from the top centre toward the viewer until it fills the screen. Then a ragged hole opens through it from the middle onto the blue cloth, which clears onto the stargazer.
+- **Leaves.** Forty-six of the ascent's painted leaves stand in the world on the twigs around the camera's path to the branch; the push carries them past the lens, near ones huge and soft. Two on the path fill the lens at 0.0770, where the scenes cross-fade over 0.012 screen to each side (`swap`, `swapAt`). Back out of the tree, thirty loosened leaves flutter down past the lens while the tree fills in clump by clump (`grow`, `GRAFT.fruit`).
+- **Sand.** Grains pour from the halves' cut faces under gravity, the wind lifts them across, a blue dune piles up from the bottom (its lit crest smoking) and streams of grains cross at three depths; the frame fills only as the cover comes; then the wind opens holes in it at once and carries it off right, falling away below as the camera rises.
+- **Cloud.** A gust carries a bank of The Work's clouds in from the left; the nearest's solid core fills the frame at the boundary; the pan to the scaffold carries the camera out of it. Every cloud starts and ends outside the frame.
+- **Paper unfold.** The camera dives into the plan until its two middle panels overfill the frame; a sheet in front of the lens matches them exactly (match cut) and the camera reframes to the site under it; the right page turns toward the camera over the middle crease (`UNFOLD_PAGES.first`, 0.4009 to 0.4081) and lands with a small flop, then the doubled left half turns away over the left crease (`UNFOLD_PAGES.second`, 0.4047 to 0.4120).
+- **Rising dust.** The site's page lifts and flies off; plumes rise from the site toward the lens, cooling from the sand's colour to blue, white specks in them; the frame fills only as the cover comes; then the dust lifts off from the bottom along its billows' edge, uncovering the gardener.
+- **The ring.** A ripple of halftone dots (a crest and a train dying away, the grid bent on the slopes, a thin spectral sheen on the crest) runs out from the orange's strike past every corner; the old picture is cut along the crest (`reveal={{ transition: "ring" }}` on the orchard, `side: "outside"` on the old picture), drops of light jump and fall back.
+- **Fabric sky.** The sky comes loose as a blue cloth, simulated once (`cloth.ts`) and read back by story time: it falls into view billowing, covers the lens for a moment and slides out at the bottom, uncovering the stargazer.
 - **Smoke.** The beats it lists (the last question and the questions title) dissolve together across its range: their lines blur and rise, first line first, and soft holes of smoke noise open in them and drift upward (a CSS mask). Every beat that leaves as `smoke` gets the same mask over its own leave. `SmokeOut` (BlurFade drifting up, plus the mask) does the same for any other group of text.
 - **Viewfinders.** The hairlines' `viewfinder` cue (see below): the lines close in from wherever they are into a square around `target`.
+- **The finale's clouds** blow in once the scenes have changed (`FINALE.cloudsIn`, 0.9006 to 0.9174), forming from their upwind side, instead of fading up where they stand.
 
 Where they are drawn:
 
-- The covering and sweeping ones draw on the transition canvas (`TransitionCanvas`, React Three Fiber): one full-screen shader pass per transition, premultiplied over the stage. Fronts, folds, radii and fades are computed in `choreography.ts`; `shaders.ts` adds the texture (ragged edges, grain, specks, paper fibre, fold shading, the spectrum, the cloth and the cloud). Sweeping fronts move in step with the scroll; fades and folds use the story curve.
-- The canvas renders only while a transition runs, plus one clearing frame as it ends; while the sand, the dust or the fabric is on screen it keeps rendering on idle time for its drift. Its pixel ratio is capped at `TRANSITION_MAX_DPR`, its shaders compile while the browser is idle, and its art loads `TRANSITION_PRELOAD_SCREENS` before it is needed: `fall/ring-mask`, `stars/fabric-sky` and `stars/cloud`. Until the art arrives, the shaders draw stand-ins.
-- Only one canvas transition runs at a time (`validateScript()` checks it).
-- In development, `/design` plays every transition on its real range between placeholder plates of the scenes it joins.
+- On the stage canvas itself (`src/components/stage/transitions/`), not on a canvas over it: lens layers in front of the camera for the media that fill the lens (`LensGroup`, drawn after every scene's plates, far to near), world layers for those the camera moves through (the leaves, the cloud bank), and the ring in the fall scene's halftone layer. `TransitionStage` mounts each medium `TRANSITION_PRELOAD_SCREENS` (3) before its transition (art loading, shaders compiled while the browser is idle, the cloth simulated in idle slices) and unmounts it a screen after; a mounted medium draws only while its transition runs.
+- Only one canvas transition runs at a time, and no text beat is on screen during one (`validateScript()` and the script's unit test check it).
+- Three versions (`modes.ts`): `full`; `light` on a phone or the lowest quality tier (40% of the particles, the two nearest sheets, no smear); `calm` (a still painted veil in the medium's colours that the scenes cross-fade through; the ring and the leaves become cross-fades). `?transitions=full|light|calm` forces one.
+- Scrolling fast smears the grains and leaves along their flight (`smear.ts`, a spring on the scroll speed that settles to nothing at rest; off in the light and calm modes and with idle time held).
+- In development, `/design` plays every transition on the real stage over its real range (and a tenth of a screen either side), in any of the three versions.
 
 ## Camera
 
@@ -364,7 +369,7 @@ The hairline grid moves on cues, each an envelope: it starts, reaches full stren
 | viewfinder (finale) | 0.9490 | 0.9847 | never | never |
 
 - Progress line `found-line`: draws along the top hairline from 0.1462 to 0.1575 as "We get you found." arrives, and erases from 0.1651 to 0.1707 as it leaves.
-- Tone: the chrome, the hairlines and the text turn ink on milk during the paper unfold (0.3938 to 0.4152) and over the top-down site with its milk panel (0.4320 to 0.4792). Everywhere else they are white on sky.
+- Tone: the chrome, the hairlines and the text turn ink on milk while the plan's paper fills the frame in the paper unfold (0.3953 to 0.4084, until the second page is half way over) and over the top-down site with its milk page (0.4320 to 0.4792). Everywhere else they are white on sky.
 
 ## Navigation
 
@@ -387,7 +392,7 @@ The ruler's progress line has one segment per stretch between `RULER_STOPS`: eve
 - the scenes follow the storyboard order and tile 0 to 1 exactly: no gaps, no overlaps, each as long as its share;
 - the chapters start inside 0 to 1, in order;
 - no two beats in the same slot overlap, every beat lasts at least one screen, every hold is inside its range, a beat that never leaves runs to 1, and every copy key (and part) exists in the copy deck;
-- every transition has a valid range and peak, is sorted by start, starts on the stage (a ring's `origin`), and a transition that hands one scene to the next straddles their boundary and fully covers the screen at it; transitions on the one transition canvas never overlap;
+- every transition has a valid range and peak (and a pass's `swapAt` inside its range), is sorted by start, starts on the stage (a ring's `origin`), and a transition that hands one scene to the next straddles their boundary and fully covers the screen at it; transitions on the stage never overlap;
 - the camera starts at 0, its keys increase strictly, every scene has a key, fields of view stay between 10 and 90 degrees, and every `reframe` sits inside a full cover;
 - hairline envelopes are in order, progress lines draw before they erase, and tones and anchors stay inside 0 to 1.
 
@@ -517,7 +522,7 @@ From `src/scroll/helpers.ts`, pure and safe on the server, in tests and inside s
 - `currentScene(p)` and `currentChapter(p)`: the scene and the ruler chapter at p.
 - `beatVisible(id, p)`: whether a beat is on stage at p (arriving, holding or leaving).
 - Also `sceneAt(id, t)` (the inverse of `sceneProgress`), `visibleBeats(p)`, `beatEnterAmount` and `beatLeaveAmount`, `beatLineRanges` (the per-line stagger), `transitionProgress(id, p)`, `activeTransitions(p)`, `smokeRange(beat)` (where a beat dissolves as smoke) and `toneAt(p)`.
-- For transitions, `src/components/transitions/choreography.ts` adds `transitionPhase(def, p)` (how far through its covering ramp, peak and clearing ramp p is), `canvasTransitionAt(p, defs)`, the per-effect frames (`sandFrame`, `unfoldFrame`, `dustFrame`, `ringFrame`, `fabricFrame`) and `revealCircle(def, p, width, height)`.
+- For transitions, `src/components/stage/transitions/choreography.ts` adds `transitionPhase(def, p)` (how far through its covering ramp, peak and clearing ramp p is), `stageTransitionAt(p, defs)`, `revealCircle(def, p, width, height)` and `veilAmount(def, p)`; each transition's own motion is in its plan (`sand-plan.ts`, `cloud-plan.ts`, ...), and `storyBoundaries()` (`src/scroll/boundaries.ts`) lists every place the picture changes.
 
 In components, `useStory()` gives the `progress` and `velocity` motion values and `scrollTo(p)`. To show something in a scene, map `progress` through `sceneProgress` with `useTransform`, or write to the DOM from `progress.on("change")`; to render content for a beat, register a component for its id in `BEAT_CONTENT` (`src/components/story/story-stage.tsx`) and build it from `BeatLine`, `Headline` and `TypedLine` so it keeps the beat's timing.
 
@@ -570,6 +575,17 @@ Natural motion (phase 25: the motion kit, the hands and figures on IK with their
 
 At or under phase 21's 16.7 / 16.8 / 16.8 ms. The motion kit's work per frame is a few dozen closed-form numbers (no stepping: a value at any progress is computed directly, so scrubbing far costs the same as scrubbing near); the water is one dynamic strip of 58 vertices and one instanced draw of at most 28 drops, and only while the loop shows.
 
+The transitions (phase 26: the media drawn on the stage itself, in depth), measured the same way on the same machine, against the phase 25 build (the commit before, built and served beside it), and the frames inside the transitions (from each canvas transition's start to its end, the new ranges for both builds) counted apart from the rest. The laptop was running on a low battery, where Chromium's battery saver paces every page at 30 frames a second (a blank page too); the harness turns it off in a fresh profile, so both builds were measured at 60. The scroll reached the end of the story in every run.
+
+| Run | Whole story, before → after (p50 / p95 / p99, over 20 ms) | In the transitions, before → after (p50 / p95 / p99, over 20 ms, slowest) |
+| --- | --- | --- |
+| Reading pace (the whole story in about 108 s) | 16.7 / 16.8 / 16.8, 0.20% → 16.7 / 16.7 / 16.8, 0.18% | 16.7 / 16.8 / 33.3, 1.09%, 233 ms → 16.7 / 16.8 / 16.8, 0.93%, 233 ms |
+| Fast (wheel input for 46 s) | 16.7 / 16.8 / 16.8, 0.42% → 16.7 / 16.7 / 16.8, 0.39% | 16.7 / 16.8 / 33.4, 2.93%, 67 ms → 16.7 / 16.8 / 33.4, 2.24%, 217 ms |
+| Phone (Pixel 7, scripted scroll, 46 s) | 16.7 / 16.8 / 16.8, 0.39% → 16.7 / 16.8 / 16.8, 0.39% | 16.7 / 16.8 / 33.3, 1.92%, 33 ms → 16.7 / 16.8 / 33.3, 1.61%, 50 ms |
+| Lowest tier (`?quality=low`), fast | 16.7 / 16.8 / 16.8, 0.42% → 16.7 / 16.8 / 16.8, 0.46% | 16.7 / 16.8 / 33.4, 2.29%, 67 ms → 16.7 / 16.8 / 33.4, 2.91%, 233 ms |
+
+The whole story holds phase 21's 16.7 / 16.8 / 16.8 ms. Inside the transitions the median and the 95th percentile are 16.7 and 16.8 in every run; the slow frames there are the scene changes, where the next scene mounts (its textures go up to the GPU, its rigs are built), at the same moments in both builds (the 217 to 233 ms frame is the pluck mounting as the graft becomes the scene, at the end of the leaves: in the phase 25 build it falls a hair after the same range). In a short range they weigh more: at reading pace the transitions' own 99th percentile is 16.8. What the media cost: instanced particles in one draw each (13,340 sand grains at most, a light 40% on phones and the lowest tier), sheets that read one baked noise texture instead of hashing octaves per pixel, a cloth read back from frames simulated in idle moments, shaders compiled in parallel as a medium mounts (three screens ahead), and nothing drawn by a medium outside its range.
+
 The percentiles are phase 21's; the share of frames over 20 ms is phase 23's (where a scene mounts), within a few frames of phase 21's. A figure drawn larger costs no more to draw: the plates are the same images, the same meshes and the same shaders. When the larger paintings of "Regenerate at higher resolution" (`docs/ART-BRIEFS.md`) land, the texture cap (2560 on the long side, `TEXTURE_CAP`) bounds what they cost on the GPU. What keeps it smooth:
 
 - **Textures:** WebP with alpha (98 plates, 3.1 MB in all), capped at 2560 px on the longest side (1024 on low-memory and small touch devices; no plate is over 2048 yet), uploaded with premultiplied alpha and mipmaps. Only the current and the next scene are preloaded; a texture nobody holds leaves the GPU 4 s later.
@@ -577,7 +593,7 @@ The percentiles are phase 21's; the share of frames over 20 ms is phase 23's (wh
 - **Instancing:** the glow's droplets and every star or sparkle field are one instanced draw each, animated in the vertex shader.
 - **The living stage in the shaders:** one plate program for every plate (the canvas, the grade, the rim and the life are uniforms, not variants, so nothing compiles mid-story) and one halftone program (clouds, water and rings), both first compiled in the hero. The figures' life is computed once per figure per frame on the CPU (a few dozen numbers) and bends the mesh in the vertex shader; the rig meshes and weight textures are built once per plate and shared by reference count. The canvas is two shared textures every plate reads, loaded once.
 - **No allocations per frame** in the canvas frame loops: plates reuse scratch vectors, pairs and quaternions; the idle clock walks the scene graph without callbacks; the finale's loop writes into reused frame objects. Motion's derived values do allocate small objects (that is how Motion works).
-- **Pixel ratio:** 1 to 1.5 on the stage (1.25 on a phone), 1 to 1.25 on the transition canvas (1 on a phone), half the glow droplets on a phone.
+- **Pixel ratio:** 1 to 1.5 on the stage (1.25 on a phone), half the glow droplets on a phone. The transitions draw on the stage at its pixel ratio (there is no second canvas): instanced particles (a light share on a phone and the lowest tier), sheets that read one baked noise texture instead of hashing octaves, a cloth read back from stored frames.
 - **Adaptive quality** (`AdaptiveQuality` in `stage-canvas.tsx`, `adaptDpr` in `quality.ts`): after 1.2 s of frames slower than 45 fps the stage drops its pixel ratio by a fifth (down to 0.75), and after 4 s of frames quicker than 57 fps it raises it again, never back to a ratio that proved too slow. Only draws in consecutive animation frames count, so an on-demand canvas that simply had nothing to draw is never mistaken for a slow one. The adapted ratio goes through the canvas's own `dpr` prop (React Three Fiber re-applies that prop whenever the canvas re-renders).
 
 ## Storyboard check
@@ -587,19 +603,19 @@ Scene by scene against `docs/STORYBOARD.md`. Everything the storyboard asks for 
 | Scene | Status |
 | --- | --- |
 | 1 Hero | Matched: sky, statue raising the orange on the minaret (large, on the right third), the glow ripple before any scroll, the crowd looking up (heads and shoulders along the bottom, in front of the minaret), the hero copy and button, "What we do", the chrome. |
-| 2 Ascent | Matched: the glow brightens and quickens, the copy drifts left title first, the push-in, the rising minaret turning to bark, branches and leaves, settling on one branch. |
-| 3 Graft | Matched: two sleeved hands fit the cutting, wrap and knot it, then the camera pulls out to the swaying tree full of oranges. |
+| 2 Ascent | Matched: the glow brightens and quickens, the copy drifts left title first, the push-in, the rising minaret turning to bark, branches and leaves, settling on one branch (the camera rises to it through the leaves, which hide the change of scene). |
+| 3 Graft | Matched: two sleeved hands fit the cutting, wrap and knot it, then the camera pulls out to the swaying tree full of oranges (it fills in clump by clump around the graft while loosened leaves drift down past the lens). |
 | 4 Pluck | Matched: the rising hand, "We get you found." with its progress line as the hand closes, the dolly down, the harvester, "We split the harvest." with the tag and the typed line. |
-| 5 Share | Matched: knife, halves, the second hand, both holding, the viewfinder, the push into the halves, the sand, the ruler switching to The Work. |
+| 5 Share | Matched: knife, halves, the second hand, both holding, the viewfinder, the push into the halves, the sand (blue grains pouring from the halves and blowing across until they cover the frame, then thinning onto The Work's sky), the ruler switching to The Work. |
 | 6 Work | Matched: clouds drifting right and the dolly up, three cards in turn (the clouds part around them), the giant orange and builder with card 3, the ruler, the percent counter. |
-| 7 Blueprint | Matched, with one simplification: the packet is in the architect's hands, but it is brought forward and opens by itself in front of the scaffold (his arms do not move: TODO with final art, arm frames for him). |
-| 8 Site | Matched: the seaside site, the rise to straight above with no sky, the shrink into the left half with the field of tiles, the milk panel with drifting leaf shadows, the terms text. |
-| 9 Prune | Matched, with one deliberate change: the gardener stands right of center, waist up beside his tree (the storyboard says center), so the words on the left sit on the tree receding into the sky's haze rather than on him. The column is below the frame. The dust, the docking title and the fit text are as described. |
-| 10 Fall | Matched: the cut branch, the push toward his face and his drift out, the falling orange followed to the center, the text sinking, the rainbow ring, the orchard, the dolly up, Questions on the ruler and the section title. |
+| 7 Blueprint | Matched, with one simplification: the packet is in the architect's hands, but it is brought forward and opens by itself in front of the scaffold (his arms do not move: TODO with final art, arm frames for him). The camera reaches the scaffold through a cloud bank, and the plan fills the frame as paper; the next scene opens out of it as the paper opens on its creases (the drawings stay on the paper rather than the frame turning plain milk white first). |
+| 8 Site | Matched: the seaside site, the rise to straight above with no sky, the shrink into the left half with the field of tiles, the milk page with drifting leaf shadows (a sheet on the stage now, which the dust's wind lifts away), the terms text. |
+| 9 Prune | Matched, with one deliberate change: the gardener stands right of center, waist up beside his tree (the storyboard says center), so the words on the left sit on the tree receding into the sky's haze rather than on him. The column is below the frame. The dust (blue, with white specks, lifting from the site and off the top of the frame), the docking title and the fit text are as described. |
+| 10 Fall | Matched: the cut branch, the push toward his face and his drift out, the falling orange followed to the center, the text sinking, the rainbow ring (a ripple of halftone dots from the orange's strike, its leading crest a soft spectral band, the orchard shown inside it), the orchard, the dolly up, Questions on the ruler and the section title. |
 | 11 Questions | Matched: five glass cards, one connector fixed on an orange and locked to a different corner each time, zoom then arc, sparkles, exact reversal (checked in the browser), the smoke. |
-| 12 Stargazer | Matched: the push into the blue, the fabric sky and the billowing cloud, the astronomer pointing from his platform, the growing constellation, the clear bottom right. |
+| 12 Stargazer | Matched, with one deliberate change: the push into the blue, the fabric sky (the sky comes loose as a blue cloth that falls across the lens, billowing), the astronomer pointing from his platform, the growing constellation, the clear bottom right. The storyboard's cloud billowing over to fill the screen is the cloth's own billow: no second cloud is pasted in. |
 | 13 Apply | Matched: tag, title and subtitle top left; the form on the right with two short glass fields, the larger one, icons on the labels and the 3D stack on hover or focus (checked in the browser). |
-| 14 Finale | Matched: the sink, the clouds, the form leaving, the stars drifting away, the tree, the woman watering and the man trimming, the loop on idle time, the closing frame with the wordmark, subtitle, copyright and email, the end of the page. |
+| 14 Finale | Matched: the sink, the clouds (blowing in from the left as they form), the form leaving, the stars drifting away, the tree, the woman watering and the man trimming, the loop on idle time, the closing frame with the wordmark, subtitle, copyright and email, the end of the page. |
 
 TODO, outside the code:
 
@@ -616,7 +632,7 @@ Visitors who prefer reduced motion get no pinned stage, no smooth scrolling and 
 
 **One script, a shorter stage.** Under `MOBILE.stackedMaxWidth` (767px, the same width as Tailwind's `max-md` and the `@media` blocks in `globals.css`; `stacked-css.test.ts` keeps them in step) the page is laid out stacked. The stage is `MOBILE.stageScale` (0.7) as tall (3780vh, about 36.8 screens), and `MOBILE.weights` give each scene a multiplier on its share of the scroll before the result is scaled to fit (`src/scroll/mobile.ts`): the text-heavy scenes keep their reading time, the long camera moves tighten. Every progress value in `script.ts` is the same everywhere; only the scroll distance between them changes, and `stage-scroll.ts` is the one place that maps scroll to progress (`mobile.test.ts` checks that every beat keeps enough scrolling to read). The stage height itself is CSS (`--stage-vh`, `--stage-vh-stacked`, written from the script).
 
-**Layout.** Slots stack (`slots.ts`, `max-md:` classes): titles and the hero hang from the top; paragraphs, cards and the form sit at the bottom; the question cards and the finale keep the middle. The hairline grid mirrors on the right and the top line drops to 56px (`stackedGrid`), so the mark, the menu button and Apply sit in a row above it and no star lands on the pill. The form is one column. The site scene shrinks into the upper half with the milk panel below. Fewer particles (half the glow droplets) and a lower pixel ratio (`quality.ts`).
+**Layout.** Slots stack (`slots.ts`, `max-md:` classes): titles and the hero hang from the top; paragraphs, cards and the form sit at the bottom; the question cards and the finale keep the middle. The hairline grid mirrors on the right and the top line drops to 56px (`stackedGrid`), so the mark, the menu button and Apply sit in a row above it and no star lands on the pill. The form is one column. The site scene shrinks into the upper half with the milk page below. Fewer particles (half the glow droplets) and a lower pixel ratio (`quality.ts`).
 
 **Camera on tall screens.** Below an aspect of 1.3 the field of view widens so the picture keeps the width it has at 1.3 (`fitFov`, `camera-fit.ts`), and keys can carry a `pan` of x, y and z: the framing table gives every framed key one (`phonePan`), so on a phone the camera also comes nearer and the subject keeps a phone-sized share of the taller picture, placed below or beside the text (the statue right of the button, the harvester with his orange above the words, the builder above the card). The stage reports its shape with `setStageAspect`, so the rig, the connector lines and the falling orange all use the same fitted camera. Wide screens are untouched. The taller picture this shows is accounted for: the astronomer sinks right out of a phone's frame in the application (`SINK_DEPTH_STACKED`, checked against projected phone frames), and the orchard rows fade out at their foot instead of ending in a cut edge.
 
@@ -628,4 +644,4 @@ Visitors who prefer reduced motion get no pinned stage, no smooth scrolling and 
 
 **Screen readers** (`story-outline.tsx`). The stage is decorative: its beats are `aria-hidden` (their buttons and links are out of the tab order), as are the art and canvases. A visually hidden outline is always on the page: the four chapters as landmarks with headings, every beat in script order, the questions as one list, and a link to the form.
 
-**Hidden tabs.** The canvases set their frame loop to `never` (`PauseWhenHidden`), the idle clock (and with it the figures' breathing and shifts, the ripple, the clouds' drift) and the transition drift stop, and `html[data-tab-hidden]` pauses the CSS idle effects.
+**Hidden tabs.** The canvas sets its frame loop to `never` (`PauseWhenHidden`), the idle clock (and with it the figures' breathing and shifts, the ripple, the clouds' drift, the leaf shadows on the site's page) stops, and `html[data-tab-hidden]` pauses the CSS idle effects. The transitions themselves are functions of progress: nothing of theirs runs on time but the smear, which settles.

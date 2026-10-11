@@ -95,6 +95,9 @@ export const STAGE_UNIFORMS = {
   bounceColor: { value: paletteColor(mixColors("milk", "orange", 0.55)) },
 };
 
+/** The plan's paper: the milk of the story, a little toward the marble's cream. */
+export const PAPER = mixColors("milk", "marble", 0.45);
+
 /* ------------------------------------------------------------------ */
 /* The plate: life in the vertex shader                                */
 /* ------------------------------------------------------------------ */
@@ -141,7 +144,7 @@ void main() {
 `;
 
 /** Premultiplied linear color in, premultiplied output color (in the canvas color space) out. */
-const OUTPUT = /* glsl */ `
+export const OUTPUT = /* glsl */ `
 vec4 toOutput(vec4 color, float opacity) {
   vec3 straight = color.a > 0.0 ? color.rgb / color.a : vec3(0.0);
   vec4 outColor = linearToOutputTexel(vec4(straight, color.a));
@@ -184,6 +187,54 @@ float clearInside() {
   vec2 q = abs(gl_FragCoord.xy - center) - (clearRect.zw - clearRect.xy) * 0.5;
   float outside = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0);
   return (1.0 - smoothstep(0.0, clearSoft, outside)) * clearAmount;
+}
+`;
+
+/**
+ * Paper under a drawing (the plan in the architect's hands, and the sheet of the paper unfold that
+ * takes over from it): cream with a fibre (the shared canvas weave read finer) and a softly deckled
+ * edge, the drawing laid over it. Linear premultiplied colour in and out. `paper` 0 leaves the plate as it is.
+ */
+export const PAPER_GLSL = /* glsl */ `
+uniform float paper;
+uniform vec3 paperColor;
+vec4 onPaper(vec4 color, vec2 uv) {
+  if (paper < 0.5) return color;
+  vec2 e = min(uv, 1.0 - uv);
+  float rag = texture2D(grainMap, uv * vec2(2.3, 3.1) + 0.37).r - 0.5;
+  float sheet = smoothstep(0.0, 0.01, min(e.x, e.y) + 0.006 * rag);
+  float fibre = texture2D(grainMap, uv * vec2(5.0, 7.5)).r - 0.5;
+  vec4 back = vec4(paperColor * (1.0 + 0.06 * fibre) * sheet, sheet);
+  return color + back * (1.0 - color.a);
+}
+`;
+
+/**
+ * A plate that fills in (`grow`: how far, negative when off; the point it spreads from, in uv; the soft
+ * edge, negative when it closes in on the point from the edges instead): it spreads out from its point
+ * clump by clump (a value noise read at two sizes), so each part is either there or not but for a soft
+ * edge, never the whole picture faded half through. The fruiting tree round the graft, the finale's
+ * clouds blown in (in the halftone, the dots grow at the edge).
+ */
+const GROW = /* glsl */ `
+uniform vec4 grow;
+float growHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float growNoise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(growHash(i), growHash(i + vec2(1.0, 0.0)), f.x), mix(growHash(i + vec2(0.0, 1.0)), growHash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+float growKeep(vec2 uv) {
+  if (grow.x < 0.0) return 1.0;
+  float soft = abs(grow.w);
+  float far = length(max(grow.yz, 1.0 - grow.yz));
+  float reach = clamp(length(uv - grow.yz) / far, 0.0, 1.0);
+  if (grow.w < 0.0) reach = 1.0 - reach;
+  float clumps = 0.65 * growNoise(uv * 7.0) + 0.35 * growNoise(uv * 19.0 + 3.7);
+  float threshold = 0.5 * reach + 0.5 * clumps;
+  float amount = grow.x * (1.0 + 2.0 * soft) - soft;
+  return smoothstep(threshold - soft, threshold + soft, amount);
 }
 `;
 
@@ -261,6 +312,8 @@ ${CLEARING}
 ${LUMA}
 ${SAMPLE_MAP}
 ${FINISH}
+${PAPER_GLSL}
+${GROW}
 // gradeColor in paint.ts: warm highlights, cool shadows, a saturation trim.
 vec3 gradeColor(vec3 c) {
   float l = luma(c);
@@ -271,7 +324,7 @@ vec3 gradeColor(vec3 c) {
   float l2 = luma(c);
   return mix(vec3(l2), c, 1.0 + grade.z);
 }
-// How much of the plate shows at vUv: all of it, but for its cut edges (faded) and outside its crop window.
+// How much of the plate shows at vUv: all of it, but for its cut edges (faded), outside its crop window and where it has not filled in yet.
 float plateKeep() {
   float keep = 1.0;
   if (cutFade.x > 0.0) keep *= smoothstep(0.0, cutFade.x, vUv.x);
@@ -282,11 +335,11 @@ float plateKeep() {
     vec2 inside = smoothstep(crop.xy - cropSoft, crop.xy + cropSoft, vUv) * (1.0 - smoothstep(crop.zw - cropSoft, crop.zw + cropSoft, vUv));
     keep *= inside.x * inside.y;
   }
-  return keep;
+  return keep * growKeep(vUv);
 }
 void main() {
   vec2 uv = vUv * uvTransform.xy + uvTransform.zw;
-  vec4 color = sampleMap(uv) * plateKeep();
+  vec4 color = onPaper(sampleMap(uv), vUv) * plateKeep();
   if (color.a > 0.0 && (figureOn > 0.5 || (quality > 1.5 && grainAmount + crackAmount > 0.0))) {
     vec3 c = color.rgb / color.a;
     if (figureOn > 0.5) {
@@ -323,7 +376,7 @@ void main() {
 /* ------------------------------------------------------------------ */
 
 /** The dot of a halftone cell (`halftoneCoverage` in paint.ts). */
-const HALFTONE_DOT = /* glsl */ `
+export const HALFTONE_DOT = /* glsl */ `
 float halftoneTone(float t) { return smoothstep(${HALFTONE.low.toFixed(3)}, ${HALFTONE.high.toFixed(3)}, t); }
 float halftoneDot(vec2 cell, float tone, float aa) {
   float r = 0.70710678 * sqrt(halftoneTone(tone));
@@ -355,6 +408,7 @@ uniform float opacity;
 uniform vec2 blurRadius;
 uniform float blurBias;
 uniform float quality;
+uniform float dots;      // 1: the dots; toward 0, the soft painted version (a cloud out of focus near the lens)
 uniform float mode;      // 0: cloud, 1: water, 2: ripple rings
 uniform vec2 cells;      // dot cells across and down the plate
 uniform vec3 litColor;
@@ -373,6 +427,7 @@ ${CLEARING}
 ${LUMA}
 ${SAMPLE_MAP}
 ${FINISH}
+${GROW}
 ${HALFTONE_DOT}
 ${RING_TONE}
 void main() {
@@ -381,10 +436,10 @@ void main() {
   float perPixel = length(fwidth(g));
   float aa = clamp(perPixel * 0.75, 0.01, 0.5);
   // Cells too small to draw cleanly give way to the plain soft version, as does the lowest quality tier.
-  float lod = quality > 0.5 ? smoothstep(${HALFTONE.minCellPx.toFixed(2)}, ${HALFTONE.fullCellPx.toFixed(2)}, 1.0 / max(perPixel, 1e-4)) : 0.0;
+  float lod = quality > 0.5 ? smoothstep(${HALFTONE.minCellPx.toFixed(2)}, ${HALFTONE.fullCellPx.toFixed(2)}, 1.0 / max(perPixel, 1e-4)) * dots : 0.0;
   vec4 color;
   if (mode < 1.5) {
-    vec4 soft = sampleMap(vUv * uvTransform.xy + uvTransform.zw);
+    vec4 soft = sampleMap(vUv * uvTransform.xy + uvTransform.zw) * growKeep(vUv);
     color = soft;
     if (lod > 0.0 && soft.a > 0.001) {
       vec3 c = soft.rgb / soft.a;
@@ -672,6 +727,11 @@ export class PlateMaterial extends ShaderMaterial {
         cropSoft: { value: 0.01 },
         // The back face (off).
         backTint: { value: new Vector4(1, 1, 1, 0) },
+        // Paper under the drawing (off).
+        paper: { value: 0 },
+        paperColor: { value: paletteColor(PAPER) },
+        // Filling in (off).
+        ...growUniforms(),
         // Life.
         lifeOn: { value: 0 },
         rigMap: { value: noRigTexture() },
@@ -706,6 +766,7 @@ export class HalftoneMaterial extends ShaderMaterial {
         blurRadius: { value: new Vector2(0, 0) },
         blurBias: { value: 0 },
         mode: { value: HALFTONE_MODES[mode] },
+        dots: { value: 1 },
         cells: { value: new Vector2(1, 1) },
         // The story's palette: a milk-white body, the cool sky in the shadow dots, warm light for water and rings.
         litColor: { value: paletteColor(mixColors("milk", "white", 0.5)) },
@@ -717,11 +778,17 @@ export class HalftoneMaterial extends ShaderMaterial {
         ringSize: { value: new Vector2(1, 1) },
         calm: { value: new Vector2(-1, 0) },
         quality: STAGE_UNIFORMS.quality,
+        ...growUniforms(),
         ...revealUniforms(),
         ...clearingUniforms(),
       },
     });
   }
+}
+
+/** Uniforms of filling in (off by default). */
+function growUniforms() {
+  return { grow: { value: new Vector4(-1, 0.5, 0.5, 0.05) } };
 }
 
 /** Uniforms of the reveal circle (off by default). */

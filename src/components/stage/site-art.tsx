@@ -13,6 +13,7 @@ import { useFigureLife } from "./figure-life";
 import { Plate } from "./plate";
 import type { SceneArtProps } from "./scene-layers";
 import { useStageProgress } from "./stage-context";
+import { SitePage } from "./site-page";
 import { seaOpacity, sideOpacity, siteShift, siteShiftStacked, tileField, tilesOpacity, topDownOpacity } from "./site-plan";
 
 /**
@@ -28,7 +29,8 @@ import { seaOpacity, sideOpacity, siteShift, siteShiftStacked, tileField, tilesO
  *   tiled field fills everything beyond it.
  * - The top-down view zooms out (camera pull) and the whole site shifts into the middle of the left
  *   half of the screen (`SiteFrame`), while the tiled ground grows into a large field around it.
- *   The milk panel and its leaf shadows on the right are DOM (`SitePanel`).
+ *   The milk page with its leaf shadows on the right is `SitePage` (in front of the lens), which the
+ *   wind lifts away when the dust rises.
  *
  * All scrubbed by progress, so it plays backwards exactly.
  */
@@ -92,5 +94,15 @@ export function SiteArt({ scene }: SceneArtProps) {
       <Plate id="site/builder-seated" opacity={side} sway={false} />
       <Plate id="site/top-down" opacity={topDown} layer={21} focus={false} sway={false} />
     </SiteFrame>
+  );
+}
+
+/** The site, and its milk page beside it (in front of the lens: it is laid out on the screen). */
+export function SiteScene(props: SceneArtProps) {
+  return (
+    <>
+      <SiteArt {...props} />
+      <SitePage />
+    </>
   );
 }
