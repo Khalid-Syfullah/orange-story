@@ -1,0 +1,86 @@
+{
+  "hero": {
+    "source": "placeholder",
+    "from": [],
+    "fingerprint": "1d8a8943fcdc3081",
+    "updated": "2026-10-11T10:47:34.493Z"
+  },
+  "bridge": {
+    "source": "placeholder",
+    "from": [],
+    "fingerprint": "5a6f34feffeec9e2",
+    "updated": "2026-10-11T10:47:42.783Z"
+  },
+  "graft": {
+    "source": "placeholder",
+    "from": [],
+    "fingerprint": "737a287e049baf52",
+    "updated": "2026-10-11T10:47:44.222Z"
+  },
+  "grove": {
+    "source": "placeholder",
+    "from": [],
+    "fingerprint": "737a287e049baf52",
+    "updated": "2026-10-11T10:47:47.513Z"
+  },
+  "share": {
+    "source": "placeholder",
+    "from": [],
+    "fingerprint": "fdba1779f6f2af11",
+    "updated": "2026-10-11T10:47:49.667Z"
+  },
+  "plate": {
+    "source": "placeholder",
+    "from": [],
+    "fingerprint": "de1194f07063462e",
+    "updated": "2026-10-11T10:48:01.208Z"
+  },
+  "drawing": {
+    "source": "placeholder",
+    "from": [],
+    "fingerprint": "5e79a14b201b4f55",
+    "updated": "2026-10-11T10:48:56.040Z"
+  },
+  "plan": {
+    "source": "placeholder",
+    "from": [],
+    "fingerprint": "bd13bcdda27ec8ed",
+    "updated": "2026-10-11T10:48:57.035Z"
+  },
+  "coda": {
+    "source": "placeholder",
+    "from": [],
+    "fingerprint": "2d3c40e901e8132f",
+    "updated": "2026-10-11T10:49:26.773Z"
+  },
+  "share-orange": {
+    "source": "placeholder",
+    "from": [],
+    "fingerprint": "bd13bcdda27ec8ed",
+    "updated": "2026-10-11T10:49:27.431Z"
+  },
+  "canopy": {
+    "source": "placeholder",
+    "from": [],
+    "fingerprint": "1d8a8943fcdc3081",
+    "updated": "2026-10-11T10:50:00.522Z"
+  },
+  "application": {
+    "source": "placeholder",
+    "from": [],
+    "fingerprint": "737a287e049baf52",
+    "updated": "2026-10-11T10:50:01.973Z"
+  },
+  "sapling": {
+    "source": "placeholder",
+    "from": [],
+    "fingerprint": "737a287e049baf52",
+    "updated": "2026-10-11T10:50:02.732Z"
+  },
+  "finale": {
+    "source": "placeholder",
+    "from": [],
+    "fingerprint": "1d8a8943fcdc3081",
+    "updated": "2026-10-11T10:53:04.044Z"
+  }
+}

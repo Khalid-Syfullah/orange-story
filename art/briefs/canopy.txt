@@ -1,0 +1,5 @@
+Neoclassical academic oil painting in the manner of a 19th-century salon painter: smooth modelling, fine visible brushwork, warm skin, cream and ochre drapery, white Carrara marble, one deep cobalt-blue sky with no gradient banding. Light from the upper left, long soft shadows. Museum finish, no frame, no text, no watermark, no signature. Subject colours: orange peel in saturated orange-gold with burnished highlights and visible dimples, glossy dark-green leaves.
+
+Looking straight up through the branches of an orange tree: dark glossy leaves and a dozen oranges around all four edges, some lit from behind so the peel glows, framing an open patch of cobalt sky in the centre. No ground, no trunk, no clouds (the cloud is added in the shader). The branches must leave the centre 50% of the frame as clear sky.
+
+MOTION (10 s loop): leaves stir in a light wind; one orange sways on its stem; the camera holds.

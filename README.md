@@ -18,6 +18,9 @@ The orange.io site: one continuous scroll story in four chapters (The Model, The
 | `npm start` | Serves the production build on port 3000 |
 | `npm run lint` | ESLint with the Next.js config (Next.js 16 removed `next lint`, so this runs `eslint .`) |
 | `npm run typecheck` | `tsc --noEmit` |
+| `npm run art:import` | Imports `art/source/` into `public/art/` and paints a placeholder for anything missing (see `art/briefs/README.md`) |
+| `npm run art:placeholders` | Repaints the placeholders for ids with no source (`-- --preview DIR` writes sample frames elsewhere) |
+| `npm run art:briefs` | Regenerates `art/briefs/<id>.txt` from `docs/PAINTINGS.md` |
 
 Node 20.9 or newer (CI and the server use Node 22).
 
