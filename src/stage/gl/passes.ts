@@ -51,6 +51,11 @@ export interface PassDef {
    * motion the engine redraws only when something changed, whatever this says.
    */
   breathes?: boolean;
+  /**
+   * Anything the pass draws besides its declared textures has arrived (the finale's wordmark waits
+   * on its font). The e2e hook asks before it takes a frame; default true.
+   */
+  settled?: () => boolean;
 }
 
 type Handle = StillHandle | LoopHandle | FramesHandle;
@@ -60,6 +65,8 @@ interface BoundPass {
   handles: Handle[];
   /** undefined = not compiled yet, null = failed. */
   program?: Program | null;
+  /** The e2e probe build (lib.glsl.ts PROBE), compiled only when the hook asks for it. */
+  probe?: Program | null;
 }
 
 export class PassManager {
@@ -179,6 +186,74 @@ export class PassManager {
       return false;
     }
     this.lastPassId = bound.def.id;
+    this.drawWith(bound, program, frame);
+    return true;
+  }
+
+  /**
+   * The e2e probe (docs/CHECKS.md pop and edge tests): draw the frame's pass with its probe build,
+   * which writes where the cut's crest is (mode 0) or a printed boundary's mix (mode 1) instead of
+   * the picture (lib.glsl.ts PROBE, PROBE_MIX). Built on the first call; nothing on the page ever
+   * calls it. False when the pass has no probe build.
+   */
+  drawProbe(frame: FrameCtx, mode: 0 | 1 = 0): boolean {
+    const bound = this.bySegment.get(frame.segment.id);
+    if (!bound) return false;
+    if (bound.probe === undefined) bound.probe = buildProgram(this.ctx, `${bound.def.id} (probe)`, bound.def.frag, true);
+    if (!bound.probe) return false;
+    bound.probe.use();
+    bound.probe.uniforms.set1f("uProbeMode", mode);
+    this.drawWith(bound, bound.probe, frame);
+    return true;
+  }
+
+  /**
+   * True when everything the pass for this frame samples is exactly what this frame wants: stills
+   * and loops have real pixels (a held loop its held frame), sequences show the very frame aimed at
+   * rather than the nearest decoded one, and the pass's own extras have arrived. A missing asset
+   * counts as settled (it will never arrive). The e2e hook waits on this before taking a frame.
+   */
+  settled(frame: FrameCtx): boolean {
+    const bound = this.bySegment.get(frame.segment.id);
+    if (!bound) return true;
+    if (bound.def.settled && !bound.def.settled()) return false;
+    const decls = bound.def.textures ?? [];
+    for (let i = 0; i < decls.length; i++) {
+      const decl = decls[i];
+      const h = bound.handles[i];
+      if (h.failed) continue;
+      if (h.kind === "frames") {
+        // Pinned (the e2e hook): a sequence keeps its frame on purpose.
+        if (this.textures.pinned) continue;
+        if (!h.showing(decl.frame ? decl.frame(frame, h.count) : frame.t * (h.count - 1))) return false;
+      } else if (h.kind === "loop") {
+        if (!h.settled) return false;
+      } else if (!h.ready) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * The e2e hook: whether drawing this frame would put a different frame of any sequence on screen
+   * than the one there now (the pop test then also draws it with the sequences pinned).
+   */
+  sequencesMove(frame: FrameCtx): boolean {
+    const bound = this.bySegment.get(frame.segment.id);
+    if (!bound) return false;
+    const decls = bound.def.textures ?? [];
+    for (let i = 0; i < decls.length; i++) {
+      const h = bound.handles[i];
+      if (h.kind !== "frames" || h.failed) continue;
+      const aim = decls[i].frame;
+      if (!h.showing(aim ? aim(frame, h.count) : frame.t * (h.count - 1))) return true;
+    }
+    return false;
+  }
+
+  private drawWith(bound: BoundPass, program: Program, frame: FrameCtx): void {
+    const { gl } = this.ctx;
     program.use();
     const u = program.uniforms;
 
@@ -220,7 +295,6 @@ export class PassManager {
 
     this.triangle.bind();
     this.triangle.draw();
-    return true;
   }
 
   /** How many of the textures the pass for a segment declares have real pixels (for the HUD). */
@@ -238,7 +312,10 @@ export class PassManager {
   }
 
   destroy(): void {
-    for (const p of this.passes) p.program?.destroy();
+    for (const p of this.passes) {
+      p.program?.destroy();
+      p.probe?.destroy();
+    }
     this.triangle.destroy();
   }
 }

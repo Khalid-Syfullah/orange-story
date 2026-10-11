@@ -171,6 +171,7 @@ void main() {
   screenCell(frag, cellPx, PRINT_ANGLE, cid, loc, uvC);
   float sk;
   float m = arrival(uvC, uClock, tm, sk);
+  if (m > 0.0 && m < 1.0) PROBE(0.0);   // the e2e probe: a cell mid-arrival is the cut's crest
 
   // The application, pushed in about the gap's centre and still catching up with its edge: offset
   // the way the front travels (outward from the gap) and smeared along it, settling as it lands.
@@ -226,6 +227,7 @@ void main() {
       float sk2 = skyMask(texture2D(uCanopy, toCanopy(uvC2)).rgb);
       float r1 = SCREEN_R * uScreen * sk * (1.0 - m);
       float r2 = SCREEN_R * 0.8 * uScreen * sk2 * (1.0 - m);
+      if (max(r1, r2) > 0.0) PROBE(0.0);   // the e2e probe: the gap's bare screen is crest too
       float aa = 0.75 / cellPx;
       float d1 = (1.0 - smoothstep(r1 - aa, r1 + aa, length(loc))) * smoothstep(0.0, 0.05, r1);
       float aa2 = 0.75 / cell2;
@@ -301,6 +303,7 @@ void main() {
 
     // The front at the cell's centre, and the coverage it gives the cell.
     float fc = front(ptC, tm);
+    if (uFront < 0.5) PROBE_ZONE(fc, BAND, 0.3);   // the e2e probe: the band ahead, the lag behind
     float cov = clamp(-fc / BAND, 0.0, 1.0);
     if (cov > 0.0) {
       // The sapling catching up with its front: displaced back toward its foot, smeared the way it grows.

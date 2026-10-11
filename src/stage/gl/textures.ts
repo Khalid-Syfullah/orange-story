@@ -59,6 +59,13 @@ export interface LoopHandle extends TextureHandle {
   readonly video: HTMLVideoElement;
   /** Play and upload frames while near; pause otherwise. */
   setNear(near: boolean): void;
+  /**
+   * The e2e hook: pause the loop at `seconds` for good (it no longer plays when near) and upload
+   * that frame, so frames drawn over a loop are reproducible. Resolves once the frame has decoded.
+   */
+  hold(seconds: number): Promise<void>;
+  /** Real pixels are up, and when held, the held frame's. */
+  readonly settled: boolean;
 }
 
 export interface FramesHandle extends TextureHandle {
@@ -73,6 +80,8 @@ export interface FramesHandle extends TextureHandle {
   aim(frame: number): void;
   /** Upload and return the nearest decoded frame to `frame` (or keep the current one). */
   near(frame: number): number;
+  /** True when the texture holds exactly the frame `frame` rounds to (the count read from the manifest). */
+  showing(frame: number): boolean;
   /** Drop decoded frames (the texture keeps its last frame). */
   release(): void;
 }
@@ -226,6 +235,8 @@ interface Shared {
   pool: DecodePool;
   /** Count one texture upload (for the HUD's uploads per second). */
   countUpload(): void;
+  /** The e2e hook: sequences keep the frame they show (TextureManager.pinFrames). */
+  pinned: boolean;
 }
 
 abstract class BaseHandle implements TextureHandle {
@@ -303,6 +314,9 @@ class LoopTexture extends BaseHandle implements LoopHandle {
   private freshFrame = false;
   private readonly usesFrameCallback: boolean;
   private lastTime = -1;
+  /** Held by the e2e hook: paused at one frame for good, uploaded whether near or not. */
+  private held = false;
+  private heldUp = false;
 
   constructor(shared: Shared, entry: LoopArt, element: HTMLVideoElement | undefined, key: string) {
     super(shared, entry.id, key, entry.aspect);
@@ -338,6 +352,7 @@ class LoopTexture extends BaseHandle implements LoopHandle {
   setNear(near: boolean): void {
     if (near === this.isNear) return;
     this.isNear = near;
+    if (this.held) return;
     if (near) {
       if (this.video.preload !== "auto") this.video.preload = "auto";
       const playing = this.video.play();
@@ -347,14 +362,61 @@ class LoopTexture extends BaseHandle implements LoopHandle {
     }
   }
 
-  /** Upload the current video frame when a new one has arrived and the loop is near. */
+  hold(seconds: number): Promise<void> {
+    this.held = true;
+    this.heldUp = false;
+    const video = this.video;
+    video.pause();
+    if (video.preload !== "auto") video.preload = "auto";
+    return new Promise<void>((resolve) => {
+      if (this.failed) {
+        resolve();
+        return;
+      }
+      const done = () => {
+        video.removeEventListener("error", done);
+        resolve();
+      };
+      video.addEventListener("error", done);
+      const seek = () => {
+        const end = Number.isFinite(video.duration) && video.duration > 0 ? video.duration - 0.05 : seconds;
+        const at = Math.max(0, Math.min(seconds, end));
+        // A seek to where the video already is fires no event: count it as arrived.
+        if (Math.abs(video.currentTime - at) < 1e-3 && video.readyState >= 2) {
+          this.freshFrame = true;
+          this.lastTime = -1;
+          done();
+          return;
+        }
+        video.addEventListener(
+          "seeked",
+          () => {
+            this.freshFrame = true;
+            this.lastTime = -1;
+            done();
+          },
+          { once: true },
+        );
+        video.currentTime = at;
+      };
+      if (video.readyState >= 1) seek();
+      else video.addEventListener("loadedmetadata", seek, { once: true });
+    });
+  }
+
+  get settled(): boolean {
+    return this.failed || (this.ready && (!this.held || this.heldUp));
+  }
+
+  /** Upload the current video frame when a new one has arrived and the loop is near (or held). */
   tick(): void {
-    if (!this.isNear || this.video.readyState < 2) return;
+    if ((!this.isNear && !this.held) || this.video.readyState < 2) return;
     const fresh = this.usesFrameCallback ? this.freshFrame : this.video.currentTime !== this.lastTime;
     if (!fresh) return;
     this.freshFrame = false;
     this.lastTime = this.video.currentTime;
     this.upload(this.video);
+    if (this.held) this.heldUp = true;
   }
 
   destroy(): void {
@@ -415,6 +477,7 @@ class FramesTexture extends BaseHandle implements FramesHandle {
   }
 
   near(frame: number): number {
+    if (this.shared.pinned && this.current >= 0) return this.current;
     const f = this.clampIndex(frame);
     let best = -1;
     if (this.decoded.has(f)) {
@@ -440,6 +503,10 @@ class FramesTexture extends BaseHandle implements FramesHandle {
       }
     }
     return this.current;
+  }
+
+  showing(frame: number): boolean {
+    return this.countKnown && this.current === this.clampIndex(frame);
   }
 
   /** Called by the manager when the sequence is no longer near; frames are dropped after a grace. */
@@ -629,7 +696,21 @@ export class TextureManager {
       countUpload: () => {
         this.uploads++;
       },
+      pinned: false,
     };
+  }
+
+  /**
+   * The e2e hook: while pinned, every sequence keeps the frame it shows whatever the scroll aims at,
+   * so a frame can be drawn at a new p with the content of the last one (the pop test judges what
+   * the shader does, apart from what the sequences' own frames do).
+   */
+  pinFrames(on: boolean): void {
+    this.shared.pinned = on;
+  }
+
+  get pinned(): boolean {
+    return this.shared.pinned;
   }
 
   /** A still (or the `last` keyframe variant of `share`). Loading starts when its segment is near. */
@@ -714,6 +795,20 @@ export class TextureManager {
     for (const handle of this.handles.values()) {
       if (handle instanceof LoopTexture) handle.tick();
     }
+  }
+
+  /** The e2e hook: hold every loop at `seconds` (LoopHandle.hold), so frames are reproducible. */
+  holdLoops(seconds: number): Promise<void> {
+    const all: Promise<void>[] = [];
+    for (const handle of this.handles.values()) {
+      if (handle instanceof LoopTexture) all.push(handle.hold(seconds));
+    }
+    return Promise.all(all).then(() => undefined);
+  }
+
+  /** Assets that failed to load (a missing file): the e2e hook reports them. */
+  failedKeys(): string[] {
+    return [...this.handles.values()].filter((h) => h.failed).map((h) => h.key);
   }
 
   /** Decoded frame totals across sequences, for the HUD. */

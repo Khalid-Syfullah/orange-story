@@ -14,6 +14,10 @@
 // was (the browser's restoration is read before the first frame). Dev only: `?clock=12` fixes the
 // shader clock so frames are reproducible (docs/CHECKS.md) and `?finish` waits for the GPU after
 // each draw so the HUD's frame time is the pass's real cost.
+//
+// The e2e build (NEXT_PUBLIC_STAGE_TEST_HOOK=1, playwright.config.ts) also installs `window.__stage`
+// (src/stage/dev/testHook.ts); next.config.ts pins the flag to "0" in every other build, so the
+// production bundle has neither the hook nor its import.
 import { tierFor } from "@/content/art";
 import { bandFor, pageAt, setBand, ZONE_IN_BAND } from "./band";
 import type { FrameCtx } from "./frame";
@@ -227,8 +231,9 @@ export function createEngine(opts: EngineOptions): Engine {
     ghost.style.opacity = "0";
   };
 
-  // The loop.
-  const t0 = performance.now();
+  // The loop. The shader clock is the page's own (performance.now, from the time origin), not one
+  // started with the stage: breath only reads it through sines and differences, and a clock fixed
+  // with Playwright's page.clock then gives the same frames on every run (docs/CHECKS.md).
   let raf = 0;
   let frameCount = 0;
   let lastMs = 0;
@@ -237,34 +242,12 @@ export function createEngine(opts: EngineOptions): Engine {
   let lastUploads = -1;
   let destroyed = false;
 
-  const loop = (now: number) => {
-    if (destroyed) return;
-    const start = performance.now();
-    scroll.tick(now);
-    const real = (now - t0) / 1000;
-    const time = fixedClock ?? real;
-    pointer.tick(scroll.vel, real);
-
-    // Reduced motion: a transition shows its end frame (t = 1) from the moment the scroll enters
-    // it, and the change dissolves over 300 ms (the ghost holds the frame that was on screen).
-    const p = reduced ? reducedHold(scroll.p) : scroll.p;
-    if (reduced && Math.abs(p - lastP) > JUMP_P && frameCount > 4) dissolve();
+  /** The frame context at progress `p` (already held under reduced motion) and shader time `time`. */
+  const frameAt = (p: number, time: number): FrameCtx => {
     const segment = active(p);
-    const t = local(segment.id, p);
-    const mouse: [number, number] = [pointer.x, pointer.y];
-
-    const page = pageAt(p, colors);
-    if (band < 0.999) {
-      const key = hexOf(page);
-      if (key !== pageKey) {
-        pageKey = key;
-        pin.style.setProperty("--page", key);
-      }
-    }
-
-    const frame: FrameCtx = {
+    return {
       p,
-      t,
+      t: local(segment.id, p),
       segment,
       vel: scroll.vel,
       dt: scroll.dt,
@@ -273,9 +256,9 @@ export function createEngine(opts: EngineOptions): Engine {
       css,
       view,
       band,
-      page,
+      page: pageAt(p, colors),
       dpr: fit.dpr,
-      mouse,
+      mouse: [pointer.x, pointer.y],
       still: reduced ? 1 : 0,
       kick: fixedClock === null ? pointer.kick : 0,
       octaves,
@@ -285,6 +268,30 @@ export function createEngine(opts: EngineOptions): Engine {
       glOff,
       synced: syncGPU,
     };
+  };
+
+  const loop = (now: number) => {
+    if (destroyed) return;
+    const start = performance.now();
+    scroll.tick(now);
+    const real = now / 1000;
+    const time = fixedClock ?? real;
+    pointer.tick(scroll.vel, real);
+
+    // Reduced motion: a transition shows its end frame (t = 1) from the moment the scroll enters
+    // it, and the change dissolves over 300 ms (the ghost holds the frame that was on screen).
+    const p = reduced ? reducedHold(scroll.p) : scroll.p;
+    if (reduced && Math.abs(p - lastP) > JUMP_P && frameCount > 4) dissolve();
+    const frame = frameAt(p, time);
+    const mouse = frame.mouse;
+
+    if (band < 0.999) {
+      const key = hexOf(frame.page);
+      if (key !== pageKey) {
+        pageKey = key;
+        pin.style.setProperty("--page", key);
+      }
+    }
 
     if (gl && !gl.lost && passes && textures) {
       // Rule 14: what is near only changes when p does (or a pass finishes compiling).
@@ -300,7 +307,7 @@ export function createEngine(opts: EngineOptions): Engine {
         pointer.kick > 0.01;
       // Rule 14: skip dead work. Breath redraws unless motion is reduced (uStill = 1); at rest it is
       // 0.4% of zoom over seconds, so every second frame (30 Hz) draws it and the rest cost nothing.
-      if (changed || (!reduced && passes.breathes(segment) && frameCount % 2 === 0)) {
+      if (changed || (!reduced && passes.breathes(frame.segment) && frameCount % 2 === 0)) {
         passes.draw(frame);
         for (let i = 1; i < repeat; i++) passes.draw(frame);
         if (syncGPU) {
@@ -317,12 +324,52 @@ export function createEngine(opts: EngineOptions): Engine {
 
     resized = false;
     lastP = p;
-    lastMouse = mouse;
+    lastMouse = [mouse[0], mouse[1]];
     frameCount++;
     lastMs = performance.now() - start;
     raf = requestAnimationFrame(loop);
   };
   raf = requestAnimationFrame(loop);
+
+  // The e2e hook (docs/CHECKS.md), only in the e2e build: see the note at the top of this file.
+  let removeHook: (() => void) | null = null;
+  if (process.env.NEXT_PUBLIC_STAGE_TEST_HOOK === "1") {
+    const heldP = () => (reduced ? reducedHold(scroll.p) : scroll.p);
+    const clockNow = () => fixedClock ?? performance.now() / 1000;
+    void import("./dev/testHook").then(({ installTestHook }) => {
+      if (destroyed) return;
+      removeHook = installTestHook({
+        canvas,
+        ghost,
+        hub,
+        engine: () => engine,
+        land(p) {
+          // A landing, as a deep link lands: no glide, and the frame after it is not consecutive
+          // with the last one drawn, so per-frame followers (the terms' lagged centre, the
+          // parchment's and the drawing's motion smear) start at rest.
+          scroll.setP(p, true);
+          frameCount += 2;
+        },
+        progress: () => scroll.p,
+        frame: () => frameAt(heldP(), clockNow()),
+        render(what, vel) {
+          if (!gl || gl.lost || !passes || !textures) return false;
+          const frame = frameAt(heldP(), clockNow());
+          if (vel !== undefined) frame.vel = vel;
+          passes.preload(frame.p);
+          textures.tick();
+          if (what === "picture") return passes.draw(frame);
+          return passes.drawProbe(frame, what === "mix" ? 1 : 0);
+        },
+        settled: () => (passes ? passes.settled(frameAt(heldP(), clockNow())) : false),
+        holdLoops: (seconds) => (textures ? textures.holdLoops(seconds) : Promise.resolve()),
+        pinFrames(on) {
+          textures?.pinFrames(on);
+        },
+        sequencesMove: (p) => (passes ? passes.sequencesMove(frameAt(reduced ? reducedHold(p) : p, clockNow())) : false),
+      });
+    });
+  }
 
   const engine: Engine = {
     scroll,
@@ -337,6 +384,7 @@ export function createEngine(opts: EngineOptions): Engine {
     destroy() {
       destroyed = true;
       cancelAnimationFrame(raf);
+      removeHook?.();
       hub.detach();
       window.removeEventListener("hashchange", onHash);
       window.removeEventListener("popstate", onPop);

@@ -96,8 +96,11 @@ void main() {
   // The front: bitten by two decorrelated fields, its boundary printed, not faded. The finer field
   // drifts with the travel and creeps with time, so a held frame's edge still smoulders.
   float front = f0 + bite2(q, N1_FREQ, N1_AMP, N2_FREQ, N2_AMP, vec2(2.3, 9.1), vec2(-5.7, 1.4) + vec2(0.0, uBurnR * 0.05) + tm * 0.015);
+  // The e2e probe: the crest zone is the scorch and singe ahead and three lag lengths behind (the soot inside them).
+  PROBE_ZONE(front, CHAR_WIDTH + SINGE_WIDTH, 3.0 * LAG_DIST);
   float edge = front + printEdge(frag, BAYER, STIPPLE);
   float gone = 1.0 - smoothstep(-EDGE_SOFT, EDGE_SOFT, edge);      // 1 = the paper has gone
+  if (abs(front) < 0.5 * (BAYER + STIPPLE) + EDGE_SOFT) PROBE_MIX(gone);   // the e2e edge probe
   float mottle = fbm(q * CHAR_MOTTLE + 3.3);                         // the char's unevenness
 
   vec3 a = vec3(0.0);

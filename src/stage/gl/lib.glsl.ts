@@ -20,10 +20,23 @@ void main() { gl_Position = vec4(aPos, 0.0, 1.0); }
  * viewport), fades the base of the picture into the page colour over its lower 34%. The fade is
  * printed, not ramped (rule 2): a Bayer threshold bites the ramp, with its amplitude following the
  * ramp's own shape so the first and last rows of the fade are exact.
+ *
+ * In a probe build (STAGE_PROBE, compiled only by the e2e hook) it writes the probe instead of the
+ * picture: the place across the crest zone packed into red and green (16 bits over -8..8), blue 1
+ * where a crest was recorded and 0 where the pixel took a fast path or the pass has no front; or,
+ * with uProbeMode 1, a printed boundary's mix in red, blue 1 where one was recorded.
  */
 export const EPILOGUE_GLSL = `
 void main() {
   passMain();
+#ifdef STAGE_PROBE
+  if (uProbeMode > 0.5) {
+    gl_FragColor = vec4(clamp(gMix, 0.0, 1.0), 0.0, gMix >= 0.0 ? 1.0 : 0.0, 1.0);
+    return;
+  }
+  float pv = clamp(gProbe / 16.0 + 0.5, 0.0, 1.0);
+  gl_FragColor = vec4(floor(pv * 255.0) / 255.0, fract(pv * 255.0), abs(gProbe) < 1.0e3 ? 1.0 : 0.0, 1.0);
+#else
   if (uBand < 0.999) {
     float y = (uRes.y - gl_FragCoord.y) / uRes.y;
     float f = clamp((y - 0.66) / 0.34, 0.0, 1.0);
@@ -31,6 +44,7 @@ void main() {
     f = clamp(f + (bayer4(gl_FragCoord.xy) - 0.5) * 0.10 * sin(3.14159265 * f), 0.0, 1.0);
     gl_FragColor.rgb = mix(gl_FragColor.rgb, uPage, f);
   }
+#endif
 }
 `;
 
@@ -39,7 +53,7 @@ export const LIB_GLSL = `
 // ---- shared uniforms, set once per frame -----------------------------------------------------
 uniform vec2  uRes;      // canvas size in device pixels (gl_FragCoord space)
 uniform float uDpr;      // device pixel ratio in use (capped at 2 and by the 3.4 Mpx budget)
-uniform float uTime;     // seconds since the stage started: breath only, never scroll state
+uniform float uTime;     // seconds on the page's clock (performance.now): breath only, never scroll state
 uniform float uP;        // smoothed scroll progress 0..1
 uniform float uT;        // local progress 0..1 inside the active segment
 uniform float uVel;      // scroll velocity in px per frame, signed (+ = scrolling down)
@@ -52,6 +66,30 @@ uniform vec3  uPage;     // the page colour the band's base fades into (see EPIL
 
 // ---- colour tokens from src/app/globals.css, read at start-up ---------------------------------
 uniform vec3 uSky, uSkySoft, uMilk, uInk, uPress, uOrange, uLeaf, uMarble, uPaper;
+
+// ---- the e2e probe (docs/CHECKS.md, pop and edge tests; src/stage/dev/testHook.ts) ------------
+// A cut records where its crest is with PROBE(x): this pixel's place across the cut's crest zone,
+// the band its crest machinery acts in (rind, pith, char, tear, mosaic, lag, print-in dots),
+// scaled by the cut's own band widths so that the zone is |x| <= 1, positive ahead of the front
+// (the old picture) and negative behind it, 0 on the front (or a cell mid-print where a cut has no
+// single front). PROBE_ZONE(d, ahead, behind) scales a signed front distance by the zone's reach on
+// each side. The nearest front wins. Only a probe build reads it (the epilogue writes it out
+// instead of the picture); in every other build PROBE is nothing and the page's shaders unchanged.
+// PROBE_MIX(m) records, at a printed boundary, how much of the new picture the pixel shows (0..1,
+// after the print): the edge test reads it (uProbeMode 1) to tell a print (every pixel 0 or 1) from
+// an alpha ramp (pixels between).
+#ifdef STAGE_PROBE
+uniform float uProbeMode;
+float gProbe = 1.0e4;
+float gMix = -1.0;
+#define PROBE(x) { float probeX = (x); if (abs(probeX) < abs(gProbe)) gProbe = probeX; }
+#define PROBE_ZONE(d, ahead, behind) PROBE((d) > 0.0 ? (d) / (ahead) : (d) / (behind))
+#define PROBE_MIX(m) { gMix = (m); }
+#else
+#define PROBE(x)
+#define PROBE_ZONE(d, ahead, behind)
+#define PROBE_MIX(m)
+#endif
 
 // screenUV: the fragment as 0..1 with y down, matching painting coordinates and the DOM.
 vec2 screenUV() { return vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y) / uRes; }

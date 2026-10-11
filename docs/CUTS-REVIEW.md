@@ -10,6 +10,11 @@ and every position profiled with `?finish`. The art is still the painted placeho
 the placeholder's own content (the bridge reel's bottom-up morph edge, the coda's flat blue) is not a tell
 and is not listed.
 
+Phase 16 turned these checks into the `npm run e2e` suite (`docs/CHECKS.md`). Measured, two boundaries this
+review passed by eye at 400% were dithered alpha ramps, not prints: the Split's and the static treatment's
+(about 28% of their boundary pixels between the two pictures). Both now print through a ±0.004 smoothstep, as
+the burn and the match cut do; the numbers are in `docs/PERF.md`, phase 16.
+
 Severity: **tell** = reads as mechanical and is fixed in this phase; **note** = within the rules, recorded
 so the next reader does not re-open it; **latent** = invisible with the placeholders, fixed anyway.
 

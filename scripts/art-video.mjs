@@ -20,7 +20,7 @@
 // Inputs are the stills in art/source/ (png): they are the first and last keyframes. Output goes to
 // art/source/<id>.mp4 (audio stripped) and `npm run art:import` takes it from there.
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';

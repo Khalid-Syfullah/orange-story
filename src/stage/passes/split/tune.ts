@@ -24,6 +24,13 @@ export const SPLIT_TUNE = {
   n2Amp: 0.1,
   bayer: 0.03,
   stipple: 0.02,
+  /**
+   * Half-width of the smoothstep the printed front goes through: well inside the print's own reach
+   * (Bayer and stipple, +-0.024), so each pixel is one picture or the other and the boundary is dots
+   * and stipple (phase 16's edge test; at 0.02 it was a dithered alpha ramp, 27% of its pixels
+   * between the two pictures). The burn and the match cut print theirs through the same 0.004.
+   */
+  edgeSoft: 0.004,
   onsetTo: 0.22,
   // ---- rind band ahead of the cut: smoothstep(rindWidth, 0, edgeS); A desaturates and darkens
   rindWidth: 0.09,
@@ -81,7 +88,7 @@ export const SPLIT_TUNE_GLSL = `uniform float ${SPLIT_TUNE_KEYS.map(tuneUniform)
 /** The HUD's groups, in tuning order. */
 const GROUPS: readonly (readonly [string, readonly SplitTuneKey[]])[] = [
   ["front", ["frontLin", "frontGain", "frontOffset", "partFrom", "partSpan"]],
-  ["bite", ["n1Freq", "n1Amp", "n2Freq", "n2Amp", "bayer", "stipple", "onsetTo"]],
+  ["bite", ["n1Freq", "n1Amp", "n2Freq", "n2Amp", "bayer", "stipple", "edgeSoft", "onsetTo"]],
   ["rind", ["rindWidth", "rindDesat", "rindDark", "rindSmear"]],
   ["lag", ["lagDist", "lagOffset", "lagSmear", "lagFadeFrom"]],
   ["part", ["metricY", "sgnWidth", "parting", "partRamp", "partSmear", "pushLin", "pushGain", "driftX", "driftY"]],

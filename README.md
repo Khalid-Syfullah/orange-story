@@ -18,6 +18,7 @@ The orange.io site: one continuous scroll story in four chapters (The Model, The
 | `npm start` | Serves the production build on port 3000 |
 | `npm run lint` | ESLint with the Next.js config (Next.js 16 removed `next lint`, so this runs `eslint .`) |
 | `npm run typecheck` | `tsc --noEmit` |
+| `npm run e2e` | The checks of `docs/CHECKS.md` in Playwright against a production build with the stage test hook (see Checks below). Not `npm test`, so CI's `test --if-present` step stays fast |
 | `npm run art:import` | Imports `art/source/` into `public/art/` and paints a placeholder for anything missing (see `art/briefs/README.md`) |
 | `npm run art:placeholders` | Repaints the placeholders for ids with no source (`-- --preview DIR` writes sample frames elsewhere) |
 | `npm run art:briefs` | Regenerates `art/briefs/<id>.txt` from `docs/PAINTINGS.md` |
@@ -31,6 +32,7 @@ Node 20.9 or newer (CI and the server use Node 22).
 - `src/app/globals.css`: colour, type, shape and layout tokens.
 - `src/ui/primitives.tsx`: pill button, tag, hairline and star mark.
 - `src/stage/`: the engine (phase 2). `Stage.tsx` is the one client component that owns the frame loop; `script.ts` is the single source of segment ranges (`local`, `active`, `nearby`); `scroll.ts` the smoothed scroll clock; `gl/` the WebGL 1 core (context, program builder, `lib.glsl.ts`, texture manager, pass manager); `passes/` the story's passes (`passes/paper.ts` is the procedural sheet every pass on paper draws on; `passes/terms/` draws the drawing, its brushed-edge panel and the margin orange into it, with `termsPage()` for passes that draw the panel at rest; `passes/coda/` burns that page into the coda's first frame and scrubs the coda with its halo, with `codaOrange()` and `haloAt()` in its timeline for the match cut); `Chrome.tsx` the hairline frame, mark, menu, Apply pill, rail and percentage; `hub.ts` the subscribe API DOM layers use (`useFrame`), never React state per frame.
+- `e2e/`: the checks (`npm run e2e`, see Checks below); `src/stage/dev/testHook.ts` the hook they drive the stage by.
 - `/design` (development only, not linked): the type scale, swatches, buttons, tags and hairlines.
 - `/stage-test` (development only, not linked): a checkerboard drawn through `cover()` with GLSL rings and DOM labels at `uncover()` of the same points, for checking the painting-to-screen mapping by eye (`?pan=0.1,-0.05&zoom=1.3&aspect=9:16`).
 
@@ -43,7 +45,7 @@ URL flags on any stage page: `?hud` shows p, segment, local t, frame time and te
 - `docs/PAINTINGS.md`: the style preamble and one prompt per painting, loop or frame sequence.
 - `docs/TRANSITIONS.md`: every cut on the page, with The Split (Chapter 1 to 2) specified in full.
 - `docs/MOTION-RULES.md`: the rules that keep the motion from feeling mechanical, plus the scroll smoothing.
-- `docs/CHECKS.md`: what passing means for a cut.
+- `docs/CHECKS.md`: what passing means for a cut, and which test of `npm run e2e` holds each check.
 - `prompts/NN-name.md`: sixteen phases, each a complete instruction for one subagent; `prompts/NN-name.commit` is that phase's commit message; `prompts/models.conf` assigns the model and effort.
 
 ## Building it
@@ -53,6 +55,17 @@ In Claude Code, from the repo root: `/build-orange` runs every remaining phase i
 ## Art
 
 The paintings and their prompts are listed in `docs/PAINTINGS.md`. Drop finished sources in `art/source/<id>.png|mp4` (gitignored); `npm run art:import` (from phase 3) turns them into tiers under `public/art/`. Missing paintings get painted placeholders, so the build never waits for art. The anchor points in `src/content/art.ts` are the numbers to retune when real art replaces a placeholder.
+
+## Checks
+
+`npm run e2e` runs `docs/CHECKS.md` as a Playwright suite (`e2e/`, `playwright.config.ts`); about 8 minutes on a laptop. Once per machine, install the browser: `npx playwright install chromium`.
+
+- **What it runs against.** `scripts/e2e-server.mjs` builds with `NEXT_PUBLIC_STAGE_TEST_HOOK=1` into `.next-e2e` (so the production build in `.next` is never replaced) and serves it with `npm start` on a free port. Chromium only, WebGL through ANGLE on SwiftShader (`--use-gl=angle --use-angle=swiftshader`), so it renders headless with no GPU.
+- **The test hook.** In that build only, `window.__stage` (`src/stage/dev/testHook.ts`) has `setP(p)`, `getP()`, `segment()`, `frameMs()` and `frame()` (the canvas as PNG bytes, drawn there and then), plus `ready()`, `probe()`, `holdLoops()`, `pinFrames()` and `state()` for the suite. `next.config.ts` pins the flag to `"0"` in every other build, so `npm run build` ships neither the hook nor its import (the suite checks `.next` for it).
+- **Reproducible frames.** The visual tests install `page.clock` and pause it, hold the video loops at one frame, and wait until every texture a frame samples is exactly the one it wants, so a frame is a function of `p` alone, the same on every run.
+- **The tests.** `e2e/cuts.spec.ts`: for every cut in `docs/TRANSITIONS.md` (read from its table), the scrub, pop and still-frame tests (stills into `docs/screenshots/cuts/<cut>-<t>.png`), and the edge test at the crest of every printed front. `e2e/speed.spec.ts`: crest effects scale with the scroll's speed. `e2e/frame-time.spec.ts`: 4x CPU throttle at 390x844. `e2e/reduced-motion.spec.ts`, `e2e/phone.spec.ts` (390x844, dpr 3, touch), `e2e/build.spec.ts`.
+- **Reading a failure.** `npx playwright show-report` opens the HTML report (`playwright-report/`), with a trace per failed test in `test-results/`. One project or one cut: `npx playwright test --project=phone`, `npx playwright test -g "cut split"`.
+- **On a real GPU.** `E2E_GPU=metal npm run e2e -- --project=desktop -g "frame time"` (or `vulkan`, `gl`) runs the desktop frame-time test, which SwiftShader cannot measure (`docs/PERF.md`). The suite's own run is always SwiftShader.
 
 ## Deploy
 

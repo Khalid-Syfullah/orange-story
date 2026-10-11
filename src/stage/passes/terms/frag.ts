@@ -138,6 +138,11 @@ float windowCover(vec2 pc, vec2 frag, float tm, out float thin, out float pool) 
   float ft = fbm4(nf * vec2(5.0, 24.0)) - 0.5;
   float n2 = mix(ft, fs, side);
   float front = e + n1 * TEAR + n2 * FRAY;
+#ifdef TERMS_PROBE
+  // The e2e probe (TERMS_FRAG only, not the close): the brushed edge once it is inside the frame.
+  // Its zone: the dry brush thinning 1.4 bands inside the edge, the print 0.4 outside it.
+  if (uWin.z < 0.5 * uRes.x / uDpr || uWin.w < 0.5 * uRes.y / uDpr) PROBE_ZONE(-front, 1.4, 0.4);
+#endif
   thin = smoothstep(-1.4, 0.0, front);
   pool = smoothstep(-1.0, -0.3, front) * (1.0 - smoothstep(-0.3, 0.1, front));
   float pf = front + printEdge(frag, 0.36, 0.26);
@@ -230,7 +235,11 @@ vec3 marginOrange(vec3 col, vec2 pc, vec2 frag, float tm) {
     float bite = bite2(relC, 1.3, 0.6, 3.1, 0.22, vec2(4.2), vec2(-2.7));
     float cov = clamp(arrive * 2.4 - length(relC) / OR_BOUND + bite, 0.0, 1.0);
     printA = printAlpha(cov, loc, cid, cellPx, frag);
-    covPx = clamp(arrive * 2.4 - length(rel) / OR_BOUND + bite, 0.0, 1.0);
+    float rawPx = arrive * 2.4 - length(rel) / OR_BOUND + bite;
+    covPx = clamp(rawPx, 0.0, 1.0);
+#ifdef TERMS_PROBE
+    PROBE_ZONE(-rawPx, 0.15, 1.0);                          // the e2e probe: the print-in's dots
+#endif
   }
 
   // The contact shadow on the paper: offset down and right, away from the key light; a soft
@@ -324,6 +333,7 @@ vec3 termsPage(vec2 frag, float tm) {
       soak = 0.0;
     } else {
       float c = soakField(pc);
+      PROBE_ZONE(-c, 0.1, 1.0);           // the e2e probe: the print ahead, the smudge resolving behind
       float cp = c + printEdge(frag, 0.12, 0.08);
       soak = clamp(cp / SOAK_EDGE, 0.0, 1.0);
       sharp = smoothstep(0.25, 1.0, c);
@@ -382,6 +392,7 @@ vec3 termsPage(vec2 frag, float tm) {
 `;
 
 export const TERMS_FRAG = /* glsl */ `
+#define TERMS_PROBE 1
 ${TERMS_GLSL}
 
 void main() {

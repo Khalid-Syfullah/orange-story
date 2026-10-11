@@ -123,8 +123,12 @@ void main() {
   // The front: the metric bitten by two decorrelated fields, its boundary printed, not faded.
   float front = r - R + bite2(q, uTune_n1Freq, uTune_n1Amp, uTune_n2Freq, uTune_n2Amp,
                               vec2(7.0), vec2(-3.0) + vec2(0.0, t * 0.4) + gTm * 0.02) * onset;
+  // The e2e probe: the crest zone is the rind band ahead and three lag lengths behind (the pith inside them).
+  PROBE_ZONE(front / gradR, uTune_rindWidth, 3.0 * uTune_lagDist);
   float edge = front + printEdge(frag, uTune_bayer, uTune_stipple);
-  float open = 1.0 - smoothstep(-0.02, 0.02, edge);             // 1 = the plate shows
+  float open = 1.0 - smoothstep(-uTune_edgeSoft, uTune_edgeSoft, edge);   // 1 = the plate shows
+  // The e2e edge probe: the boundary's mix wherever the print reaches.
+  if (abs(front) < 0.5 * (uTune_bayer + uTune_stipple) + uTune_edgeSoft) PROBE_MIX(open);
   float edgeS = edge / gradR;                                     // the printed front's distance in frame heights
 
   vec3 a = vec3(0.0);

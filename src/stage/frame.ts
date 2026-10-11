@@ -12,7 +12,7 @@ export interface FrameCtx {
   vel: number;
   /** ms since the previous frame (clamped). */
   dt: number;
-  /** Seconds since the stage started. */
+  /** Seconds on the page's clock (performance.now from the time origin): breath only, read through sines and differences. */
   time: number;
   /** Drawing buffer size in device pixels. */
   res: readonly [number, number];

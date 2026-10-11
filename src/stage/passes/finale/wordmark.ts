@@ -21,6 +21,13 @@ let version = 0;
 let box: [number, number, number, number] = [0, 0, 1, 1];
 let fontsReady = false;
 let fontsAsked = "";
+/** The canvas was last drawn with the display face loaded (not the fallback). */
+let drawnWithFont = false;
+
+/** The wordmark on the canvas is the final one, in its own face (PassDef.settled, for the e2e hook). */
+export function wordmarkSettled(): boolean {
+  return drawnWithFont;
+}
 
 function family(): string {
   const v = getComputedStyle(document.documentElement).getPropertyValue("--font-display").trim();
@@ -48,6 +55,7 @@ export function wordmark(css: readonly [number, number], dpr: number): Wordmark 
   if (k !== key) {
     key = k;
     version++;
+    drawnWithFont = fontsReady;
     const ctx = canvas.getContext("2d");
     if (ctx) {
       ctx.font = ask;

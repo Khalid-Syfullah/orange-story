@@ -4,6 +4,7 @@
 // `finale` segment (p 0.96-1.00), so retiming the story in script.ts retimes the finale with it.
 // Geometry is in CSS px of the frame, y down, unless a name says otherwise.
 import { finale } from "@/content/copy";
+import { FINALE_LANDED } from "../../script";
 
 export const FINALE_TUNE = {
   /** The finale loop takes the frame over [0, coverTo] of the segment (accelerating, rule 4). */
@@ -40,6 +41,12 @@ export const FINALE_TUNE = {
 } as const;
 
 const T = FINALE_TUNE;
+
+// Under reduced motion the finale is held where it has landed (script.ts FINALE_LANDED): the
+// loop's print-in, the pour and the wordmark must all be complete by then. Fail loudly on a retune.
+if (T.coverTo > FINALE_LANDED || T.pourTo > FINALE_LANDED || T.wordTo > FINALE_LANDED || T.subFrom < FINALE_LANDED) {
+  throw new Error("finale: the print-in, pour and wordmark must end by script.ts FINALE_LANDED, the subtitle start after it");
+}
 
 const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x);
 const smooth = (a: number, b: number, x: number) => {

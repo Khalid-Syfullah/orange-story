@@ -11,7 +11,7 @@ import { riseFront, riseCloud, scrimRise } from "../application/timeline";
 import { setAppUniforms } from "../application";
 import { FINALE_FRAG } from "./frag";
 import { coverAt, FINALE_TUNE, finaleHudLines, pourGain, wordAt } from "./timeline";
-import { wordmark } from "./wordmark";
+import { wordmark, wordmarkSettled } from "./wordmark";
 
 const fin = art.finale;
 
@@ -28,6 +28,7 @@ export const finalePass: PassDef = {
     { uniform: "uApp", asset: "application" },
     { uniform: "uSapling", asset: "sapling" },
   ],
+  settled: wordmarkSettled,
   uniforms(ctx, u, textures) {
     const t = ctx.t;
     // The rise as it ended, for the frame the loop takes over from.

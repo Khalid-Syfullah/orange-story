@@ -97,7 +97,8 @@ export function setTermsUniforms(ctx: FrameCtx, u: UniformSetter, textures: Text
   const seq = textures.frames("drawing");
   const plan = textures.still("plan");
   const want = Math.round(frameFor(p, seq.count));
-  const usePlan = plan.ready && want >= seq.count - 1;
+  // Sequences pinned by the e2e hook keep their frame, and the plan still is one of them.
+  const usePlan = textures.pinned ? state.usePlan : plan.ready && want >= seq.count - 1;
   u.set1f("uUsePlan", usePlan ? 1 : 0);
   u.set1f("uDrawReady", usePlan || (seq.ready && seq.current >= 0) ? 1 : 0);
   state.shown = usePlan ? seq.count - 1 : seq.current;

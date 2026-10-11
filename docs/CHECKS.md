@@ -2,12 +2,35 @@
 
 Run these on every cut, in a headless browser with a fixed clock so the frames are reproducible (`npm run e2e` drives them with Playwright against a production build). A cut that fails one of them is the one that will read as mechanical.
 
-- [ ] **Scrub test:** step `p` across the cut in 40 increments forward, then backward. No frame may differ between the two directions by more than the time-driven breath.
-- [ ] **Still-frame test:** save frames at t = 0.2, 0.5, 0.8 and look at each as a picture. Each must read as a thing happening to the image, not as a hole with another image in it.
-- [ ] **Pop test:** diff consecutive frames; the largest per-frame change must be at the crest, never at a texture or a scrim switching on.
-- [ ] **Edge test:** zoom to 400% on the crest; the boundary must be dots and stipple, not an alpha ramp or a straight line.
+- [x] **Scrub test:** step `p` across the cut in 40 increments forward, then backward. No frame may differ between the two directions by more than the time-driven breath.
+- [x] **Still-frame test:** save frames at t = 0.2, 0.5, 0.8 and look at each as a picture. Each must read as a thing happening to the image, not as a hole with another image in it.
+- [x] **Pop test:** diff consecutive frames; the largest per-frame change must be at the crest, never at a texture or a scrim switching on.
+- [x] **Edge test:** zoom to 400% on the crest; the boundary must be dots and stipple, not an alpha ramp or a straight line.
 - [ ] **Speed test:** scroll the cut at three speeds (trackpad flick, slow wheel, keyboard page). Crest effects must scale with velocity and the settle must take the same time at all three.
-- [ ] **Phone test:** at 390x844 with 2 noise octaves on texture fields, the cut must look the same as desktop at arm's length; motion fields keep 4 octaves.
-- [ ] **Frame-time test:** 16.7 ms budget through the whole cut on a mid-range phone; the fast paths must leave at-rest frames under 4 ms.
-- [ ] **Reduced-motion test:** with `prefers-reduced-motion`, the cut collapses to its t = 1 frame with a 300 ms dissolve and nothing else moves.
-- [ ] **Build test:** `npm run lint`, `npm run typecheck` and `npm run build` pass; the page serves on port 3000 with `npm start` (the EC2 deploy depends on this).
+- [x] **Phone test:** at 390x844 with 2 noise octaves on texture fields, the cut must look the same as desktop at arm's length; motion fields keep 4 octaves.
+- [x] **Frame-time test:** 16.7 ms budget through the whole cut on a mid-range phone; the fast paths must leave at-rest frames under 4 ms.
+- [x] **Reduced-motion test:** with `prefers-reduced-motion`, the cut collapses to its t = 1 frame with a 300 ms dissolve and nothing else moves.
+- [x] **Build test:** `npm run lint`, `npm run typecheck` and `npm run build` pass; the page serves on port 3000 with `npm start` (the EC2 deploy depends on this).
+
+## How each check is held
+
+`npm run e2e` (README.md, Checks) runs every test below; the cuts are the rows of the table in `docs/TRANSITIONS.md`, read from it, so a cut added there is tested. Frames are drawn by the stage's test hook at a clock `page.clock` holds, with the video loops held and every texture at exactly the frame it wants. The numbers of the last run are in `docs/PERF.md` (phase 16).
+
+| Check | Test | What it asserts |
+| --- | --- | --- |
+| Scrub | `e2e/cuts.spec.ts` "scrub" | At each of the 41 steps the forward and backward frames differ by at most 0.5 per channel on average and on no more than 0.1% of pixels by more than 8 (the clock is fixed, so breath is the same both ways); and the cut changes the picture across its p range |
+| Pop | `e2e/cuts.spec.ts` "pop" | The largest step-to-step change of the cut lies in the crest band (the zone each cut's shader reports through its probe, `lib.glsl.ts` PROBE); no region of 64x64 px or more outside the band changes at one step while nothing within 64 px of it changes at the steps either side (a switch). Frame sequences are held for the comparison, so their own frames are not judged |
+| Still frame | `e2e/cuts.spec.ts` "still frames" | Writes `docs/screenshots/cuts/<cut>-0.2/0.5/0.8.png`; each is a picture (structure larger than a pixel), and no art failed to load. Looking at them is by hand (below) |
+| Edge | `e2e/cuts.spec.ts` "edge" | At the crest of every printed front (the bridge's static, the Split, the burn, the match cut), under 15% of the boundary's pixels lie between the two pictures (an alpha ramp leaves a quarter or more) and at least 5% are put across the front by the print (a clean line puts none); the measure is checked on the Split with its print taken out |
+| Speed (velocity) | `e2e/speed.spec.ts` | For the three crests that read the scroll's speed (the static's tear, the Split's zest, the burn's ember and sparks), the change from rest grows from a slow wheel (8 px a frame) to a flick (40), and all of it is at the crest |
+| Phone | `e2e/phone.spec.ts` | At 390x844, dpr 3, touch: texture fields at 2 octaves, native scrolling; no horizontal overflow at five places in every segment; every copy block shown there lies inside the viewport; the form shows its three messages empty and sends filled in; each cut's middle frame saved as `docs/screenshots/cuts/phone-<cut>-0.5.png` |
+| Frame time | `e2e/frame-time.spec.ts` | At 390x844 (dpr 3) with Chrome's 4x CPU slowdown: every frame through every cut under 16.7 ms of main-thread time, and every frame at rest in the hero and the sheet under 4 ms. The desktop variant runs on a real GPU only (`E2E_GPU`, `docs/PERF.md`) |
+| Reduced motion | `e2e/reduced-motion.spec.ts` | Entering each cut at t = 0.2, 0.5 and 0.8: a 300 ms dissolve, then the cut's end frame; at rest in every chapter and at every cut's end, the canvas and the whole page do not change over 1.5 s |
+| Build | `e2e/build.spec.ts`, and the deploy contract | `npm start` is `next start -p 3000`; a production build in `.next` carries no test hook. Lint, typecheck and build are CI's steps and the phase gate |
+
+## By hand
+
+- **Still frames, by eye** (phase 16, the 27 stills of the last run): every one reads as a picture mid-event: the bridge's reel morphing under the hero's sky, the halves held apart over a slit that becomes a rimmed opening onto the plate, the push draining the plate to paper round the parchment, the smudge resolving into the drawing and the drawing drawing back to its panel, the char band crossing the sheet onto the coda, the ring opening onto the canopy with the fruit thrown, the canopy's gap taking the screen and the figure printing in as dots, the sapling printed on the steps. The remaining hard edges (the flat blue block in `parchment-0.2`, the torn white line through the orange in `bridge-0.5`) are the placeholder paintings' own shapes.
+- **Phone at arm's length** (phase 16, all nine `phone-<cut>-0.5.png` against the desktop stills): the same gestures, recomposed for the band (the phone's plate fit and pans): the reel's morph, the Split's rim, the push draining to paper, the drawing soaked in and turning to plan, the burn's char band, the ring with the thrown fruit, the moire's two screens beating (coarser against the smaller frame), the sapling printing. One thing to watch with the real art: mid-bridge the band's base fades the reel's paper-white into the page colour, which is still the sky until the ground switches at t 0.6 (`src/stage/band.ts`, `script.ts`), so the foot of the band is white going to blue for a moment.
+- **Speed, the settle and real input:** not yet done by hand. The suite holds the velocity half; the settle is the scroll-stop kick, a function of time alone (`src/stage/pointer.ts`: 1.5% decaying to 5% in 1.2 s at any speed), and the earlier machine scrub (`docs/CUTS-REVIEW.md`) drove wheel steps, not a trackpad or a keyboard. Owed: scroll each cut with a trackpad flick, a slow wheel and Page Down on a real machine and watch the crest and the settle.
+- **On real devices:** the frame time on a phone's GPU, iOS Safari's dynamic toolbar and touch momentum, and everything with the real paintings rather than the placeholders (`docs/PERF.md`, "What could not be measured here").

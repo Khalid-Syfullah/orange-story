@@ -180,6 +180,7 @@ void main() {
   vec2 uva = vec2(qa.x / ar, qa.y);
   vec3 pic = codaPic(uva);
   float within = 1.0 - smoothstep(reach * s, reach * s * 1.06, length(q - cq));
+  PROBE((length(q - cq) - reach * s) / (reach * s));   // the e2e probe: the thrown fruit and its reach
   vec3 base = mix(bg, pic, within);
   vec3 A = codaHalo(base, uva, tm);
   // Where the fruit (its peel, stem and leaf) is: the picture differs from the blue it was taken from.
@@ -198,10 +199,13 @@ void main() {
 
   // The front, bitten by two decorrelated fields (4 octaves everywhere: motion fields), printed.
   float front = f0 + bite2(q, N1_FREQ, N1_AMP, N2_FREQ, N2_AMP, vec2(7.3, 1.9), vec2(-3.1, 8.6) + vec2(0.0, uRingP * 0.3) + tm * 0.02) * uBite;
+  // The e2e probe: the crest zone is the halo's light ahead and three lag lengths behind the ring.
+  PROBE_ZONE(front, 3.0 * LIGHT_REACH, 3.0 * LAG_DIST);
   float thr = bayer4(frag);
   float edge = front + printEdge(frag, BAYER, STIPPLE);
   // 1 = the canopy is here: behind the ring, once the cut has begun to print it in.
   float inside = (1.0 - smoothstep(-EDGE_SOFT, EDGE_SOFT, edge)) * dither(uReveal, thr);
+  if (abs(front) < 0.5 * (BAYER + STIPPLE) + EDGE_SOFT) PROBE_MIX(inside);   // the e2e edge probe
 
   // The floating fruit stays on top of the canopy until the canopy's own takes its place.
   float keep = max(1.0 - inside, fruit * dither(uDisc, thr));

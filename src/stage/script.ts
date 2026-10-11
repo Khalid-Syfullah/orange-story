@@ -60,9 +60,10 @@ export const segments: readonly Segment[] = [
   // The push into the parchment she holds; the painting fades to paper around it. The rail already
   // reads The Terms. The chrome turns to ink on the push's own uFlat ramp (Chrome.tsx), not at `at`.
   { id: "parchment", start: 0.37, end: 0.4, chapter: "terms", ground: { from: "sky", to: "paper", at: 0.5 } },
-  // The procedural sheet; the drawing soaks in from the middle.
+  // The procedural sheet at rest (the drawing soaks into it at the start of `drawing`).
   { id: "sheet", start: 0.4, end: 0.42, chapter: "terms", ground: "paper" },
-  // The orbit from eye level to plan while the window draws back toward the margin.
+  // The drawing soaks in from the middle, orbits from eye level to plan, and its window draws back
+  // toward the margin (passes/terms/timeline.ts).
   { id: "drawing", start: 0.42, end: 0.48, chapter: "terms", ground: "paper" },
   // The brushed-edge panel in the left margin beside the terms copy.
   { id: "panel", start: 0.48, end: 0.5, chapter: "terms", ground: "paper" },
@@ -219,6 +220,11 @@ export const ANCHORS: Readonly<Record<string, SegmentId>> = {
  * 300 ms dissolve (docs/CHECKS.md): from the moment the scroll enters one of these segments the
  * stage draws its last frame. The chapters' own segments (the model's beats, the Work, the Terms
  * copy over the panel, the coda, the Questions, the application) keep scrolling: they are content.
+ *
+ * The rise is the first half of one cut (docs/TRANSITIONS.md, Application -> finale: the sapling
+ * prints in and the finale loop takes the frame), so it lands where that cut ends, on the finale
+ * at FINALE_LANDED; the finale holds there too until the scroll passes it, and its own scroll (the
+ * subtitle and the footer) runs on from there under the reader's hand.
  */
 export const REDUCED_HOLD: readonly SegmentId[] = [
   "bridge",
@@ -232,10 +238,17 @@ export const REDUCED_HOLD: readonly SegmentId[] = [
   "rise",
 ];
 
+/**
+ * The finale's local t once it has landed: the loop has taken the frame, the pour has grown and the
+ * wordmark has printed in (passes/finale/timeline.ts checks its ramps end by here).
+ */
+export const FINALE_LANDED = 0.78;
+
 const HOLD_EPS = 1e-6;
 
-/** The progress the stage draws at under reduced motion: a transition's end frame, else `p` itself. */
+/** The progress the stage draws at under reduced motion: the end frame of the cut `p` is in, else `p` itself. */
 export function reducedHold(p: number): number {
   const s = active(p);
+  if (s.id === "rise" || (s.id === "finale" && local("finale", p) < FINALE_LANDED)) return pAt("finale", FINALE_LANDED);
   return REDUCED_HOLD.includes(s.id) && s.end < 1 ? s.end - HOLD_EPS : p;
 }

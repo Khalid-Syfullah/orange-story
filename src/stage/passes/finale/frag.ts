@@ -67,6 +67,7 @@ vec3 printWord(vec3 col, vec2 uv, vec2 frag) {
   screenCell(frag, cell, PRINT_ANGLE, rid, loc, cuv);
   vec2 cw = wordAt(cuv);
   float ak = arrive(cw.x);
+  if (ak > 0.0 && ak < 1.0 && cw.y > 0.02) PROBE(0.0);   // the e2e probe: a letter printing in
   // Instances differ (rule 13): each dot has its own size.
   float rad = 0.80 * ak * sqrt(cw.y) * (0.88 + 0.24 * hash(rid + 4.3));
   float dd = length(loc);
@@ -112,6 +113,7 @@ void main() {
     float cov = 0.0;
     if (d0C < 0.2 || a >= 0.92) {
       float frontC = d0C + bite2(qC, 2.2, 0.30, 7.0, 0.10, vec2(3.1), vec2(11.7));
+      PROBE_ZONE(frontC, 0.06, 0.75);     // the e2e probe: the stipple ahead, the dots and the lag behind
       cov = max(clamp(-frontC / 0.42, 0.0, 1.0), smoothstep(0.92, 1.0, a));
     }
     if (cov > 0.0) {

@@ -9,12 +9,12 @@ Every cut on the page is the same gesture: a front bitten by noise, something ha
 | Hero → Model | 0.04–0.07 | Not a shader cut: the bridge is a 121-frame morph scrubbed by scroll. The shader hands film to reel through the static treatment: a diagonal wave from the bottom-right corner (`d = ((1-x)*aspect + y)/(aspect+1)`, bent by slow noise); ahead of it the film, behind it the reel; at the crest a horizontal tear with hashed row shifts, a mosaic that starts coarse and resolves as the crest passes, a chroma split of ±0.006 along x, and a 5x5 bitmap-font ASCII rubbing of the luminance inside the crest band only. The pan is keyed to the reel's frames so the orange never jumps. | Tear, mosaic, chroma split, glyphs |
 | Model → Work | 0.19–0.22 | The Split, below. | Pith, zest, stipple |
 | Work → sheet | 0.37–0.40 | The camera pushes into the parchment the figure holds (cover-fit the parchment region of the plate with its own zoom and centre) while `uFlat` takes the whole frame to the paper colour; pulp, fibre and tooth are multiplied by the same `uFlat`, so the paper arrives as the colour arrives. A faint shadow of the orange survives in the sheet for the first half of the fill. | None: a push and a colour |
-| Sheet → drawing | 0.40–0.42 | The drawing soaks in from the middle on a radius bitten by two scales of noise, holding the whole frame, as a smudge that resolves into line. `coverage = clamp(t*4.2 - dist*1.9 + (fbm(uv*3)-0.5)*0.7, 0, 1)`. | Ink patches spreading and joining |
+| Sheet → drawing | 0.42–0.44 | The drawing soaks in from the middle on a radius bitten by two scales of noise, holding the whole frame, as a smudge that resolves into line. `coverage = clamp(t*4.2 - dist*1.9 + (fbm(uv*3)-0.5)*0.7, 0, 1)`. | Ink patches spreading and joining |
 | Drawing → panel | 0.42–0.48 | As the orbit turns to plan, the window draws back from full frame to a square panel in the left margin, one rect interpolated with the sampling following it; its edge is brushed by a broad tear and a finer fray across a wide band. The picture zooms inside the cutout, not with it. Size eases with `t*(0.6 + 0.4*t*t)`; the centre follows the size with a 220 ms lag so the panel settles after it shrinks. | Frayed edge |
 | Sheet → blue | 0.50–0.53 | The sheet burns from the bottom left. Two decorrelated fbm fields bend the front; ordered dither and hash stipple print its boundary; the side about to go carbonises in a band that travels with the front (scorch multiplied into the sheet, so the paper keeps reading through the char); an ember glow sits on the cut; the blue coda arrives offset in the direction of travel with `lag = exp(-distBehindCut/0.12)` and settles. The stipple is gated on coverage so nothing speckles ahead of the front. | Char, ember, stipple |
 | Halo → canopy | 0.58–0.59 | Match cut on the fruit: the picked orange's screen position and scale are driven to the nearest orange of the canopy (located once with `uncover()` on the canopy's first frame) while its halo opens outward as a ring front and the canopy is inside it. The copy fades out underneath. | Halo breath, chroma split |
 | Questions → Application | 0.76–0.79 | The sky gap takes a coarse halftone screen (cell 10px × dpr, laid at 15° so it moirés against the pixel grid); the branches dissolve from their inner edges outward through the same screen; the next painting's clouds arrive first as giant dot-screen clouds whose dots grow until they merge into paint, and the figure resolves last. | Growing dots, moiré |
-| Application → finale | 0.94–0.97 | The rise: the sapling prints in from its base upward, the constellation retracts to the fingertip one line at a time with a `0.62/(n-1)` stagger, and the finale loop takes the frame on a colour already on screen. | Retracting hairlines |
+| Application → finale | 0.90–0.98 | The rise: the sapling prints in from its base upward, the constellation retracts to the fingertip one line at a time with a `0.62/(n-1)` stagger, and the finale loop takes the frame on a colour already on screen. | Retracting hairlines |
 
 ## The Split in full (Model → Work)
 
@@ -37,6 +37,7 @@ before any band reads it, so a rim is the same width along the seam as across it
 | front | `r − R(t) + bite2(q, 2.2, 0.30, 5.1, 0.10)` | Two decorrelated fbm fields, 4 octaves; the finer one drifts with 0.4t + 0.02·time |
 | R(t) | `tt·(0.55 + 0.45·tt²)·1.6 − 0.10`, tt = (t−0.10)/0.65 | Accelerates; clears the side edges by t = 0.75 |
 | edge | `front + printEdge(frag, 0.03, 0.02)` | The printed boundary: Bayer 0.03 and hash stipple 0.02 |
+| open | `1 − smoothstep(−0.004, 0.004, edge)` | Narrow against the print's ±0.024, so every boundary pixel is one picture or the other: dots and stipple, not an alpha ramp (at ±0.02 it was a dithered ramp, phase 16) |
 | edgeS | `edge / ‖∇r‖`, `‖∇r‖ = length(q.x, 0.38²·q.y) / r` | The front's distance in frame heights: 1 across the seam, 0.38 along it; every band below reads this |
 | sgn | `clamp(q.x / 0.06, −1, 1)` | Which half a pixel belongs to, ramped through zero at the seam |
 | parting | `sgn · smoothstep(0, 0.6, tt) · 0.09` | How far each half has left, along x |
@@ -76,7 +77,7 @@ void main(){
 
   float front = r - R + bite2(q, 2.2, 0.30, 5.1, 0.10, vec2(7.0), vec2(-3.0) + vec2(0.0, t * 0.4) + uTime * 0.02);
   float edge = front + printEdge(gl_FragCoord.xy, 0.03, 0.02);
-  float pass = 1.0 - smoothstep(-0.02, 0.02, edge);              // 1 = plate shows
+  float pass = 1.0 - smoothstep(-0.004, 0.004, edge);            // 1 = plate shows; each pixel one or the other
   float edgeS = edge / gradR;                                     // the front's distance in frame heights, all round
 
   // the halves part: displaced apart along x, smeared the way they go, pushed in about the seam

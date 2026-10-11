@@ -74,6 +74,10 @@ vec3 cutRaw(vec2 uv, float behind);
 
 const float CUT_BOUND = 0.36;   // |d - c| beyond which no pixel can be in the band
 const float CUT_BAND = 0.13;    // half-width of the crest band in front units
+// Half-width of the smoothstep the printed front goes through: well inside the print's own reach
+// (+-0.025), so each pixel is one picture or the other (phase 16's edge test: at 0.02 the boundary was
+// a dithered alpha ramp, 29% of its pixels between the pictures).
+const float CUT_EDGE = 0.004;
 
 // ---- the bitmap font: rows 0-2 and 3-4 of each glyph, rows exact in 5 bits ----------------------
 ${chain("glyphTop", 0, 3)}
@@ -112,6 +116,9 @@ vec3 staticCut(vec2 uv, vec2 frag, float c, float amp) {
   float tm = uTime * (1.0 - uStill);
   float v = clamp(abs(uVel) / 40.0, 0.0, 1.0);
   float f = cutFront(uv, c);
+  // The e2e probe: the crest zone reaches CUT_BAND ahead (the tear and the chroma split) and
+  // CUT_BOUND behind (the mosaic's lead band, and the lag until B's offset is under 5%).
+  PROBE_ZONE(f, CUT_BAND, CUT_BOUND);
   float band = smoothstep(CUT_BAND, 0.03, abs(f));
   float slot = floor(tm * 14.0);
 
@@ -131,7 +138,8 @@ vec3 staticCut(vec2 uv, vec2 frag, float c, float amp) {
 
   // Which picture: the boundary is printed, not faded (rule 2).
   float edge = f + printEdge(frag, 0.03, 0.02);
-  float behind = 1.0 - smoothstep(-0.02, 0.02, edge);
+  float behind = 1.0 - smoothstep(-CUT_EDGE, CUT_EDGE, edge);
+  if (abs(f) < 0.025 + CUT_EDGE) PROBE_MIX(behind);   // the e2e edge probe, where the print reaches
   float lag = exp(-max(-f, 0.0) / 0.12);
   vec3 col;
   if (behind < 0.002) col = cutA(uvS, fragQ);

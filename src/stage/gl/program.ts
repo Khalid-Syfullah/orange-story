@@ -118,10 +118,15 @@ function fragmentHeader(derivatives: boolean): string {
     .join("\n");
 }
 
-/** Build the full fragment source: header, library, then the pass (as source string 1 for #line). */
-export function assembleFragment(passSource: string, derivatives: boolean): string {
+/**
+ * Build the full fragment source: header, library, then the pass (as source string 1 for #line).
+ * `probe` builds the e2e probe variant (STAGE_PROBE: the pass writes where its front is, see
+ * lib.glsl.ts); only the e2e hook asks for it.
+ */
+export function assembleFragment(passSource: string, derivatives: boolean, probe = false): string {
   // The pass's main becomes passMain so the library's epilogue can follow it (the phone band's fade).
-  return `${fragmentHeader(derivatives)}\n${LIB_GLSL}\n#define main passMain\n#line 1 1\n${passSource}\n#undef main\n${EPILOGUE_GLSL}\n`;
+  const probeDefine = probe ? "#define STAGE_PROBE 1\n" : "";
+  return `${fragmentHeader(derivatives)}\n${probeDefine}${LIB_GLSL}\n#define main passMain\n#line 1 1\n${passSource}\n#undef main\n${EPILOGUE_GLSL}\n`;
 }
 
 function numbered(src: string): string {
@@ -185,9 +190,9 @@ function compile(
  * Compile and link a pass. `fragment` is the pass's own source: the header and the library are
  * prepended here. Returns null (after reporting) when anything fails.
  */
-export function buildProgram(ctx: GLContext, name: string, fragment: string): Program | null {
+export function buildProgram(ctx: GLContext, name: string, fragment: string, probe = false): Program | null {
   const { gl } = ctx;
-  const fragSource = assembleFragment(fragment, ctx.derivatives);
+  const fragSource = assembleFragment(fragment, ctx.derivatives, probe);
   const vs = compile(gl, gl.VERTEX_SHADER, VERTEX_GLSL, name, "vertex", VERTEX_GLSL);
   if (!vs) return null;
   const fs = compile(gl, gl.FRAGMENT_SHADER, fragSource, name, "fragment", fragment);
