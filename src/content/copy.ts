@@ -55,6 +55,8 @@ export const chrome = {
   apply: "Apply",
   /** Left rail chapters (and the chapter menu). */
   chapters,
+  /** The chapter menu's Apply entry: the mark that stands where the chapters have "Ch. 1". */
+  menuApplyMark: "→",
   /** Bottom-right scroll percentage, for example "88%". */
   percent: (value: number): string => `${Math.round(value)}%`,
   /** Accessible names for icon-only controls (not visible on screen). */
@@ -63,6 +65,7 @@ export const chrome = {
     menuOpen: "Open the chapter menu",
     menuClose: "Close the chapter menu",
     chapters: "Chapters",
+    menu: "Chapter menu",
     progress: "Scroll progress",
   },
 } as const;
@@ -222,6 +225,11 @@ export const finale = {
   copyright: (year: number): string => `© ${year} Orange`,
   // TODO: confirm the real contact address (docs/COPY.md).
   email: "hello@orange.io",
+  /** The copy button beside the email, and what it says once the address is on the clipboard. */
+  copyEmail: "Copy",
+  copied: "Copied",
+  /** Accessible name of the copy button. */
+  copyEmailLabel: "Copy the contact email",
 } as const;
 
 /** The whole deck, for pages that want one import. */

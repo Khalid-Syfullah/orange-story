@@ -7,7 +7,7 @@
 // the push's uFlat ramp instead: --fg, --bg and the hairline colour are written as CSS variables on
 // the root every frame the ramp moves (no React state), and the ground classes take over again at
 // either end, where they hold the same values.
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { chrome } from "@/content/copy";
 import { Hairline, PillButton, StarMark } from "@/ui/primitives";
 import type { FrameCtx } from "./frame";
@@ -56,7 +56,36 @@ export function Chrome() {
   const percentRef = useRef<HTMLSpanElement>(null);
   const tokensRef = useRef<Record<ColorToken, RGB> | null>(null);
   const rampRef = useRef("");
+  const menuRef = useRef<HTMLDivElement>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // The chapter menu: focus moves into it on open and back to the grid button on close; Escape
+  // closes it; Tab wraps between the grid button (above the overlay) and the entries.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const menu = menuRef.current;
+    const toggle = toggleRef.current;
+    menu?.querySelector<HTMLButtonElement>("button")?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setMenuOpen(false);
+        return;
+      }
+      if (e.key !== "Tab" || !menu || !toggle) return;
+      const items = [toggle, ...Array.from(menu.querySelectorAll<HTMLButtonElement>("button"))];
+      const at = items.indexOf(document.activeElement as HTMLButtonElement);
+      const next = e.shiftKey ? (at <= 0 ? items.length - 1 : at - 1) : at === items.length - 1 ? 0 : at + 1;
+      e.preventDefault();
+      items[next].focus();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      if (menu?.contains(document.activeElement)) toggle?.focus();
+    };
+  }, [menuOpen]);
 
   const onFrame = useCallback((f: FrameCtx) => {
     const root = rootRef.current;
@@ -102,8 +131,8 @@ export function Chrome() {
   }, []);
   useFrame(onFrame);
 
-  const go = (chapter: ChapterId) => {
-    hub.scrollToSegment(chapterStart(chapter));
+  const go = (target: ChapterId | "apply") => {
+    hub.scrollToSegment(target === "apply" ? "application" : chapterStart(target));
     setMenuOpen(false);
   };
 
@@ -119,7 +148,35 @@ export function Chrome() {
         {chrome.mark}
       </button>
 
+      {menuOpen && (
+        <div
+          ref={menuRef}
+          className={styles.menuOverlay}
+          role="dialog"
+          aria-modal="true"
+          aria-label={chrome.a11y.menu}
+        >
+          <ul className={styles.menuList}>
+            {chrome.chapters.map((c) => (
+              <li key={c.id}>
+                <button type="button" className={styles.menuItem} onClick={() => go(c.id)}>
+                  <span className="meta">{c.short}</span>
+                  <span className="display-l">{c.label}</span>
+                </button>
+              </li>
+            ))}
+            <li>
+              <button type="button" className={styles.menuItem} onClick={() => go("apply")}>
+                <span className="meta">{chrome.menuApplyMark}</span>
+                <span className="display-l">{chrome.apply}</span>
+              </button>
+            </li>
+          </ul>
+        </div>
+      )}
+
       <button
+        ref={toggleRef}
         type="button"
         className={styles.menu}
         aria-label={menuOpen ? chrome.a11y.menuClose : chrome.a11y.menuOpen}
@@ -128,20 +185,8 @@ export function Chrome() {
       >
         <GridIcon />
       </button>
-      {menuOpen && (
-        <ul className={styles.menuList} aria-label={chrome.a11y.chapters}>
-          {chrome.chapters.map((c) => (
-            <li key={c.id}>
-              <button type="button" className={`meta ${styles.menuItem}`} onClick={() => go(c.id)}>
-                <span>{c.short}</span>
-                <span>{c.label}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
 
-      <PillButton className={styles.apply} onClick={() => hub.scrollToSegment("application")}>
+      <PillButton className={styles.apply} onClick={() => go("apply")}>
         {chrome.apply}
       </PillButton>
 

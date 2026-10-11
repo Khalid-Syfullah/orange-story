@@ -28,7 +28,7 @@ const rect = (u: UniformSetter, name: string, r: { x: number; y: number; w: numb
   u.set4f(name, r.x, r.y, r.w, r.h);
 
 /** The application painting's framing and the scrim box, for all three passes. */
-function setAppUniforms(css: readonly [number, number], u: UniformSetter, scrim: number): void {
+export function setAppUniforms(css: readonly [number, number], u: UniformSetter, scrim: number): void {
   const framing = applicationFraming(css);
   u.set2f("uAppPan", framing.pan.x, framing.pan.y);
   u.set1f("uAppZoom", framing.zoom);

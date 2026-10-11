@@ -1,0 +1,121 @@
+/* The finale's DOM: the subtitle under the wordmark and the footer line along the mid rule, milk on
+   the finale's blue (the `on-sky` ground on the container). Opacity and lift are written from the
+   frame subscription, so every piece starts hidden until the first frame. The wordmark is drawn in
+   the canvas; the heading here is only its accessible name. */
+
+.finale {
+  position: absolute;
+  inset: 0;
+  color: var(--fg);
+  pointer-events: none;
+}
+
+.piece {
+  opacity: 0;
+  visibility: hidden;
+  will-change: opacity, transform;
+}
+
+.wordmark {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.subtitle {
+  position: absolute;
+  left: 50%;
+  top: 28vh;
+  translate: -50% 0;
+  width: min(32rem, calc(100% - 4rem));
+  margin: 0;
+  text-align: center;
+  font-size: clamp(1.05rem, min(0.85rem + 0.5vw, 2.6vh), 1.35rem);
+  text-shadow:
+    0 0 10px color-mix(in srgb, var(--sky) 90%, transparent),
+    0 0 22px color-mix(in srgb, var(--sky) 80%, transparent);
+}
+
+/* The footer line sits just under the mid rule, split round the tree's trunk. */
+.foot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(var(--rule-mid) + 0.9rem);
+  height: 2rem;
+  text-shadow: 0 0 14px color-mix(in srgb, var(--sky) 70%, transparent);
+}
+
+.copyright {
+  position: absolute;
+  right: calc(50% + 17%);
+  top: 50%;
+  translate: 0 -50%;
+  white-space: nowrap;
+}
+
+.contact {
+  position: absolute;
+  left: calc(50% + 4.5%);
+  top: 50%;
+  translate: 0 -50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  white-space: nowrap;
+}
+
+.email {
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+  text-transform: none;
+}
+
+.copyBtn {
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--border-pill);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-transform: uppercase;
+  letter-spacing: inherit;
+  cursor: pointer;
+  transition:
+    background-color 240ms var(--ease),
+    color 240ms var(--ease);
+}
+
+.copyBtn:hover {
+  background: var(--fg);
+  color: var(--sky);
+}
+
+.status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+@media (max-width: 640px) {
+  .copyright {
+    right: auto;
+    left: var(--col-a);
+  }
+
+  .contact {
+    left: auto;
+    right: calc(100% - var(--hair-right));
+  }
+
+  .foot {
+    top: calc(var(--rule-mid) + 0.6rem);
+  }
+}

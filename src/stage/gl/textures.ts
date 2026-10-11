@@ -544,6 +544,57 @@ class FramesTexture extends BaseHandle implements FramesHandle {
 }
 
 // ---------------------------------------------------------------------------------------------
+// Canvas textures
+// ---------------------------------------------------------------------------------------------
+
+/** A texture made from an offscreen canvas (the finale's wordmark): filled by `set`, bound by `bind`. */
+export class CanvasTexture {
+  private readonly texture: WebGLTexture;
+  private has = false;
+  /** The caller's version tag of what was last uploaded. */
+  version = -1;
+
+  constructor(private readonly gl: WebGLRenderingContext) {
+    const tex = gl.createTexture();
+    if (!tex) throw new Error("[stage] could not create a canvas texture");
+    this.texture = tex;
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 0]));
+  }
+
+  /** Upload the canvas (no flip: uv (0,0) is its top-left). */
+  set(canvas: HTMLCanvasElement, version = 0): void {
+    this.version = version;
+    const { gl } = this;
+    // A scratch unit, so no texture the pass has bound is replaced by the upload.
+    gl.activeTexture(gl.TEXTURE0 + 7);
+    gl.bindTexture(gl.TEXTURE_2D, this.texture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
+    this.has = true;
+  }
+
+  get ready(): boolean {
+    return this.has;
+  }
+
+  bind(unit: number): void {
+    const { gl } = this;
+    gl.activeTexture(gl.TEXTURE0 + unit);
+    gl.bindTexture(gl.TEXTURE_2D, this.texture);
+  }
+
+  destroy(): void {
+    this.gl.deleteTexture(this.texture);
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
 // The manager
 // ---------------------------------------------------------------------------------------------
 
@@ -562,6 +613,7 @@ export class TextureManager {
   private readonly ownsPool: boolean;
   private readonly handles = new Map<string, StillTexture | LoopTexture | FramesTexture>();
   private readonly shared: Shared;
+  private readonly canvases = new Map<string, CanvasTexture>();
 
   constructor(
     private readonly gl: WebGLRenderingContext,
@@ -619,6 +671,16 @@ export class TextureManager {
     return handle;
   }
 
+  /** A texture filled from an offscreen canvas by the caller (one per key). */
+  canvas(key: string): CanvasTexture {
+    let handle = this.canvases.get(key);
+    if (!handle) {
+      handle = new CanvasTexture(this.gl);
+      this.canvases.set(key, handle);
+    }
+    return handle;
+  }
+
   /** A frame sequence scrubbed with aim()/near(). */
   frames(id: ArtId): FramesHandle {
     const key = `frames:${id}`;
@@ -670,6 +732,8 @@ export class TextureManager {
   destroy(): void {
     for (const handle of this.handles.values()) handle.destroy();
     this.handles.clear();
+    for (const c of this.canvases.values()) c.destroy();
+    this.canvases.clear();
     if (this.ownsPool) this.pool.destroy();
     void this.gl;
   }

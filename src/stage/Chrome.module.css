@@ -74,6 +74,7 @@
 
 /* Top-left: the Orange mark in the top band, the grid button under it on the left hairline. */
 .mark {
+  z-index: 6;
   position: absolute;
   left: var(--col-a);
   top: calc(var(--rule-top) / 2);
@@ -92,6 +93,7 @@
 }
 
 .menu {
+  z-index: 6;
   position: absolute;
   left: var(--hair-left);
   top: calc(var(--rule-top) + 1.25rem);
@@ -117,34 +119,63 @@
   height: 12px;
 }
 
-.menuList {
+/* The chapter menu: full screen over the frame, --press at 92%; the grid button and the mark stay
+   above it so the button closes it. */
+.menuOverlay {
   position: absolute;
-  left: var(--col-a);
-  top: calc(var(--rule-top) + 1.25rem);
+  inset: 0;
+  z-index: 5;
   display: grid;
-  gap: 0.5rem;
+  align-items: center;
+  padding: calc(var(--rule-top) + 1.5rem) var(--col-a) 3rem;
+  background: color-mix(in srgb, var(--press) 92%, transparent);
+  color: var(--milk);
+  pointer-events: auto;
+  animation: menuIn 320ms var(--ease) both;
+}
+
+@keyframes menuIn {
+  from {
+    opacity: 0;
+  }
+}
+
+.menuList {
+  display: grid;
+  gap: clamp(0.5rem, 2vh, 1.25rem);
   margin: 0;
   padding: 0;
   list-style: none;
-  pointer-events: auto;
 }
 
 .menuItem {
   display: inline-flex;
-  gap: 0.75rem;
+  align-items: baseline;
+  gap: 1.5rem;
   padding: 0.25rem 0;
   border: 0;
   background: none;
   color: inherit;
   cursor: pointer;
+  text-align: left;
 }
 
 .menuItem span:first-child {
+  min-width: 3.5rem;
   opacity: 0.55;
+}
+
+.menuItem span:last-child {
+  transition: opacity 240ms var(--ease);
+}
+
+.menuItem:hover span:last-child {
+  opacity: 0.7;
 }
 
 /* Top-right: the Apply pill, right edge on the right hairline. */
 .apply {
+  z-index: 6;
   position: absolute;
   left: var(--hair-right);
   top: calc(var(--rule-top) / 2);

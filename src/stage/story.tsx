@@ -3,6 +3,7 @@
 // added here as children by later phases.
 import { ApplicationCopy } from "./ApplicationCopy";
 import { CodaCopy } from "./CodaCopy";
+import { FinaleCopy } from "./FinaleCopy";
 import { HeroCopy } from "./HeroCopy";
 import { ModelCopy } from "./ModelCopy";
 import { storyPasses } from "./passes";
@@ -21,6 +22,7 @@ export function StoryStage() {
       <CodaCopy />
       <QuestionsCopy />
       <ApplicationCopy />
+      <FinaleCopy />
     </Stage>
   );
 }
