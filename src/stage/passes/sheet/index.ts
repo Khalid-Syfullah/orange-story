@@ -4,9 +4,8 @@
 // p 0.40 is invisible; the only motion at rest is the light (and the kick), stopped under reduced
 // motion.
 //
-// It claims `sheet` and, until the drawing and its panel are drawn on this paper (phase 9: they
-// multiply the drawing into paperSheet() and take those two segments from this pass), the
-// `drawing` and `panel` segments too, so everything on paper after the push is paper.
+// It claims `sheet`. The drawing and its panel (`drawing`, `panel`) are passes/terms, which draws
+// this same paperSheet() with the drawing multiplied into it, so the cut at p 0.42 is invisible too.
 import type { PassDef } from "../../gl/passes";
 import { PAPER_GLSL } from "../paper";
 
@@ -23,6 +22,6 @@ void main() {
 
 export const sheetPass: PassDef = {
   id: "sheet",
-  segments: ["sheet", "drawing", "panel"],
+  segments: ["sheet"],
   frag: SHEET_FRAG,
 };

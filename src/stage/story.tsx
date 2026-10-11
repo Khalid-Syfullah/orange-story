@@ -5,6 +5,7 @@ import { HeroCopy } from "./HeroCopy";
 import { ModelCopy } from "./ModelCopy";
 import { storyPasses } from "./passes";
 import { Stage } from "./Stage";
+import { TermsCopy } from "./TermsCopy";
 import { WorkCopy } from "./WorkCopy";
 
 export function StoryStage() {
@@ -13,6 +14,7 @@ export function StoryStage() {
       <HeroCopy />
       <ModelCopy />
       <WorkCopy />
+      <TermsCopy />
     </Stage>
   );
 }

@@ -1,0 +1,81 @@
+/* The terms copy: one column in column B beside the panel, the title and body at the panel's top,
+   the tag and side text at its bottom; ink on paper (the `on-paper` ground on the container also
+   feeds the tag's tint). The column's left, top, width and height are written as CSS variables
+   from passes/terms/timeline.ts once per frame size, so it always sits beside the panel the shader
+   draws. Opacity and lift are written from the frame subscription, so every piece starts hidden
+   until the first frame. */
+
+.terms {
+  position: absolute;
+  inset: 0;
+  color: var(--fg);
+  pointer-events: none;
+}
+
+.column {
+  position: absolute;
+  left: var(--terms-left, 40%);
+  top: var(--terms-top, 17%);
+  width: var(--terms-width, 30%);
+  min-height: var(--terms-height, 0);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: clamp(1.25rem, 3.2vh, 2.25rem);
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: clamp(0.8rem, 2vh, 1.25rem);
+}
+
+.foot {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.piece {
+  opacity: 0;
+  visibility: hidden;
+  will-change: opacity, transform;
+}
+
+.title {
+  max-width: 28rem;
+  /* Sized by height as well as width so the block stays beside a panel on short frames. */
+  font-size: clamp(1.75rem, min(1rem + 2.6vw, 6vh), 3.25rem);
+}
+
+.body {
+  max-width: 26rem;
+  font-size: clamp(1rem, min(0.85rem + 0.4vw, 2.4vh), 1.25rem);
+}
+
+.side {
+  max-width: 26rem;
+  color: color-mix(in srgb, var(--fg) 86%, transparent);
+}
+
+/* Tall phones: the panel on top, the copy stacked under it in one column. */
+.terms[data-stacked="true"] .column {
+  justify-content: flex-start;
+  gap: clamp(1rem, 2.4vh, 1.5rem);
+}
+
+.terms[data-stacked="true"] .title,
+.terms[data-stacked="true"] .body,
+.terms[data-stacked="true"] .side {
+  max-width: none;
+}
+
+.terms[data-stacked="true"] .title {
+  font-size: clamp(1.5rem, 7vw, 2.25rem);
+}
+
+.terms[data-stacked="true"] .body {
+  font-size: 1rem;
+}

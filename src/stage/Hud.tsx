@@ -3,11 +3,13 @@
 // rendered hidden and switched on in an effect so server and client markup match. With `?finish`
 // the frame time includes the GPU (the engine waits for the draw); over The Split it lists the
 // cut's tune (`?tune=key:value,...` retunes it live, starred entries are overridden); over the push
-// into the parchment it shows the push, the magnification, uFlat, the shadow and the sheet's lod.
+// into the parchment it shows the push, the magnification, uFlat, the shadow and the sheet's lod;
+// over the terms the soak, the orbit's frame, the retreat, the window and the copy's ramps.
 import { useEffect, useRef } from "react";
 import { useStage } from "./hub";
 import { parchmentHudLines } from "./passes/parchment/timeline";
 import { splitTuneLines } from "./passes/split/tune";
+import { termsHud } from "./passes/terms";
 
 export function Hud() {
   const ref = useRef<HTMLPreElement>(null);
@@ -49,6 +51,7 @@ export function Hud() {
       ];
       if (pass === "split") lines.push("tune (?tune=key:value,...)", ...splitTuneLines());
       if (pass === "parchment") lines.push(...parchmentHudLines(f.p, f.css));
+      if (pass === "terms") lines.push(...termsHud(f.p, f.css));
       el.textContent = lines.join("\n");
     });
   }, [hub]);

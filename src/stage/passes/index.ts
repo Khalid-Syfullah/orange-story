@@ -9,10 +9,11 @@ import { parchmentPass } from "./parchment";
 import { placeholderPass } from "./placeholder";
 import { sheetPass } from "./sheet";
 import { splitPass } from "./split";
+import { termsPass } from "./terms";
 import { workPass } from "./work";
 
-// The first pass to claim a segment draws it: a pass that takes `drawing` or `panel` from the
-// sheet must come before sheetPass here.
+// The first pass to claim a segment draws it, so a pass that takes a segment from a more general one
+// comes before it here (terms takes `drawing` and `panel`, which the sheet no longer claims).
 export const storyPasses: readonly PassDef[] = [
   heroPass,
   bridgePass,
@@ -20,6 +21,7 @@ export const storyPasses: readonly PassDef[] = [
   splitPass,
   workPass,
   parchmentPass,
+  termsPass,
   sheetPass,
   placeholderPass,
 ];
