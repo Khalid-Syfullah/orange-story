@@ -1,0 +1,120 @@
+.page {
+  display: grid;
+  min-height: 100vh;
+  background: var(--milk);
+}
+
+.block {
+  display: grid;
+  gap: 1.5rem;
+  padding: 3rem max(var(--gutter-min), 5.3vw);
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.scale {
+  display: grid;
+  gap: 1.75rem;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(9rem, 14rem) 1fr;
+  align-items: baseline;
+  gap: 1.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--line-on-flat);
+}
+
+.rowLabel {
+  opacity: 0.6;
+}
+
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: 1rem;
+}
+
+.swatch {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.chip {
+  display: block;
+  height: 4.5rem;
+  border-radius: var(--radius-tag);
+  border: 1px solid var(--line-on-flat);
+}
+
+.inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+}
+
+.frames {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 1.5rem;
+}
+
+/* A miniature of the stage frame: every position comes from the layout tokens. */
+.frame {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  background: var(--bg);
+  color: var(--fg);
+  overflow: hidden;
+}
+
+.left,
+.right {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
+.left {
+  left: var(--hair-left);
+}
+
+.right {
+  left: var(--hair-right);
+}
+
+.top,
+.mid {
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+
+.top {
+  top: var(--rule-top);
+}
+
+.mid {
+  top: var(--rule-mid);
+}
+
+.midStar {
+  position: absolute;
+  left: var(--hair-left);
+  top: var(--rule-mid);
+  transform: translate(-50%, -50%);
+}
+
+.colA {
+  position: absolute;
+  left: var(--col-a);
+  top: calc(var(--rule-top) + 1rem);
+}
+
+.colB {
+  position: absolute;
+  left: var(--col-b);
+  top: calc(var(--rule-mid) + 1rem);
+}

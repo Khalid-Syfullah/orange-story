@@ -1,0 +1,308 @@
+/* orange.io design tokens and base styles.
+   Fonts come from src/app/fonts.ts as --font-display, --font-text and --font-mono. */
+
+:root {
+  /* ---- Colours -------------------------------------------------------------------------- */
+  --sky: #1f4e9c;
+  --sky-soft: #6f9bd6;
+  --milk: #f6f3ec; /* text on sky */
+  --ink: #15130f;
+  --press: #0e0c0a;
+  --orange: #ff7a00; /* the single accent */
+  --leaf: #476b35;
+  --marble: #ece7dd;
+  --paper: #efe6d2; /* the sheet */
+
+  /* Foreground of the current ground; components derive tints from it. */
+  --fg: var(--milk);
+  --bg: var(--sky);
+
+  /* ---- Type scale (fluid) --------------------------------------------------------------- */
+  --fs-display-xxl: clamp(4rem, 2rem + 9vw, 11rem);
+  --fs-display-xl: clamp(2.75rem, 1rem + 5.3vw, 5.5rem);
+  --fs-display-l: clamp(2rem, 1rem + 2.6vw, 3.25rem);
+  --fs-title: 1.625rem;
+  --fs-lead: 1.25rem;
+  --fs-body: clamp(0.8125rem, 0.75rem + 0.2vw, 0.9375rem);
+  --fs-label: 0.6875rem;
+  --fs-meta: 0.75rem;
+
+  /* ---- Shapes --------------------------------------------------------------------------- */
+  --radius-pill: 999px;
+  --radius-tag: 4px;
+  --line-on-paint: rgb(246 243 236 / 0.55); /* hairline over paintings: 55% milk */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1); /* the one easing curve */
+
+  /* ---- Layout (percentages of the full-viewport frame) ---------------------------------- */
+  --gutter-min: 16px; /* side gutter never under this */
+  --hair-left: max(var(--gutter-min), 5.3%); /* the rail sits on it */
+  --hair-right: min(calc(100% - var(--gutter-min)), 94.7%);
+  --rule-top: 72px;
+  --rule-mid: 70.5%; /* of the frame's height; star mark on the left hairline */
+  --col-a: max(calc(var(--gutter-min) * 2), 8%);
+  --col-b: max(calc(var(--gutter-min) * 2), 24%);
+}
+
+/* Tints derived from the current foreground. Re-declared on every ground class, because a custom
+   property that uses var() resolves where it is declared, not where it is used. */
+:root,
+.on-sky,
+.on-paper,
+.on-milk,
+.on-press {
+  --line-on-flat: color-mix(in srgb, var(--fg) 20%, transparent); /* hairline on flat grounds */
+  --border-pill: color-mix(in srgb, var(--fg) 20%, transparent);
+  --tint-tag: color-mix(in srgb, var(--fg) 10%, transparent);
+}
+
+/* ---- Base ------------------------------------------------------------------------------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-text), system-ui, sans-serif;
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 1px solid var(--orange);
+  outline-offset: 3px;
+}
+
+/* ---- Type scale ------------------------------------------------------------------------- */
+
+.display-xxl {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: var(--fs-display-xxl);
+  font-weight: 300;
+  font-optical-sizing: auto;
+  letter-spacing: -0.03em;
+  line-height: 0.9;
+}
+
+.display-xxl--wordmark {
+  font-weight: 600;
+}
+
+.display-xl {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: var(--fs-display-xl);
+  font-weight: 300;
+  font-optical-sizing: auto;
+  letter-spacing: -0.02em;
+  line-height: 0.95;
+}
+
+.display-l {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: var(--fs-display-l);
+  font-weight: 300;
+  font-optical-sizing: auto;
+  letter-spacing: -0.015em;
+  line-height: 1;
+}
+
+.title {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: var(--fs-title);
+  font-weight: 400;
+  line-height: 1.15;
+}
+
+.lead {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: var(--fs-lead);
+  font-weight: 300;
+  line-height: 1.35;
+}
+
+.body {
+  font-family: var(--font-text), system-ui, sans-serif;
+  font-size: var(--fs-body);
+  font-weight: 400;
+  line-height: 1.55;
+}
+
+.label {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: var(--fs-label);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  line-height: 1.2;
+}
+
+.meta {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: var(--fs-meta);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+}
+
+.italic {
+  font-style: italic;
+}
+
+/* ---- Grounds: set the foreground the shapes derive from ---------------------------------- */
+
+.on-sky {
+  --fg: var(--milk);
+  --bg: var(--sky);
+}
+
+.on-paper {
+  --fg: var(--ink);
+  --bg: var(--paper);
+}
+
+.on-milk {
+  --fg: var(--ink);
+  --bg: var(--milk);
+}
+
+.on-press {
+  --fg: var(--milk);
+  --bg: var(--press);
+}
+
+/* ---- Pill button: radius 999px, 1px border at 20% fg, mono label, arrow chip -------------- */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 40px;
+  padding: 0.3125rem 0.3125rem 0.3125rem 1.125rem;
+  border: 1px solid var(--border-pill);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--fg);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: var(--fs-label);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    border-color 420ms var(--ease),
+    background-color 420ms var(--ease);
+}
+
+.pill:hover {
+  border-color: color-mix(in srgb, var(--fg) 45%, transparent);
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+}
+
+.pill__chip {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-pill);
+  background: var(--fg);
+  color: var(--bg);
+  transition: transform 420ms var(--ease);
+}
+
+.pill:hover .pill__chip {
+  transform: translateX(2px);
+}
+
+.pill__chip svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* ---- Tag: radius 4px, 10% tint, mono uppercase, decorative ------------------------------- */
+
+.tag {
+  display: inline-block;
+  padding: 0.3125rem 0.5rem 0.25rem;
+  border-radius: var(--radius-tag);
+  background: var(--tint-tag);
+  color: var(--fg);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: var(--fs-label);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  line-height: 1.2;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* ---- Hairlines and the star mark --------------------------------------------------------- */
+
+.hairline {
+  background: var(--line-on-flat);
+}
+
+.hairline--paint {
+  background: var(--line-on-paint);
+}
+
+.hairline--v {
+  width: 1px;
+}
+
+.hairline--h {
+  height: 1px;
+}
+
+.star {
+  display: block;
+  width: 11px;
+  height: 11px;
+  color: var(--fg);
+}
+
+/* ---- Visually hidden (screen readers only) ---------------------------------------------- */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

@@ -1,0 +1,221 @@
+// Every on-screen string on orange.io, grouped by where it appears.
+// Source of truth: docs/COPY.md. Wording here must match it exactly; components never type copy.
+//
+// Strings that need a value at runtime are small functions (scroll percentage, footer year),
+// so the wording still lives here and only the number comes from the caller.
+
+export interface Beat {
+  title: string;
+  subtitle?: string;
+  tag?: string;
+  /** Typed character by character by scroll progress. */
+  typed?: string;
+}
+
+export interface WorkCard {
+  tag: string;
+  title: string;
+  body: string;
+}
+
+export interface Question {
+  q: string;
+  a: string;
+}
+
+export interface Chapter {
+  /** Anchor id used by the menu and the rail (#model, #work, ...). */
+  id: "model" | "work" | "terms" | "questions";
+  /** Label on the left rail. */
+  label: string;
+  /** Label in the chapter menu ("Ch. 1" ...). */
+  short: string;
+}
+
+export interface FormField {
+  name: "name" | "email" | "grow";
+  label: string;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Chrome (always on screen)
+// ---------------------------------------------------------------------------------------------
+
+const chapters: readonly Chapter[] = [
+  { id: "model", label: "The Model", short: "Ch. 1" },
+  { id: "work", label: "The Work", short: "Ch. 2" },
+  { id: "terms", label: "The Terms", short: "Ch. 3" },
+  { id: "questions", label: "Questions", short: "Ch. 4" },
+];
+
+export const chrome = {
+  /** The Orange mark, top-left. */
+  mark: "Orange",
+  /** Top-right pill button with a right-arrow chip; scrolls to the application form. */
+  apply: "Apply",
+  /** Left rail chapters (and the chapter menu). */
+  chapters,
+  /** Bottom-right scroll percentage, for example "88%". */
+  percent: (value: number): string => `${Math.round(value)}%`,
+  /** Accessible names for icon-only controls (not visible on screen). */
+  a11y: {
+    home: "Orange, back to the top",
+    menuOpen: "Open the chapter menu",
+    menuClose: "Close the chapter menu",
+    chapters: "Chapters",
+    progress: "Scroll progress",
+  },
+} as const;
+
+// ---------------------------------------------------------------------------------------------
+// Hero
+// ---------------------------------------------------------------------------------------------
+
+export const hero = {
+  title: "Grown to be found.",
+  subtitle: "A growth partner paid from the harvest, not the hours.",
+  /** Right-arrow chip; scrolls to the application form. */
+  button: "Start a partnership",
+  /** Bottom-left tag. */
+  tag: "What we do",
+  /** Bottom-left paragraph. */
+  paragraph:
+    "We build your software, get it ranked where buyers search, and take our pay from the new revenue it brings in. No retainer. No timesheets. If you don't grow, we don't invoice.",
+} as const;
+
+// ---------------------------------------------------------------------------------------------
+// Chapter 1: The Model
+// ---------------------------------------------------------------------------------------------
+
+export const model = {
+  chapter: chapters[0],
+  /** Beat over the grove (picking). */
+  grove: {
+    title: "We get you found.",
+    subtitle: "Search and links that put you in front of the people already looking.",
+  } satisfies Beat,
+  /** Beat over the robed man (the split orange). */
+  share: {
+    title: "We split the harvest.",
+    tag: "Revenue share",
+    typed: "Nothing billed by the hour. We share the outcome, so we share the risk.",
+  } satisfies Beat,
+} as const;
+
+// ---------------------------------------------------------------------------------------------
+// Chapter 2: The Work
+// ---------------------------------------------------------------------------------------------
+
+export const work = {
+  chapter: chapters[1],
+  cards: [
+    {
+      tag: "Search engine optimization",
+      title: "Found, built and ranked by one team.",
+      body: "Our engineers and our search specialists are the same people. Every site is shaped for search from the first commit, not patched for it afterwards.",
+    },
+    {
+      tag: "Content and links",
+      title: "Pages people search for, links they trust.",
+      body: "We write what your buyers are already typing into a search bar, and earn mentions from the places they already read.",
+    },
+    {
+      tag: "Custom software",
+      title: "We build the thing that gets ranked.",
+      body: "Storefronts, marketplaces, booking flows: the systems a modern business sells through. Speed, structure and clean rendering decide rankings long before the copy does, so we design for them from day one. What we ship loads fast, reads cleanly, and gives search engines nothing to stumble over.",
+    },
+  ] satisfies readonly WorkCard[],
+} as const;
+
+// ---------------------------------------------------------------------------------------------
+// Chapter 3: The Terms
+// ---------------------------------------------------------------------------------------------
+
+export const terms = {
+  chapter: chapters[2],
+  block: {
+    title: "Nothing upfront. A share of the growth.",
+    body: "Starting costs you nothing: no retainer, no project fee, no meter running. We fund the strategy, the build, the content and the links.",
+    tag: "In plain terms",
+    side: "We earn an agreed percentage of the new revenue the work creates, measured against a starting baseline we can both see. Everything we make stays yours: the code, the content, the rankings. We keep our partner list short, because being paid on results means choosing carefully.",
+  },
+  /** Large chapter title over the coda. */
+  codaTitle: "The Terms",
+  fit: {
+    text: "We work with companies that already sell something real and want more of it from search: online shops, software products, marketplaces and service businesses.",
+    tag: "In plain terms",
+    side: "If that sounds like you, this page is the whole proposal. If you're pre-revenue, want developers by the hour, or need results by next week, we're not the right fit, and we'll say so on the first call.",
+  },
+} as const;
+
+// ---------------------------------------------------------------------------------------------
+// Chapter 4: Questions
+// ---------------------------------------------------------------------------------------------
+
+export const questions = {
+  chapter: chapters[3],
+  /** Section title. Its last word is the one handwritten in (see `titleHandwritten`). */
+  title: "Questions worth asking first.",
+  /** The part of `title` set in type, before the handwritten word. */
+  titleSet: "Questions worth asking",
+  /** The last word of `title`, handwritten in as the reader arrives. */
+  titleHandwritten: "first.",
+  items: [
+    {
+      q: "What does it cost to start?",
+      a: "Nothing upfront and nothing by the hour. We pay for the strategy, the software, the content and the links ourselves, and earn an agreed percentage of the new revenue the work brings in. No growth, no bill.",
+    },
+    {
+      q: "How big is your share?",
+      a: "We agree on it before we begin, based on how much needs building. It only ever applies to growth above your current baseline, never to revenue you already earn.",
+    },
+    {
+      q: "Why a revenue share instead of a fee?",
+      a: "Hourly billing rewards effort, and a retainer pays the same whether you grow or not. Remove both, and the only way left for us to get paid is to grow your revenue.",
+    },
+    {
+      q: "How do you measure what you've added?",
+      a: "Before we start, we agree on your baseline and on how new organic revenue is counted: analytics, orders or bookings, whichever fits your business. We both look at the same dashboard.",
+    },
+    {
+      q: "How soon does it pay off?",
+      a: "Search builds slowly, then quickly. Technical and software fixes land in weeks; rankings and revenue usually move within months. The wait costs you nothing, because we're funding the climb.",
+    },
+  ] satisfies readonly Question[],
+} as const;
+
+// ---------------------------------------------------------------------------------------------
+// Application
+// ---------------------------------------------------------------------------------------------
+
+export const application = {
+  tag: "Apply",
+  title: "Show us what you sell, and where you want more of it.",
+  subtitle: "A person reads every application. If we're a fit, you'll hear back within a week.",
+  fields: [
+    { name: "name", label: "Your name" },
+    { name: "email", label: "Work email" },
+    { name: "grow", label: "What should grow?" },
+  ] satisfies readonly FormField[],
+  /** Right-arrow chip. */
+  submit: "Send application",
+  success: "Received. We'll read it and reply within a week.",
+} as const;
+
+// ---------------------------------------------------------------------------------------------
+// Finale
+// ---------------------------------------------------------------------------------------------
+
+export const finale = {
+  wordmark: "Orange",
+  subtitle: "A growth partner paid from the harvest, not the hours.",
+  /** Footer line, "© {year} Orange". */
+  copyright: (year: number): string => `© ${year} Orange`,
+  // TODO: confirm the real contact address (docs/COPY.md).
+  email: "hello@orange.io",
+} as const;
+
+/** The whole deck, for pages that want one import. */
+export const copy = { chrome, hero, model, work, terms, questions, application, finale } as const;
+
+export type Copy = typeof copy;

@@ -1,25 +1,52 @@
 # orange-story
 
-The orange.io site: one continuous scroll story in four chapters (The Model, The Work, The Terms, Questions) with a hero before them and an application and finale after, drawn by one raw WebGL canvas and scrolled as a clock. The structure and cuts follow pear.no; every painting, line of copy and shader is Orange's own.
+The orange.io site: one continuous scroll story in four chapters (The Model, The Work, The Terms, Questions) with a hero before them and an application and finale after, drawn by one raw WebGL canvas and scrolled as a clock. Every chapter, transition and camera move is a pure function of smoothed scroll progress `p` (0 to 1), so scrolling up plays everything backwards. The structure and cuts follow pear.no; every painting, line of copy and shader is Orange's own.
 
-The repo is currently reset to its specification. The site is rebuilt phase by phase by the `build-orange` skill from the prompt pack; nothing under `src/` exists until phase 1 runs.
+## Stack
+
+- Next.js (App Router, TypeScript), React, plain CSS (tokens in `src/app/globals.css`, CSS modules per page). No Tailwind, no component library.
+- Fonts through `next/font/google` in `src/app/fonts.ts`: Newsreader (display), Geist (text), Geist Mono (labels).
+- The stage (from phase 2): raw WebGL 1 in `src/stage/`. No Three.js, no GSAP, no Lenis, no animation library.
+- ESLint with `eslint-config-next` (flat config in `eslint.config.mjs`).
+
+## Scripts
+
+| Script | What it does |
+| --- | --- |
+| `npm run dev` | Development server on http://localhost:3000 |
+| `npm run build` | Production build |
+| `npm start` | Serves the production build on port 3000 |
+| `npm run lint` | ESLint with the Next.js config (Next.js 16 removed `next lint`, so this runs `eslint .`) |
+| `npm run typecheck` | `tsc --noEmit` |
+
+Node 20.9 or newer (CI and the server use Node 22).
+
+## Where things live
+
+- `src/content/copy.ts`: every on-screen string, grouped by chapter (wording from `docs/COPY.md`). Components never type copy.
+- `src/content/art.ts`: the art manifest, one typed entry per painting with its kind, aspect, file paths and anchor points.
+- `src/app/globals.css`: colour, type, shape and layout tokens.
+- `src/ui/primitives.tsx`: pill button, tag, hairline and star mark.
+- `/design` (development only, not linked): the type scale, swatches, buttons, tags and hairlines.
 
 ## The pack
 
 - `docs/STORY.md`: the sections, their scroll ranges, what is on screen, and which asset each uses.
 - `docs/COPY.md`: every on-screen string.
 - `docs/PAINTINGS.md`: the style preamble and one prompt per painting, loop or frame sequence.
-- `docs/TRANSITIONS.md`: every cut on the page, with The Split (Chapter 1 → 2) specified in full.
-- `docs/MOTION-RULES.md`: the fifteen rules that keep the motion from feeling mechanical, plus the scroll smoothing.
+- `docs/TRANSITIONS.md`: every cut on the page, with The Split (Chapter 1 to 2) specified in full.
+- `docs/MOTION-RULES.md`: the rules that keep the motion from feeling mechanical, plus the scroll smoothing.
 - `docs/CHECKS.md`: what passing means for a cut.
-- `prompts/NN-name.md`: sixteen phases, each a complete instruction for one subagent; `prompts/NN-name.commit` is that phase's commit message; `prompts/models.conf` assigns the model and effort. Fable 5.1 takes the engine, The Split, the burn and the final polish of every cut; Opus 5.5 and Sonnet 5.5 take the rest.
+- `prompts/NN-name.md`: sixteen phases, each a complete instruction for one subagent; `prompts/NN-name.commit` is that phase's commit message; `prompts/models.conf` assigns the model and effort.
 
 ## Building it
 
 In Claude Code, from the repo root: `/build-orange` runs every remaining phase in order (`next` runs one, `status` shows progress, `reset` clears it, `art` only generates missing paintings). Each phase is built by a subagent, gated on `npm run build`, committed and pushed. Every push to `main` deploys to production, so set `GIT_PUSH=0` in `.claude/skills/build-orange/config.env` or work on a branch while building.
 
-Paintings go in `art/source/<id>.png|mp4` (gitignored); `npm run art:import` (phase 3) turns them into `public/art/`. Missing paintings get painted placeholders, so the build never waits for art.
+## Art
+
+The paintings and their prompts are listed in `docs/PAINTINGS.md`. Drop finished sources in `art/source/<id>.png|mp4` (gitignored); `npm run art:import` (from phase 3) turns them into tiers under `public/art/`. Missing paintings get painted placeholders, so the build never waits for art. The anchor points in `src/content/art.ts` are the numbers to retune when real art replaces a placeholder.
 
 ## Deploy
 
-Push to `main` → CI (`lint`, `typecheck`, `build`) → `deploy/orange-deploy.sh` runs on the EC2 instance over AWS Systems Manager, builds the commit, serves it with `npm start` on port 3000 under pm2 behind nginx at https://production.khalidsyfullah.com. Details and rollback in `deploy/README.md`.
+Push to `main`, then CI (`lint`, `typecheck`, `test` if present, `build`), then `deploy/orange-deploy.sh` runs on the EC2 instance over AWS Systems Manager: `npm ci`, `npm run build`, and `npm start` on port 3000 under pm2 behind nginx at https://production.khalidsyfullah.com. Details and rollback in [`deploy/README.md`](deploy/README.md).
