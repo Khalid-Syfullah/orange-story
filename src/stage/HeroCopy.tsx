@@ -73,7 +73,8 @@ export function HeroCopy() {
       const inLow = Math.max(smooth(0.7, 1, intro), failSafe);
 
       // The paragraph sits right under the title block, wherever the block ends at this size; on a
-      // tall phone it stacks at the foot of the page instead (the stylesheet).
+      // tall phone it stacks at the foot of the page instead, and on a short landscape frame the
+      // stack tightens so the paragraph clears the attendant standing lower left (the stylesheet).
       const top = topRef.current;
       const low = lowRef.current;
       if (top && low && f.band >= 0.999 && f.frame % 15 === 0) {

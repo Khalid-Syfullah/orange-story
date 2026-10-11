@@ -23,28 +23,32 @@ The cut is the cut in the picture. The last reel frame is two hands holding the 
 | Phase | t | Film A (the halves) | Plate B (sky of the scaffold painting) | Crest |
 | --- | --- | --- | --- | --- |
 | Rest | 0.00–0.10 | Untouched | Not drawn (fast path) | None |
-| Part | 0.10–0.75 | A narrow tall front opens from the seam point and widens; the halves are displaced apart along x with the sign ramped through zero across the seam, smeared along x, and the frame pushes in about the seam point; a rind band ahead of the cut desaturates and darkens | Appears behind the cut offset toward the seam by lag, settling as the front leaves; held at scale 1.18 about the seam point; its halftone cloud already drifting | Pith band 0.24 wide behind the cut; zest specks on the cut, denser when the scroll is fast |
+| Part | 0.10–0.75 | A narrow tall front opens from the seam point and widens; the halves are displaced apart along x with the sign ramped through zero across the seam, smeared along x, and the frame pushes in about the seam point; a rind band ahead of the cut desaturates and darkens | Appears behind the cut offset toward the seam by lag, settling as the front leaves; held at scale 1.18 about the seam point; its halftone cloud already drifting | A pith rim 0.07 deep behind the cut, the same width all round the opening; zest specks on the cut, denser when the scroll is fast |
 | Settle | 0.65–1.00 | Softens radially from the seam point in the last quarter as the halves reach the frame edges, then gone | Eases back from 1.18 to 1.00 with the seam point drifting 3% right and 1% down; lag decays to 0 | Pith thins to nothing by t = 1 |
 
-Parameters, in tuning order (front speed, bite, rind width, lag distance):
+Parameters, in tuning order (front speed, bite, rind width, lag distance). Band widths are in frame
+heights across the front (phase 15): the printed front distance is divided by the metric's gradient
+before any band reads it, so a rim is the same width along the seam as across it.
 
 | Name | Value | What it does |
 | --- | --- | --- |
 | origin | `uncover(seam)` | The gap between the halves in the reel's last frame, mapped to screen uv |
-| metric | `length(q * (1.0, 0.38))` | Narrow in x, tall in y: a vertical seam widening, not a horizontal wipe |
-| front | `r − R(t) + n1·0.30 + n2·0.10` | n1 = fbm(q·2.2), n2 = fbm(q·5.1 + 0.4t + 0.02·time), both 4 octaves |
+| metric | `r = length(q * (1.0, 0.38))` | Narrow in x, tall in y: a vertical seam widening, not a horizontal wipe |
+| front | `r − R(t) + bite2(q, 2.2, 0.30, 5.1, 0.10)` | Two decorrelated fbm fields, 4 octaves; the finer one drifts with 0.4t + 0.02·time |
 | R(t) | `tt·(0.55 + 0.45·tt²)·1.6 − 0.10`, tt = (t−0.10)/0.65 | Accelerates; clears the side edges by t = 0.75 |
-| edge | `front + (bayer4 − 0.5)·0.03 + (hash − 0.5)·0.02` | The printed boundary |
+| edge | `front + printEdge(frag, 0.03, 0.02)` | The printed boundary: Bayer 0.03 and hash stipple 0.02 |
+| edgeS | `edge / ‖∇r‖`, `‖∇r‖ = length(q.x, 0.38²·q.y) / r` | The front's distance in frame heights: 1 across the seam, 0.38 along it; every band below reads this |
 | sgn | `clamp(q.x / 0.06, −1, 1)` | Which half a pixel belongs to, ramped through zero at the seam |
 | parting | `sgn · smoothstep(0, 0.6, tt) · 0.09` | How far each half has left, along x |
-| rind band | `smoothstep(0.18, 0, edge)` | Ahead of the cut only: A desaturates 30% and darkens 25% |
-| pith band | `smoothstep(0,−0.07,edge)·smoothstep(−0.24,−0.09,edge)` | Fades over t 0.75→1; fibre runs along the seam |
-| lag | `exp(−max(−edge,0)/0.12) · (1 − smoothstep(0.7,1,t))` | 1 at the cut, gone 0.12 past it |
+| rind band | `smoothstep(0.09, 0, edgeS)` | Ahead of the cut only: A desaturates 30% and darkens 25% |
+| pith rim | `smoothstep(0,−0.012,edgeS)·smoothstep(−0.07,−0.024,edgeS)` | Saturated 0.012–0.024 inside the opening, released by 0.07; fades over t 0.75→1; fibre runs along the seam |
+| lag | `exp(−max(−edgeS,0)/0.12) · (1 − smoothstep(0.7,1,t))` | 1 at the cut, gone 0.12 past it, all the way round |
 | plate scale | `mix(1.18, 1.0, smoothstep(0.55, 1, t))` about origin | The arrival into the plate |
-| zest | `step(0.985, hash(cell3px, floor(time·6))) · smoothstep(0.04, 0, |edge|) · (0.6 + 0.4v)` | Oil specks, additive warm white; v = clamp(|uVel|/40, 0, 1) |
+| zest | `step(0.985, hash(cell3px, floor(time·6))) · smoothstep(0.03, 0, |edgeS|) · (0.6 + 0.4v)` | Oil specks, additive warm white; v = clamp(|uVel|/40, 0, 1) |
 | fast paths | `r > R + 0.40` → A only; `r < R − 0.95` → B only | Most of the frame at rest costs two taps |
 
-Shader skeleton (helpers `fbm`, `bayer4`, `hash`, `smear5`, `blur` and `cover`/`uncover` come from the engine):
+Shader skeleton (helpers `fbm`, `bayer4`, `hash`, `smear5`, `blur`, `cover`/`uncover` and the shared
+gestures `bite2`, `printEdge`, `filmGrain` come from the engine's GLSL library):
 
 ```glsl
 // uT: local progress 0..1 (smoothed scroll)  uVel: scroll px/frame  uTime: seconds
@@ -63,42 +67,42 @@ void main(){
   float tt = clamp((t - 0.10) / 0.65, 0.0, 1.0);
   float R = tt * (0.55 + 0.45 * tt * tt) * 1.6 - 0.10;
   float r = length(q * vec2(1.0, 0.38));                       // vertical seam, widening
+  float gradR = length(vec2(q.x, 0.38 * 0.38 * q.y)) / max(r, 1e-4);   // |grad r|: 1 across the seam, 0.38 along it
 
   // fast paths: provably ahead of / behind every possible front
   if (r > R + 0.40) { gl_FragColor = vec4(A(uv), 1.0); return; }
   vec2 uvB = dollyAbout(uv, o, mix(1.18, 1.0, smoothstep(0.55, 1.0, t)));
   if (r < R - 0.95) { gl_FragColor = vec4(B(uvB), 1.0); return; }
 
-  float n1 = fbm(q * 2.2 + 7.0) - 0.5;
-  float n2 = fbm(q * 5.1 - 3.0 + vec2(0.0, t * 0.4) + uTime * 0.02) - 0.5;
-  float front = r - R + n1 * 0.30 + n2 * 0.10;
-  float edge = front + (bayer4(gl_FragCoord.xy) - 0.5) * 0.03 + (hash(floor(gl_FragCoord.xy / 2.0)) - 0.5) * 0.02;
+  float front = r - R + bite2(q, 2.2, 0.30, 5.1, 0.10, vec2(7.0), vec2(-3.0) + vec2(0.0, t * 0.4) + uTime * 0.02);
+  float edge = front + printEdge(gl_FragCoord.xy, 0.03, 0.02);
   float pass = 1.0 - smoothstep(-0.02, 0.02, edge);              // 1 = plate shows
+  float edgeS = edge / gradR;                                     // the front's distance in frame heights, all round
 
   // the halves part: displaced apart along x, smeared the way they go, pushed in about the seam
   float part = smoothstep(0.0, 0.6, tt);
   vec2 dA = vec2(sgn * part * 0.09 / ar, 0.0);
-  float rind = smoothstep(0.18, 0.0, edge) * (1.0 - pass);
+  float rind = smoothstep(0.09, 0.0, edgeS) * (1.0 - pass);
   vec3 a = smear5(A, dollyAbout(uv, o, 1.0 + 0.10 * push) - dA, vec2(sgn, 0.0), part * 0.025 + rind * 0.01);
   a = mix(a, vec3(dot(a, vec3(0.30, 0.59, 0.11))), 0.30 * rind) * (1.0 - 0.25 * rind);
   float soft = smoothstep(0.7, 0.95, t) * length(q) * 0.006;    // near the lens, last quarter only
   a = mix(a, blur(A, uv - dA, soft), step(0.001, soft));
 
   // the plate still catching up with the edge that uncovered it
-  float lag = exp(-max(-edge, 0.0) / 0.12) * (1.0 - smoothstep(0.7, 1.0, t));
+  float lag = exp(-max(-edgeS, 0.0) / 0.12) * (1.0 - smoothstep(0.7, 1.0, t));
   vec2 dB = vec2(-sgn * lag * 0.05 / ar, 0.0);
   vec3 b = smear5(B, uvB + dB, vec2(sgn, 0.0), lag * 0.02);
 
-  // pith at the rim, then zest on the cut
-  float pith = smoothstep(0.0, -0.07, edge) * smoothstep(-0.24, -0.09, edge) * (1.0 - smoothstep(0.75, 1.0, t));
+  // the pith rim, then zest on the cut
+  float pith = smoothstep(0.0, -0.012, edgeS) * smoothstep(-0.07, -0.024, edgeS) * (1.0 - smoothstep(0.75, 1.0, t));
   float fib = fbm(vec2(q.x * 40.0, q.y * 6.0));                  // fibre runs along the seam
   vec3 pithCol = mix(vec3(0.98, 0.95, 0.88), vec3(0.90, 0.83, 0.68), fib);
-  float zest = step(0.985, hash(floor(gl_FragCoord.xy / 3.0) + floor(uTime * 6.0))) * smoothstep(0.04, 0.0, abs(edge)) * (0.6 + 0.4 * v);
+  float zest = step(0.985, hash(floor(gl_FragCoord.xy / 3.0) + floor(uTime * 6.0))) * smoothstep(0.03, 0.0, abs(edgeS)) * (0.6 + 0.4 * v);
 
   vec3 col = mix(a, mix(b, pithCol, pith * 0.9), pass);
-  col += vec3(1.0, 0.93, 0.70) * zest;
+  col += vec3(1.0, 0.93, 0.70) * zest + filmGrain(gl_FragCoord.xy, uTime, 0.03);
   gl_FragColor = vec4(col, 1.0);
 }
 ```
 
-Why it is not mechanical: the cut is already in the picture (rule 15); the front is a tall narrow field bitten twice (rule 1) with a dithered boundary (rule 2); pith, rind shadow and zest are products of edge and t (rule 3); R(t) accelerates while the plate settles on a lagged centre (rule 4); the plate arrives offset and smeared (rules 5, 6); the halves push in about the seam with a drifting origin and soften as they leave (rule 7); the sign of the parting ramps through zero (rule 12); pith lives only in its band (rule 8); zest is hashed per cell and per sixth of a second (rule 10); everything is a function of t (rule 11).
+Why it is not mechanical: the cut is already in the picture (rule 15); the front is a tall narrow field bitten twice (rule 1) with a dithered boundary (rule 2); pith, rind shadow and zest are products of edge and t (rule 3); R(t) accelerates while the plate settles on a lagged centre (rule 4); the plate arrives offset and smeared (rules 5, 6); the halves push in about the seam with a drifting origin and soften as they leave (rule 7); the sign of the parting ramps through zero (rule 12); pith lives only in its rim, measured across the front so it is a rim all the way round and not a column along the seam (rule 8); zest is hashed per cell and per sixth of a second (rule 10); everything is a function of t (rule 11).

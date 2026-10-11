@@ -51,10 +51,8 @@ vec3 codaPicSmeared(vec2 uv, vec2 dirUV, float len) {
   return smear5(uCoda, toCoda(uv), dp, len);
 }
 
-// Film grain, +-1.2%, re-hashed every 1/24 s: the paintings' grain, carried onto the coda.
-float codaGrain(vec2 frag, float tm) {
-  return (hash(frag + floor(tm * 24.0) * vec2(37.1, 17.3)) - 0.5) * 0.024;
-}
+// Film grain, +-1.2%: the paintings' grain, carried onto the coda.
+float codaGrain(vec2 frag, float tm) { return filmGrain(frag, tm, 0.024); }
 
 // The halo round the floating orange, screen-blended over the picture. 'col' is the picture so far.
 vec3 codaHalo(vec3 col, vec2 uv, float tm) {

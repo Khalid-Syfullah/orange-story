@@ -35,8 +35,7 @@ uniform float uDrift;     // 0..1: the large cloud walking in
 uniform float uScrim;     // 0..1
 
 const float BAND = ${f(WORK_TUNE.band)};      // soak-in band, plate v
-const float CELL = 14.0;                       // halftone cell, CSS px (times dpr)
-const float ANGLE = 0.2618;                    // the screen's 15 degrees
+const float CELL = 14.0;                       // halftone cell, CSS px (times dpr), at the page's 15 degrees
 const float SKY_V = 0.06;                      // where the painting's own sky is read for the unprinted ground
 const float LAG_OFFSET = 0.008;                // plate v the arriving painting trails by at the edge
 const vec3 SCRIM = 2.0 * vec3(0.35, 0.33, 0.32);
@@ -45,7 +44,7 @@ float gTm;
 float gZk;
 vec2 gOff;
 
-float grain(vec2 frag) { return (hash(frag + floor(gTm * 24.0) * vec2(37.1, 17.3)) - 0.5) * 0.03; }
+float grain(vec2 frag) { return filmGrain(frag, gTm, 0.03); }
 
 // Screen uv -> plate uv: the arrival dolly about the seam point (with the breath), the creep about
 // the frame's centre, then the plate's own fit, scroll and parallax.
@@ -55,14 +54,11 @@ vec2 toPlate(vec2 uv) {
   return plateUV(c, uPlateSize, uYTop, gOff);
 }
 
-vec2 fragUV(vec2 frag) { return vec2(frag.x, uRes.y - frag.y) / uRes; }
-
-// The front's bite at a plate point, in bands: two decorrelated fields at different scales.
+// The front's bite at a plate point, in bands: two decorrelated fields at different scales, the
+// finer one drifting with the front's travel and creeping with time.
 float bite(vec2 pu) {
   vec2 p = vec2(pu.x * uPlateSize.x / uPlateSize.y, pu.y);
-  float n1 = fbm4(p * 6.0 + 3.0) - 0.5;
-  float n2 = fbm4(p * 17.0 - 5.0 + vec2(0.0, uFront * 3.0) + gTm * 0.02) - 0.5;
-  return n1 * 1.2 + n2 * 0.5;
+  return bite2(p, 6.0, 1.2, 17.0, 0.5, vec2(3.0), vec2(-5.0) + vec2(0.0, uFront * 3.0) + gTm * 0.02);
 }
 
 void main() {
@@ -84,16 +80,13 @@ void main() {
     // Fast path: provably ahead of it: nothing exists yet but the plate's own sky.
     col = texture2D(uPlate, vec2(pu.x, SKY_V)).rgb;
   } else {
+    // The halftone screen: this fragment's cell and the cell's centre on screen (the shared screen).
     float cellPx = CELL * uDpr;
-    float cs = cos(ANGLE);
-    float sn = sin(ANGLE);
-    // The halftone screen at 15 degrees: this fragment's cell, and the cell's centre on screen.
-    vec2 g = vec2(cs * frag.x + sn * frag.y, -sn * frag.x + cs * frag.y) / cellPx;
-    vec2 cid = floor(g);
-    vec2 loc = g - cid - 0.5;
-    vec2 cc = (cid + 0.5) * cellPx;
-    vec2 fc = vec2(cs * cc.x - sn * cc.y, sn * cc.x + cs * cc.y);
-    vec2 puC = toPlate(fragUV(fc));
+    vec2 cid;
+    vec2 loc;
+    vec2 uvC;
+    screenCell(frag, cellPx, PRINT_ANGLE, cid, loc, uvC);
+    vec2 puC = toPlate(uvC);
 
     // Soak-in coverage at the cell's centre: the front driven by progress, bitten (rule 1).
     float ddC = (puC.y - uFront) / BAND + bite(puC);
@@ -107,22 +100,17 @@ void main() {
     vec3 ground = texture2D(uPlate, vec2(pu.x, SKY_V)).rgb;
 
     // The painting behind the edge, still catching up with it: displaced and smeared the way the
-    // front travels (down the plate), the lag dying behind the edge (rules 5, 6).
-    float stip = (bayer4(frag) - 0.5) * 0.12 + (hash(floor(frag / 2.0)) - 0.5) * 0.06;
+    // front travels (down the plate), the lag dying behind the edge (rules 5, 6). The lag eases in
+    // over the chapter's first 8% (rule 4): at t = 0 the front waits under the frame and the frame
+    // is the Split's last to the pixel.
     float ddP = dd0 + bite(pu);
-    float lag = exp(-max(-ddP, 0.0) / 0.6);
+    float lag = exp(-max(-ddP, 0.0) / 0.6) * smoothstep(0.0, 0.08, uT);
     vec2 pl = pu - vec2(0.0, lag * LAG_OFFSET);
     vec3 paint = lag > 0.04 ? smear5(uPlate, pl, vec2(0.0, 1.0), lag * LAG_OFFSET * 0.8) : texture2D(uPlate, pu).rgb;
 
-    // The dots grow with the coverage until they merge (radius past half a cell's diagonal). Past
-    // the half-way point the gaps between them take the painting, through a printed threshold; the
-    // dots dissolve into it last. No mosaic of flat cells ever shows (rule 3: all one driver).
-    float r = sqrt(cov) * 0.82 * (0.92 + 0.16 * hash(cid + 7.0));
-    float aa = 0.75 / cellPx;
-    float dotMask = (1.0 - smoothstep(r - aa, r + aa, length(loc))) * smoothstep(0.0, 0.05, r);
-    float gaps = smoothstep(0.30, 0.65, cov + stip * 0.8);
-    float merged = smoothstep(0.45, 0.74, cov + stip * 0.8);
-    col = mix(mix(ground, paint, gaps), mix(tone, paint, merged), dotMask);
+    // The shared print-in: the dots grow with the coverage until they merge, the gaps take the
+    // painting through the printed threshold, the dots dissolve into it last (rule 3: one driver).
+    col = printIn(ground, tone, paint, cov, loc, cid, cellPx, frag);
   }
 
   // Clouds in the sky band, in plate coordinates: they scroll with the painting.

@@ -41,7 +41,6 @@ uniform vec4 uWordBox;        // its box in screen uv: left, top, width, height
 
 const float NL = ${f(WORD_LETTERS.length)};
 const float WSTEP = ${f(FINALE_TUNE.letterStep)};
-const float ROT = 0.31;
 
 // Letter k's arrival 0..1 (eased), after the letters before it.
 float arrive(float k) {
@@ -56,23 +55,21 @@ vec2 wordAt(vec2 uv) {
   return vec2(k, g.a);
 }
 
-// The wordmark printed over col: dots on a rotated screen that grow with the letter's arrival until
-// they merge, and the glyph itself once they have.
+// The wordmark printed over col: dots on the page's halftone screen (6.5 px cells at 15 degrees)
+// that grow with the letter's arrival until they merge, and the glyph itself once they have.
 vec3 printWord(vec3 col, vec2 uv, vec2 frag) {
   vec2 w = (uv - uWordBox.xy) / uWordBox.zw;
   if (uWordT <= 0.0 || w.x < -0.1 || w.x > 1.1 || w.y < -0.15 || w.y > 1.15) return col;
   float cell = 6.5 * uDpr;
-  mat2 rot = mat2(cos(ROT), -sin(ROT), sin(ROT), cos(ROT));
-  mat2 irot = mat2(cos(ROT), sin(ROT), -sin(ROT), cos(ROT));
-  vec2 rf = rot * frag / cell;
-  vec2 rid = floor(rf);
-  vec2 cf = irot * ((rid + 0.5) * cell);
-  vec2 cuv = vec2(cf.x, uRes.y - cf.y) / uRes;
+  vec2 rid;
+  vec2 loc;
+  vec2 cuv;
+  screenCell(frag, cell, PRINT_ANGLE, rid, loc, cuv);
   vec2 cw = wordAt(cuv);
   float ak = arrive(cw.x);
   // Instances differ (rule 13): each dot has its own size.
   float rad = 0.80 * ak * sqrt(cw.y) * (0.88 + 0.24 * hash(rid + 4.3));
-  float dd = length(rf - rid - 0.5);
+  float dd = length(loc);
   float aa = 0.9 / cell;
   float dots = (1.0 - smoothstep(rad - aa, rad + aa, dd)) * smoothstep(0.0, 0.05, rad);
   vec2 gf = wordAt(uv);
@@ -98,32 +95,34 @@ void main() {
     vec2 oq = aspectUV(uOrigin);
     float asp = uRes.x / uRes.y;
     vec2 far = vec2(max(oq.x, asp - oq.x), max(oq.y, 1.0 - oq.y));
-    float d = length(q - oq) / length(far);
     float a = uCover * uCover * (3.0 - 2.0 * uCover);
-    float front = d - a * 2.3 + fbm4(q * 2.2 + 3.1) * 0.30 + fbm4(q * 7.0 + 11.7) * 0.10;
-    float v = clamp((-front + (bayer4(frag) - 0.5) * 0.10) / 0.42, 0.0, 1.0);
-    v = max(v, smoothstep(0.92, 1.0, a));
-    if (v > 0.0) {
+    // The shared print-in (9 px cells at the page's 15 degrees): the coverage is read at the cell's
+    // centre so every dot is a clean circle; the bite's mean of 0.2 is kept out of the front so
+    // nothing is printed at a = 0 (the hero prints in the same way).
+    float cell = 9.0 * uDpr;
+    vec2 cid;
+    vec2 loc;
+    vec2 cuv;
+    screenCell(frag, cell, PRINT_ANGLE, cid, loc, cuv);
+    vec2 qC = aspectUV(cuv);
+    float d0C = length(qC - oq) / length(far) + 0.2 - a * 2.3;
+    // Fast path (rule 14): a cell provably ahead of every possible front (the bite is within +-0.2
+    // and the merge term is 0 until a = 0.92) has nothing printed in it yet: the rise's frame, with
+    // neither bite evaluated. Most of the frame takes it over the cut's first half.
+    float cov = 0.0;
+    if (d0C < 0.2 || a >= 0.92) {
+      float frontC = d0C + bite2(qC, 2.2, 0.30, 7.0, 0.10, vec2(3.1), vec2(11.7));
+      cov = max(clamp(-frontC / 0.42, 0.0, 1.0), smoothstep(0.92, 1.0, a));
+    }
+    if (cov > 0.0) {
       // The loop catching up with the front it was printed behind, smeared away from it.
+      float front = length(q - oq) / length(far) + 0.2 - a * 2.3 + bite2(q, 2.2, 0.30, 7.0, 0.10, vec2(3.1), vec2(11.7));
       float lag = exp(-max(-front, 0.0) / 0.25) * (1.0 - smoothstep(0.75, 1.0, a));
       vec2 dirq = (q - oq) / max(length(q - oq), 1.0e-3);
       vec2 dv = vec2(dirq.x * uRes.y / uRes.x, dirq.y) * coverScale(uFinSize) / fz;
       vec3 full = smear5(uFin, pp - dv * lag * 0.02, dv, lag * 0.03) + gr;
-      // The halftone screen: dots grow from nothing until they merge into the picture.
-      float cell = 9.0 * uDpr;
-      mat2 rot = mat2(cos(ROT), -sin(ROT), sin(ROT), cos(ROT));
-      mat2 irot = mat2(cos(ROT), sin(ROT), -sin(ROT), cos(ROT));
-      vec2 rf = rot * frag / cell;
-      vec2 rid = floor(rf);
-      vec2 cf = irot * ((rid + 0.5) * cell);
-      vec2 cuv = vec2(cf.x, uRes.y - cf.y) / uRes;
       vec3 cCol = texture2D(uFin, cover(cuv, uFinSize, uFinPan, fz) + foff).rgb;
-      float rad = 0.76 * v;
-      float dd = length(rf - rid - 0.5);
-      float aa = 0.9 / cell;
-      float dot_ = (1.0 - smoothstep(rad - aa, rad + aa, dd)) * smoothstep(0.0, 0.05, rad);
-      vec3 inner = mix(cCol, full, smoothstep(0.30, 0.65, rad));
-      col = mix(col, inner, dot_);
+      col = printIn(col, cCol, full, cov, loc, cid, cell, frag);
     }
   } else {
     col = texture2D(uFin, pp).rgb + gr;

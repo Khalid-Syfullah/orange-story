@@ -63,10 +63,8 @@ float scrimMask(vec2 uv) {
 // The scrim: a soft darkening toward the sky's blue under the form, as strong as its driver.
 vec3 scrimMul(vec2 uv) { return mix(vec3(1.0), SCRIM_TINT, scrimMask(uv) * uScrim); }
 
-// Film grain, +-1.2%, re-hashed every 1/24 s: the paintings' grain (the canopy's, exactly).
-float appGrain(vec2 frag, float tm) {
-  return (hash(frag + floor(tm * 24.0) * vec2(37.1, 17.3)) - 0.5) * 0.024;
-}
+// Film grain, +-1.2%: the paintings' grain (the canopy's, exactly).
+float appGrain(vec2 frag, float tm) { return filmGrain(frag, tm, 0.024); }
 
 // 5 taps trailing along -dp by len (painting units), as smear5, for the painting.
 vec3 appSmear(vec2 pt, vec2 dp, float len) {
@@ -77,18 +75,6 @@ vec3 appSmear(vec2 pt, vec2 dp, float len) {
        + texture2D(uApp, pt - d * 0.50).rgb * 0.20
        + texture2D(uApp, pt - d * 0.75).rgb * 0.15
        + texture2D(uApp, pt - d).rgb * 0.10;
-}
-
-// One halftone cell at an angle: its id, the fragment's place in it (-0.5..0.5) and the screen uv of its centre.
-void screenCell(vec2 frag, float cellPx, float ang, out vec2 cid, out vec2 loc, out vec2 uvC) {
-  float cs = cos(ang);
-  float sn = sin(ang);
-  vec2 g = vec2(cs * frag.x + sn * frag.y, -sn * frag.x + cs * frag.y) / cellPx;
-  cid = floor(g);
-  loc = g - cid - 0.5;
-  vec2 cc = (cid + 0.5) * cellPx;
-  vec2 fc = vec2(cs * cc.x - sn * cc.y, sn * cc.x + cs * cc.y);
-  uvC = vec2(fc.x, uRes.y - fc.y) / uRes;
 }
 
 // A feathered box in painting coordinates (feather in painting units), bitten by 'bite'.
@@ -127,10 +113,10 @@ uniform float uDolly;      // the painting's push about the gap's centre, settli
 uniform vec4 uFigure;      // the figure's rect, application painting units
 uniform vec4 uSteps;       // the steps' rect
 
-const float CELL = ${f(T.cell)};
-const float ANGLE = ${f(T.angle)};
+const float CELL = ${f(T.cell)};                 // laid at PRINT_ANGLE, the page's 15 degrees
 const float CELL2 = ${f(T.cell2)};
 const float ANGLE2 = ${f(T.angle2)};
+const float DOLLY_FULL = ${f(T.dolly)};
 const float GAP_FROM = ${f(T.gapFrom)};
 const float GAP_LEN = ${f(T.gapLen)};
 const float LEAF_FROM = ${f(T.leafFrom)};
@@ -173,9 +159,8 @@ void main() {
   canopyFrame(tm);
   appFrame(tm);
 
-  vec3 A = canopyScene(uv, frag, tm, vec2(0.0), 0.0);
   if (uClock < 0.0005) {
-    gl_FragColor = vec4(clamp(A + canopyGrain(frag, tm), 0.0, 1.0), 1.0);
+    gl_FragColor = vec4(clamp(canopyScene(uv, frag, tm, vec2(0.0), 0.0) + canopyGrain(frag, tm), 0.0, 1.0), 1.0);
     return;
   }
 
@@ -183,57 +168,71 @@ void main() {
   vec2 cid;
   vec2 loc;
   vec2 uvC;
-  screenCell(frag, cellPx, ANGLE, cid, loc, uvC);
+  screenCell(frag, cellPx, PRINT_ANGLE, cid, loc, uvC);
   float sk;
   float m = arrival(uvC, uClock, tm, sk);
 
   // The application, pushed in about the gap's centre and still catching up with its edge: offset
   // the way the front travels (outward from the gap) and smeared along it, settling as it lands.
-  vec2 o = uncover(GAP_C, uCanopySize, uCanPan, gKz);
-  vec2 rel = aspectUV(uv) - aspectUV(o);
-  vec2 dir = rel / max(length(rel), 1.0e-4);
-  vec2 dirUV = vec2(dir.x / ar, dir.y);
-  float lag = (1.0 - m) * (1.0 - m);
-  vec2 pB = toApp(dollyAbout(uv - dirUV * (lag * LAG_OFFSET), o, uDolly));
-  vec2 dp = dirUV * coverScale(uAppSize) / (gAz * uDolly);
-  vec3 B = appSmear(pB, dp, lag * LAG_SMEAR) * scrimMul(uv);
+  // The point it is pushed in about drifts a few percent sideways while the push is on (rule 7),
+  // as every other push on the page does, and is the gap's centre again once it has settled.
+  float push = (uDolly - 1.0) / (DOLLY_FULL - 1.0);
+  vec2 o = uncover(GAP_C, uCanopySize, uCanPan, gKz) + vec2(0.03, 0.01) * push;
 
-  // The painting's tone at the cell: its centre and four taps round it.
-  vec2 ptC = toApp(dollyAbout(uvC, o, uDolly));
-  vec2 dPu = cellPx * 0.32 / uRes * coverScale(uAppSize) / (gAz * uDolly);
-  vec3 tone = (texture2D(uApp, ptC).rgb * 0.4
-             + (texture2D(uApp, ptC + vec2(dPu.x, 0.0)).rgb + texture2D(uApp, ptC - vec2(dPu.x, 0.0)).rgb
-              + texture2D(uApp, ptC + vec2(0.0, dPu.y)).rgb + texture2D(uApp, ptC - vec2(0.0, dPu.y)).rgb) * 0.15)
-             * scrimMul(uvC);
+  vec3 col;
+  if (m >= 1.0) {
+    // Fast path (rule 14): the cell has arrived. The lag is 0, the print-in is the painting exactly
+    // and the bare screen's radius is 0, so this is the landed painting in one tap: no canopy, no
+    // tone, no screen.
+    col = texture2D(uApp, toApp(dollyAbout(uv, o, uDolly))).rgb * scrimMul(uv);
+  } else {
+    vec3 A = canopyScene(uv, frag, tm, vec2(0.0), 0.0);
+    if (m <= 0.0) {
+      // Fast path (rule 14): nothing has arrived at this cell. The print-in on its ground is the
+      // canopy exactly (no dot, the gaps' threshold never reached), so the painting is not read.
+      col = A;
+    } else {
+      vec2 rel = aspectUV(uv) - aspectUV(o);
+      vec2 dir = rel / max(length(rel), 1.0e-4);
+      vec2 dirUV = vec2(dir.x / ar, dir.y);
+      float lag = (1.0 - m) * (1.0 - m);
+      vec2 pB = toApp(dollyAbout(uv - dirUV * (lag * LAG_OFFSET), o, uDolly));
+      vec2 dp = dirUV * coverScale(uAppSize) / (gAz * uDolly);
+      vec3 B = appSmear(pB, dp, lag * LAG_SMEAR) * scrimMul(uv);
 
-  // The dots grow with the arrival until they merge (radius past half a cell's diagonal); past the
-  // half-way point the gaps between them take the painting through a printed threshold, and the dots
-  // dissolve into it last. m = 0 is the canopy, m = 1 the painting, exactly.
-  float stip = (bayer4(frag) - 0.5) * 0.12 + (hash(floor(frag / 2.0)) - 0.5) * 0.06;
-  float r = sqrt(m) * 0.82 * (0.92 + 0.16 * hash(cid + 7.0));
-  float aa = 0.75 / cellPx;
-  float dotMask = (1.0 - smoothstep(r - aa, r + aa, length(loc))) * smoothstep(0.0, 0.05, r);
-  float gaps = smoothstep(0.30, 0.65, m + stip * 0.8);
-  float merged = smoothstep(0.45, 0.74, m + stip * 0.8);
-  vec3 col = mix(mix(A, B, gaps), mix(tone, B, merged), dotMask);
+      // The painting's tone at the cell: its centre and four taps round it.
+      vec2 ptC = toApp(dollyAbout(uvC, o, uDolly));
+      vec2 dPu = cellPx * 0.32 / uRes * coverScale(uAppSize) / (gAz * uDolly);
+      vec3 tone = (texture2D(uApp, ptC).rgb * 0.4
+                 + (texture2D(uApp, ptC + vec2(dPu.x, 0.0)).rgb + texture2D(uApp, ptC - vec2(dPu.x, 0.0)).rgb
+                  + texture2D(uApp, ptC + vec2(0.0, dPu.y)).rgb + texture2D(uApp, ptC - vec2(0.0, dPu.y)).rgb) * 0.15)
+                 * scrimMul(uvC);
 
-  // The bare screen over the sky gap: the same dots, small, in a lighter blue, and a second screen
-  // a hair finer and turned a few degrees more, so the two beat against each other (and against
-  // the pixel grid). It comes up with the cut and gives way to the clouds as they print in.
-  if (uScreen > 0.002) {
-    vec2 cid2;
-    vec2 loc2;
-    vec2 uvC2;
-    float cell2 = CELL2 * uDpr;
-    screenCell(frag, cell2, ANGLE2, cid2, loc2, uvC2);
-    float sk2 = skyMask(texture2D(uCanopy, toCanopy(uvC2)).rgb);
-    float r1 = SCREEN_R * uScreen * sk * (1.0 - m);
-    float r2 = SCREEN_R * 0.8 * uScreen * sk2 * (1.0 - m);
-    float d1 = (1.0 - smoothstep(r1 - aa, r1 + aa, length(loc))) * smoothstep(0.0, 0.05, r1);
-    float aa2 = 0.75 / cell2;
-    float d2 = (1.0 - smoothstep(r2 - aa2, r2 + aa2, length(loc2))) * smoothstep(0.0, 0.05, r2);
-    float bare = (d1 + d2 - d1 * d2) * (1.0 - max(dotMask, gaps));
-    col = mix(col, mix(col, uSkySoft, 0.55), bare * 0.85);
+      // The shared print-in: the dots grow with the arrival until they merge, the gaps between them
+      // take the painting through the printed threshold, the dots dissolve into it last. m = 0 is
+      // the canopy, m = 1 the painting, exactly.
+      col = printIn(A, tone, B, m, loc, cid, cellPx, frag);
+    }
+
+    // The bare screen over the sky gap: the same dots, small, in a lighter blue, and a second screen
+    // a hair finer and turned a few degrees more, so the two beat against each other (and against
+    // the pixel grid). It comes up with the cut and gives way to the clouds as they print in.
+    if (uScreen > 0.002) {
+      vec2 cid2;
+      vec2 loc2;
+      vec2 uvC2;
+      float cell2 = CELL2 * uDpr;
+      screenCell(frag, cell2, ANGLE2, cid2, loc2, uvC2);
+      float sk2 = skyMask(texture2D(uCanopy, toCanopy(uvC2)).rgb);
+      float r1 = SCREEN_R * uScreen * sk * (1.0 - m);
+      float r2 = SCREEN_R * 0.8 * uScreen * sk2 * (1.0 - m);
+      float aa = 0.75 / cellPx;
+      float d1 = (1.0 - smoothstep(r1 - aa, r1 + aa, length(loc))) * smoothstep(0.0, 0.05, r1);
+      float aa2 = 0.75 / cell2;
+      float d2 = (1.0 - smoothstep(r2 - aa2, r2 + aa2, length(loc2))) * smoothstep(0.0, 0.05, r2);
+      float bare = (d1 + d2 - d1 * d2) * (1.0 - max(dotGrow(m, loc, cid, cellPx), printGaps(m, frag)));
+      col = mix(col, mix(col, uSkySoft, 0.55), bare * 0.85);
+    }
   }
   gl_FragColor = vec4(clamp(col + canopyGrain(frag, tm), 0.0, 1.0), 1.0);
 }
@@ -260,7 +259,6 @@ const float SAP_CELL = ${f(T.saplingCell)};
 const float SAP_LAG = ${f(T.saplingLag)};
 const float CLOUD_SIZE_R = ${f(T.cloudSize)};
 const float CLOUD_BASE_R = ${f(T.cloudBase)};
-const float ANGLE = ${f(T.angle)};
 
 // The print-in front at a painting point: the distance from the trunk's foot (height above it and
 // sideways, in painting heights) less the reach, bitten by two decorrelated fields (rule 1).
@@ -269,9 +267,7 @@ float front(vec2 pt, float tm) {
   float ap = uAppSize.x / uAppSize.y;
   vec2 q = vec2((pt.x - uFoot.x) * ap, pt.y - uFoot.y);
   float d = -q.y * UP_K + abs(q.x) * SIDE_K;
-  float n1 = fbm4(q * 5.0 + vec2(3.1, 7.7)) - 0.5;
-  float n2 = fbm4(q * 14.0 + vec2(-4.0, 2.0) + vec2(0.0, uFront * 2.0) + tm * 0.02) - 0.5;
-  return d - uFront + n1 * N1_AMP + n2 * N2_AMP;
+  return d - uFront + bite2(q, 5.0, N1_AMP, 14.0, N2_AMP, vec2(3.1, 7.7), vec2(-4.0, 2.0) + vec2(0.0, uFront * 2.0) + tm * 0.02);
 }
 
 void main() {
@@ -300,7 +296,7 @@ void main() {
     vec2 cid;
     vec2 loc;
     vec2 uvC;
-    screenCell(frag, cellPx, ANGLE, cid, loc, uvC);
+    screenCell(frag, cellPx, PRINT_ANGLE, cid, loc, uvC);
     vec2 ptC = toApp(uvC);
 
     // The front at the cell's centre, and the coverage it gives the cell.
@@ -324,14 +320,8 @@ void main() {
       vec3 tone = texture2D(uSapling, ptC).rgb * 0.4
                 + (texture2D(uSapling, ptC + vec2(dPu.x, 0.0)).rgb + texture2D(uSapling, ptC - vec2(dPu.x, 0.0)).rgb
                  + texture2D(uSapling, ptC + vec2(0.0, dPu.y)).rgb + texture2D(uSapling, ptC - vec2(0.0, dPu.y)).rgb) * 0.15;
-      float stip = (bayer4(frag) - 0.5) * 0.12 + (hash(floor(frag / 2.0)) - 0.5) * 0.06;
-      float r = sqrt(cov) * 0.82 * (0.92 + 0.16 * hash(cid + 7.0));
-      float aa = 0.75 / cellPx;
-      float dotMask = (1.0 - smoothstep(r - aa, r + aa, length(loc))) * smoothstep(0.0, 0.05, r);
-      float gaps = smoothstep(0.30, 0.65, cov + stip * 0.8);
-      float merged = smoothstep(0.45, 0.74, cov + stip * 0.8);
-      float vis = clamp(max(dotMask, gaps), 0.0, 1.0) * pm;
-      col = mix(col, mix(tone, sp, merged), vis);
+      // The shared print-in, inside the sapling's own silhouette only.
+      col = mix(col, printIn(col, tone, sp, cov, loc, cid, cellPx, frag), pm);
     }
   }
   gl_FragColor = vec4(clamp(col + appGrain(frag, tm), 0.0, 1.0), 1.0);

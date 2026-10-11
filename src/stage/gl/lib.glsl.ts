@@ -167,4 +167,79 @@ vec2 dollyAbout(vec2 uv, vec2 o, float s) { return o + (uv - o) / s; }
 
 // aspectUV: screen uv with x scaled by the aspect so distances are round on screen.
 vec2 aspectUV(vec2 uv) { return vec2(uv.x * uRes.x / uRes.y, uv.y); }
+
+// ---- the one hand: every cut's front, edge, print-in, crest and grain come from here -----------
+// Each section passes its own numbers (pitch, amplitudes, seeds); the gesture is written once.
+
+// bite2: the bite on a front (rule 1): two decorrelated fbm fields at different scales, centred, with
+// their own seeds (s1, s2: a drift of the finer field with travel or time goes into s2).
+float bite2(vec2 q, float f1, float a1, float f2, float a2, vec2 s1, vec2 s2) {
+  return (fbm4(q * f1 + s1) - 0.5) * a1 + (fbm4(q * f2 + s2) - 0.5) * a2;
+}
+
+// printEdge: the printed boundary (rule 2): a 4x4 Bayer threshold and a hash stipple to add to a
+// front before its smoothstep, so breakup is a print screen, never an alpha ramp.
+float printEdge(vec2 frag, float bayerAmp, float stippleAmp) {
+  return (bayer4(frag) - 0.5) * bayerAmp + (hash(floor(frag / 2.0)) - 0.5) * stippleAmp;
+}
+
+// printStipple: the threshold a halftone print-in hands its gaps over through (Bayer 0.12, stipple 0.06).
+float printStipple(vec2 frag) { return printEdge(frag, 0.12, 0.06); }
+
+// The halftone screens on the page are laid at 15 degrees, so they moire against the pixel grid.
+const float PRINT_ANGLE = 0.2618;
+
+// screenCell: one halftone cell at an angle: its id, the fragment's place in it (-0.5..0.5 on each
+// axis) and the screen uv (y down) of its centre, where the coverage and the tone are read.
+void screenCell(vec2 frag, float cellPx, float ang, out vec2 cid, out vec2 loc, out vec2 uvC) {
+  float cs = cos(ang);
+  float sn = sin(ang);
+  vec2 g = vec2(cs * frag.x + sn * frag.y, -sn * frag.x + cs * frag.y) / cellPx;
+  cid = floor(g);
+  loc = g - cid - 0.5;
+  vec2 cc = (cid + 0.5) * cellPx;
+  vec2 fc = vec2(cs * cc.x - sn * cc.y, sn * cc.x + cs * cc.y);
+  uvC = vec2(fc.x, uRes.y - fc.y) / uRes;
+}
+
+// dotGrow: the dot of a cell at coverage cov: radius sqrt(cov) * 0.82 cells, every dot its own size
+// (rule 13), anti-aliased over 0.75 px, nothing under a 5% radius. Past 0.71 the dots overlap.
+float dotGrow(float cov, vec2 loc, vec2 cid, float cellPx) {
+  float r = sqrt(cov) * 0.82 * (0.92 + 0.16 * hash(cid + 7.0));
+  float aa = 0.75 / cellPx;
+  return (1.0 - smoothstep(r - aa, r + aa, length(loc))) * smoothstep(0.0, 0.05, r);
+}
+
+// printGaps / printMerged: past the half-way point of a print-in the gaps between the dots take the
+// picture (0.30..0.65 of coverage) and the dots dissolve into it last (0.45..0.74), both through the
+// printed threshold, never a fade.
+float printGaps(float cov, vec2 frag) { return smoothstep(0.30, 0.65, cov + printStipple(frag) * 0.8); }
+float printMerged(float cov, vec2 frag) { return smoothstep(0.45, 0.74, cov + printStipple(frag) * 0.8); }
+
+// printIn: the halftone print-in. Dots carrying the picture's tone at the cell grow on 'ground' until
+// they merge; the gaps between them take the picture through the printed threshold, and the dots
+// dissolve into it last. cov = 0 is the ground, cov = 1 the picture, exactly, and no mosaic of flat
+// cells ever shows (rule 3: one driver).
+vec3 printIn(vec3 ground, vec3 tone, vec3 paint, float cov, vec2 loc, vec2 cid, float cellPx, vec2 frag) {
+  float c = cov + printStipple(frag) * 0.8;                     // the threshold once, for both hand-overs
+  float dotMask = dotGrow(cov, loc, cid, cellPx);
+  return mix(mix(ground, paint, smoothstep(0.30, 0.65, c)), mix(tone, paint, smoothstep(0.45, 0.74, c)), dotMask);
+}
+
+// printAlpha: the same print-in as a coverage for a layer over its ground (the dots, then the whole).
+float printAlpha(float cov, vec2 loc, vec2 cid, float cellPx, vec2 frag) {
+  return mix(dotGrow(cov, loc, cid, cellPx), 1.0, printMerged(cov, frag));
+}
+
+// crestBand: the crest on a ring front: a gaussian band exp(-x^2 / sigma2) in the signed front
+// distance with the red and blue channels split +-split along it (the chroma split, rule 8).
+vec3 crestBand(float edge, float split, float sigma2) {
+  vec3 x = vec3(edge) + vec3(split, 0.0, -split);
+  return exp(-x * x / sigma2);
+}
+
+// filmGrain: the paintings' grain, +-amp/2, hashed per pixel and re-hashed every 1/24 s (rule 10).
+float filmGrain(vec2 frag, float tm, float amp) {
+  return (hash(frag + floor(tm * 24.0) * vec2(37.1, 17.3)) - 0.5) * amp;
+}
 `;

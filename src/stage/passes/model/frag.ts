@@ -34,10 +34,7 @@ vec3 img(int k, vec2 uv) {
   return texture2D(uShareLast, cover(uv, uShareLastSize, uF4.xy, uF4.z * gZk) + gOff).rgb;
 }
 
-float grain(vec2 frag) {
-  float tm = uTime * (1.0 - uStill);
-  return (hash(frag + floor(tm * 24.0) * vec2(37.1, 17.3)) - 0.5) * 0.03;
-}
+float grain(vec2 frag) { return filmGrain(frag, uTime * (1.0 - uStill), 0.03); }
 
 vec3 cutA(vec2 uv, vec2 frag) { return img(gA, uv) + grain(frag); }
 

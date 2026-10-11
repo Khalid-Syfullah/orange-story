@@ -70,6 +70,39 @@
   opacity: 0.94;
 }
 
+/* Short landscape frames (16:9 laptops, 720 to 864 px tall): the attendant standing lower left has
+   her head at 45% of the height, and the stack as sized above would run the paragraph across it, so
+   the whole column tightens (the title to 6.4vh, the gaps to 0.6rem, the button's margin to 0, the
+   paragraph's leading to 1.3) until the paragraph's last line clears her by 15 px or more at
+   1280x720 (measured: 324 px against her head at 340). 1440x900 and taller frames keep the stack
+   above. */
+@media (max-height: 880px) and (min-aspect-ratio: 3 / 2) {
+  .top {
+    top: calc(var(--rule-top) + 1vh);
+    gap: 0.6rem;
+  }
+
+  .title {
+    font-size: clamp(2.75rem, min(1rem + 4.2vw, 6.4vh), 4.75rem);
+  }
+
+  .subtitle {
+    font-size: 1rem;
+  }
+
+  .button {
+    margin-top: 0;
+  }
+
+  .low {
+    gap: 0.5rem;
+  }
+
+  .low .paragraph {
+    line-height: 1.3;
+  }
+}
+
 /* Tall phones: one column, the title and the button up top, the paragraph under the mid rule. */
 @media (max-aspect-ratio: 4 / 5) {
   .top {

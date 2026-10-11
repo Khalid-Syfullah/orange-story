@@ -10,8 +10,11 @@
 //   - the halves are displaced apart along x with the sign ramped through zero at the seam, smeared
 //     the way they go, pushed in about the seam point, which drifts as the push accelerates, and
 //     softened radially in the last quarter (rules 6, 7, 12);
-//   - a rind band ahead of the cut desaturates and darkens; a pith band behind it with fibre along
-//     the seam; zest specks on the cut, hashed per cell and per sixth of a second (rules 8, 10);
+//   - the bands (rind, pith, zest, lag) are measured across the front in frame heights, the printed
+//     front distance divided by the metric's gradient, so a rim is the same width all the way round
+//     the opening instead of 2.6x taller along the seam than across it (rule 8: a band, not a
+//     column): a rind band ahead of the cut desaturates and darkens; a pith rim behind it with fibre
+//     along the seam; zest specks on the cut, hashed per cell and per sixth of a second (rule 10);
 //   - the plate arrives offset in the direction the front travels by a lag that decays behind it,
 //     smeared along x, its halftone clouds drawn in plate coordinates through the same mapping
 //     (rules 5, 6);
@@ -41,8 +44,8 @@ vec2 gOff;      // parallax and drift, painting units
 // same expression the model's shader uses for this picture.
 vec2 toA(vec2 uv) { return cover(uv, uShareLastSize, uFrameA.xy, uFrameA.z * gZk) + gOff; }
 
-// Film grain, +-1.5%, re-hashed every 1/24 s: the model's, carried across the cut.
-float grain(vec2 frag) { return (hash(frag + floor(gTm * 24.0) * vec2(37.1, 17.3)) - 0.5) * 0.03; }
+// Film grain, +-1.5%: the model's, carried across the cut.
+float grain(vec2 frag) { return filmGrain(frag, gTm, 0.03); }
 
 // A: the halves at screen uv uvA, smeared 'len' (screen units) along 'dirA' (the way they move, in
 // painting units), then softened by 'soft' (screen units) near the lens. The soft blends in over
@@ -89,6 +92,9 @@ void main() {
   float tt = clamp((t - uTune_partFrom) / uTune_partSpan, 0.0, 1.0);
   float R = tt * (uTune_frontLin + (1.0 - uTune_frontLin) * tt * tt) * uTune_frontGain + uTune_frontOffset;
   float r = length(q * vec2(1.0, uTune_metricY));               // a vertical seam widening, not a wipe
+  // |grad r| on screen: 1 across the seam, metricY along it. Dividing a front distance by it gives
+  // the distance to the front in frame heights, so every band is the same width all round.
+  float gradR = length(vec2(q.x, uTune_metricY * uTune_metricY * q.y)) / max(r, 1.0e-4);
   float onset = smoothstep(uTune_partFrom, uTune_onsetTo, t);   // the bite, rind and zest ease in
 
   // The halves part: displaced apart along x, smeared the way they go, pushed in about the seam.
@@ -115,16 +121,16 @@ void main() {
   }
 
   // The front: the metric bitten by two decorrelated fields, its boundary printed, not faded.
-  float n1 = fbm4(q * uTune_n1Freq + 7.0) - 0.5;
-  float n2 = fbm4(q * uTune_n2Freq - 3.0 + vec2(0.0, t * 0.4) + gTm * 0.02) - 0.5;
-  float front = r - R + (n1 * uTune_n1Amp + n2 * uTune_n2Amp) * onset;
-  float edge = front + (bayer4(frag) - 0.5) * uTune_bayer + (hash(floor(frag / 2.0)) - 0.5) * uTune_stipple;
+  float front = r - R + bite2(q, uTune_n1Freq, uTune_n1Amp, uTune_n2Freq, uTune_n2Amp,
+                              vec2(7.0), vec2(-3.0) + vec2(0.0, t * 0.4) + gTm * 0.02) * onset;
+  float edge = front + printEdge(frag, uTune_bayer, uTune_stipple);
   float open = 1.0 - smoothstep(-0.02, 0.02, edge);             // 1 = the plate shows
+  float edgeS = edge / gradR;                                     // the printed front's distance in frame heights
 
   vec3 a = vec3(0.0);
   if (open < 0.998) {
     // The rind band ahead of the cut: desaturated and darkened, smeared a little more.
-    float rind = smoothstep(uTune_rindWidth, 0.0, edge) * (1.0 - open) * onset;
+    float rind = smoothstep(uTune_rindWidth, 0.0, edgeS) * (1.0 - open) * onset;
     a = halves(uvA, dirA, part * uTune_partSmear + rind * uTune_rindSmear, soft, csA);
     a = mix(a, vec3(luma(a)), uTune_rindDesat * rind) * (1.0 - uTune_rindDark * rind);
   }
@@ -132,13 +138,14 @@ void main() {
   vec3 b = vec3(0.0);
   if (open > 0.002) {
     // The plate still catching up with the edge that uncovered it.
-    float lag = exp(-max(-edge, 0.0) / uTune_lagDist) * (1.0 - smoothstep(uTune_lagFadeFrom, 1.0, t));
+    float lag = exp(-max(-edgeS, 0.0) / uTune_lagDist) * (1.0 - smoothstep(uTune_lagFadeFrom, 1.0, t));
     vec2 dB = vec2(-sgn * lag * uTune_lagOffset / ar, 0.0);
     b = plate(uv, o, sB, dB, sgn, lag, frag);
-    // Pith at the rim: a band that travels with the cut, fibre running along the seam, thinning
-    // to nothing over the settle.
-    if (edge < 0.0 && edge > uTune_pithOut) {
-      float pith = smoothstep(0.0, uTune_pithIn, edge) * smoothstep(uTune_pithOut, uTune_pithPeak, edge)
+    // Pith at the rim: a band that travels with the cut, saturated just inside the opening and
+    // released a little way behind it, fibre running along the seam, thinning to nothing over the
+    // settle.
+    if (edgeS < 0.0 && edgeS > uTune_pithOut) {
+      float pith = smoothstep(0.0, uTune_pithIn, edgeS) * smoothstep(uTune_pithOut, uTune_pithPeak, edgeS)
                  * (1.0 - smoothstep(uTune_pithFadeFrom, 1.0, t));
       float fib = fbm(vec2(q.x * uTune_fibreX, q.y * uTune_fibreY));
       vec3 pithCol = mix(vec3(0.98, 0.95, 0.88), vec3(0.90, 0.83, 0.68), fib);
@@ -149,7 +156,7 @@ void main() {
   // Zest on the cut: oil specks hashed per cell and per sixth of a second, denser when the scroll
   // is fast, additive warm white.
   float zest = step(uTune_zestThreshold, hash(floor(frag / (uTune_zestCell * uDpr)) + floor(gTm * uTune_zestRate)))
-             * smoothstep(uTune_zestWidth, 0.0, abs(edge)) * (0.6 + 0.4 * v) * onset;
+             * smoothstep(uTune_zestWidth, 0.0, abs(edgeS)) * (0.6 + 0.4 * v) * onset;
 
   vec3 col = mix(a, b, open) + vec3(1.0, 0.93, 0.70) * zest + grain(frag);
   gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);

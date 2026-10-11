@@ -95,10 +95,8 @@ void main() {
 
   // The front: bitten by two decorrelated fields, its boundary printed, not faded. The finer field
   // drifts with the travel and creeps with time, so a held frame's edge still smoulders.
-  float n1 = fbm4(q * N1_FREQ + vec2(2.3, 9.1)) - 0.5;
-  float n2 = fbm4(q * N2_FREQ + vec2(-5.7, 1.4) + vec2(0.0, uBurnR * 0.05) + tm * 0.015) - 0.5;
-  float front = f0 + n1 * N1_AMP + n2 * N2_AMP;
-  float edge = front + (bayer4(frag) - 0.5) * BAYER + (hash(floor(frag / 2.0) + 4.3) - 0.5) * STIPPLE;
+  float front = f0 + bite2(q, N1_FREQ, N1_AMP, N2_FREQ, N2_AMP, vec2(2.3, 9.1), vec2(-5.7, 1.4) + vec2(0.0, uBurnR * 0.05) + tm * 0.015);
+  float edge = front + printEdge(frag, BAYER, STIPPLE);
   float gone = 1.0 - smoothstep(-EDGE_SOFT, EDGE_SOFT, edge);      // 1 = the paper has gone
   float mottle = fbm(q * CHAR_MOTTLE + 3.3);                         // the char's unevenness
 

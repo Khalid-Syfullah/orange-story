@@ -77,27 +77,35 @@ vec3 heroColor(vec2 uv, vec2 frag) {
     float n = clamp(uRingAge / 1.7, 0.0, 1.0);
     float rad = 1.35 * (1.0 - pow(1.0 - n, 2.2));
     ringEnv = smoothstep(0.0, 0.08, n) * pow(1.0 - n, 1.5);
-    vec3 x = vec3(rd - rad * 1.015, rd - rad, rd - rad * 0.985);
-    ringBand = exp(-x * x / 0.0011);
+    ringBand = crestBand(rd - rad, -0.015 * rad, 0.0011);      // the chroma splits +-1.5% along the radius
     vec2 dirR = radial / max(rd, 1.0e-4);
     uvS -= vec2(dirR.x * uRes.y / uRes.x, dirR.y) * ringBand.g * ringEnv * 0.006;
   }
 
-  // ---- the print-in front: bitten by two decorrelated fbm fields (rule 1), printed by Bayer ------
-  float v = 1.0;
+  // ---- the print-in front: bitten by two decorrelated fbm fields (rule 1), printed by the screen --
+  // The coverage is read at the centre of this pixel's halftone cell (the shared print-in, 9 px cells
+  // at the page's 15 degrees), so every dot is a clean circle; the lag is this pixel's own.
   float lag = 0.0;
   vec2 lagDir = vec2(0.0);
   vec2 oq = toScreenA(uAOrange);
+  float printCell = 9.0 * uDpr;
+  float cov = 1.0;
+  vec2 pcid = vec2(0.0);
+  vec2 ploc = vec2(0.0);
+  vec2 pcuv = vec2(0.0);
   if (uIntro < 1.0) {
     float asp = uRes.x / uRes.y;
     vec2 far = vec2(max(oq.x, asp - oq.x), max(oq.y, 1.0 - oq.y));
-    float d = length(q - oq) / length(far);
     float a = uIntro * uIntro * (3.0 - 2.0 * uIntro);
-    float front = d - a * 1.95 + fbm4(q * 2.2 + 3.1) * 0.30 + fbm4(q * 7.0 + 11.7) * 0.10;
-    v = clamp((-front + (bayer4(frag) - 0.5) * 0.10) / 0.42, 0.0, 1.0);
+    // The bite's mean of 0.2 is kept out of the front so nothing is printed at a = 0.
+    float front = length(q - oq) / length(far) + 0.2 - a * 1.95 + bite2(q, 2.2, 0.30, 7.0, 0.10, vec2(3.1), vec2(11.7));
     // The picture arrives moving: it catches up with the front it was printed behind (rules 5, 6).
     lag = exp(-max(-front, 0.0) / 0.25) * (1.0 - smoothstep(0.75, 1.0, uIntro));
     lagDir = (q - oq) / max(length(q - oq), 1.0e-3);
+    screenCell(frag, printCell, PRINT_ANGLE, pcid, ploc, pcuv);
+    vec2 qC = aspectUV(pcuv);
+    float frontC = length(qC - oq) / length(far) + 0.2 - a * 1.95 + bite2(qC, 2.2, 0.30, 7.0, 0.10, vec2(3.1), vec2(11.7));
+    cov = clamp(-frontC / 0.42, 0.0, 1.0);
   }
 
   // ---- 1. the loop -----------------------------------------------------------------------------
@@ -118,13 +126,11 @@ vec3 heroColor(vec2 uv, vec2 frag) {
     float cellPx = CLOUD_CELL * uDpr;
     vec2 cpp = toPaint(cloudCellUV(floor(frag / cellPx), cellPx));
     vec2 pa = vec2(cpp.x * aspect, cpp.y);
-    // Larger clouds are slower: sway periods 47 / 31 / 23 s, scroll drift falls with size.
-    vec2 swayA = vec2(0.012 * (sin(tm * TAU / 47.0 + 1.0) + 0.5 * sin(tm * TAU / 29.5 + 2.0)), 0.002 * sin(tm * TAU / 37.0))
-               + vec2(-uHeroT * 0.012 / (0.3 + 0.30 * 2.0), 0.0);
-    vec2 swayB = vec2(0.008 * (sin(tm * TAU / 31.0 + 4.0) + 0.5 * sin(tm * TAU / 19.5 + 0.5)), 0.0015 * sin(tm * TAU / 26.0 + 2.0))
-               + vec2(-uHeroT * 0.012 / (0.3 + 0.13 * 2.0), 0.0);
-    vec2 swayC = vec2(0.006 * (sin(tm * TAU / 23.0 + 2.5) + 0.5 * sin(tm * TAU / 14.5 + 3.0)), 0.001 * sin(tm * TAU / 17.0 + 1.0))
-               + vec2(-uHeroT * 0.012 / (0.3 + 0.12 * 2.0), 0.0);
+    // Each instance sways on the shared cloudSway (periods from its size, the larger slower, phase
+    // from its seed: rules 9, 13); the scroll drift falls with size too.
+    vec2 swayA = cloudSway(0.30, 1.0, tm) + vec2(-uHeroT * 0.012 / (0.3 + 0.30 * 2.0), 0.0);
+    vec2 swayB = cloudSway(0.13, 2.0, tm) + vec2(-uHeroT * 0.012 / (0.3 + 0.13 * 2.0), 0.0);
+    vec2 swayC = cloudSway(0.12, 3.0, tm) + vec2(-uHeroT * 0.012 / (0.3 + 0.12 * 2.0), 0.0);
     float cov = cloud(pa, vec2(0.47 * aspect, 0.15), 0.30, 1.0, swayA);
     cov = max(cov, cloud(pa, vec2(0.83 * aspect, 0.22), 0.13, 2.0, swayB));
     cov = max(cov, cloud(pa, vec2(0.405 * aspect, 0.455), 0.12, 3.0, swayC) * uCloud3);
@@ -160,23 +166,10 @@ vec3 heroColor(vec2 uv, vec2 frag) {
     col = 1.0 - (1.0 - col) * (1.0 - add);
   }
 
-  // ---- 5. the print-in: dots grow from nothing until they merge --------------------------------
+  // ---- 5. the print-in: dots grow on the orange ground until they merge into the picture ---------
   if (uIntro < 1.0) {
-    float cell = 9.0 * uDpr;
-    float ca = 0.31;
-    mat2 rot = mat2(cos(ca), -sin(ca), sin(ca), cos(ca));
-    vec2 rf = rot * frag / cell;
-    vec2 rid = floor(rf);
-    mat2 irot = mat2(cos(ca), sin(ca), -sin(ca), cos(ca));   // the inverse rotation
-    vec2 centreFrag = irot * ((rid + 0.5) * cell);
-    vec2 cuv = vec2(centreFrag.x, uRes.y - centreFrag.y) / uRes;
-    vec3 cCol = texture2D(uHero, toPaint(cuv)).rgb;
-    float rad = 0.76 * v;
-    float dd = length(rf - rid - 0.5);
-    float aa = 0.9 / cell;
-    float dot_ = (1.0 - smoothstep(rad - aa, rad + aa, dd)) * smoothstep(0.0, 0.05, rad);
-    vec3 inner = mix(cCol, col, smoothstep(0.30, 0.65, rad));
-    col = mix(uOrange, inner, dot_);
+    vec3 cCol = texture2D(uHero, toPaint(pcuv)).rgb;
+    col = printIn(uOrange, cCol, col, cov, ploc, pcid, printCell, frag);
   }
 
   // ---- 6. ring, then vignette, copy protection and grain (all ride the print-in driver) --------
@@ -195,8 +188,7 @@ vec3 heroColor(vec2 uv, vec2 frag) {
   float topP = (1.0 - smoothstep(0.0, 0.34, uv.y)) * uPhone;
   col = mix(col, uSky * 0.55, clamp(lowL * 0.62 + topP * 0.5, 0.0, 0.8) * drv);
   // Film grain, +-1.5%, re-hashed every 1/24 s.
-  float gr = hash(frag + floor(tm * 24.0) * vec2(37.1, 17.3)) - 0.5;
-  col += gr * 0.03 * drv;
+  col += filmGrain(frag, tm, 0.03) * drv;
 
   return clamp(col, 0.0, 1.0);
 }

@@ -108,12 +108,10 @@ vec3 smearDraw(vec2 t, vec2 d) {
 
 // ---- the soak --------------------------------------------------------------------------------
 
-// The soak's coverage before printing: from the picture's centre, bitten at two scales.
+// The soak's coverage before printing: from the picture's centre, bitten at two scales (rule 1).
 float soakField(vec2 pc) {
   vec2 q = (pc - uPic.xy) / gFrameH;
-  float n1 = fbm4(q * 3.0 + vec2(1.7, 5.3)) - 0.5;
-  float n2 = fbm4(q * 8.3 + vec2(-4.1, 2.2) + vec2(0.0, uSoak * 0.4)) - 0.5;
-  return uSoak * 4.2 - length(q) * 1.9 + n1 * 0.7 + n2 * 0.22;
+  return uSoak * 4.2 - length(q) * 1.9 + bite2(q, 3.0, 0.7, 8.3, 0.22, vec2(1.7, 5.3), vec2(-4.1, 2.2) + vec2(0.0, uSoak * 0.4));
 }
 
 // ---- the window ------------------------------------------------------------------------------
@@ -142,7 +140,7 @@ float windowCover(vec2 pc, vec2 frag, float tm, out float thin, out float pool) 
   float front = e + n1 * TEAR + n2 * FRAY;
   thin = smoothstep(-1.4, 0.0, front);
   pool = smoothstep(-1.0, -0.3, front) * (1.0 - smoothstep(-0.3, 0.1, front));
-  float pf = front + (bayer4(frag) - 0.5) * 0.36 + (hash(floor(frag / 2.0) + 3.1) - 0.5) * 0.26;
+  float pf = front + printEdge(frag, 0.36, 0.26);
   return 1.0 - smoothstep(-0.08, 0.08, pf);
 }
 
@@ -217,27 +215,21 @@ vec3 marginOrange(vec3 col, vec2 pc, vec2 frag, float tm) {
   vec2 rel = (pc - uFruit.xy) / R;                     // orange radii, y down
   float arrive = uFruitIn;
 
-  // The print-in: a halftone screen at 15 degrees whose dots grow with a coverage spreading from
-  // the orange's centre, bitten (rules 1, 2), until they merge. Identity once it has arrived.
+  // The print-in: the shared halftone screen (7 px cells at the page's 15 degrees) whose dots grow
+  // with a coverage spreading from the orange's centre, bitten (rules 1, 2), until they merge.
+  // Identity once it has arrived.
   float printA = 1.0;
   float covPx = 1.0;
   if (arrive < 1.0) {
-    float cellPx = 7.0 * uDpr;                          // the halftone cell, CSS px
-    float cs = 0.9659;
-    float sn = 0.2588;
-    vec2 g = vec2(cs * frag.x + sn * frag.y, -sn * frag.x + cs * frag.y) / cellPx;
-    vec2 cid = floor(g);
-    vec2 loc = g - cid - 0.5;
-    vec2 cc = (cid + 0.5) * cellPx;
-    vec2 fc = vec2(cs * cc.x - sn * cc.y, sn * cc.x + cs * cc.y);
-    vec2 relC = (vec2(fc.x, uRes.y - fc.y) / uDpr - uFruit.xy) / R;
-    float bite = (fbm4(relC * 1.3 + 4.2) - 0.5) * 0.6 + (fbm4(relC * 3.1 - 2.7) - 0.5) * 0.22;
+    float cellPx = 7.0 * uDpr;
+    vec2 cid;
+    vec2 loc;
+    vec2 uvC;
+    screenCell(frag, cellPx, PRINT_ANGLE, cid, loc, uvC);
+    vec2 relC = (uvC * uRes / uDpr - uFruit.xy) / R;
+    float bite = bite2(relC, 1.3, 0.6, 3.1, 0.22, vec2(4.2), vec2(-2.7));
     float cov = clamp(arrive * 2.4 - length(relC) / OR_BOUND + bite, 0.0, 1.0);
-    float stip = (bayer4(frag) - 0.5) * 0.12 + (hash(floor(frag / 2.0) + 9.7) - 0.5) * 0.06;
-    float r = sqrt(cov) * 0.82 * (0.92 + 0.16 * hash(cid + 7.0));
-    float aa = 0.75 / cellPx;
-    float dotMask = (1.0 - smoothstep(r - aa, r + aa, length(loc))) * smoothstep(0.0, 0.05, r);
-    printA = mix(dotMask, 1.0, smoothstep(0.45, 0.74, cov + stip * 0.8));
+    printA = printAlpha(cov, loc, cid, cellPx, frag);
     covPx = clamp(arrive * 2.4 - length(rel) / OR_BOUND + bite, 0.0, 1.0);
   }
 
@@ -332,7 +324,7 @@ vec3 termsPage(vec2 frag, float tm) {
       soak = 0.0;
     } else {
       float c = soakField(pc);
-      float cp = c + (bayer4(frag) - 0.5) * 0.12 + (hash(floor(frag / 2.0)) - 0.5) * 0.08;
+      float cp = c + printEdge(frag, 0.12, 0.08);
       soak = clamp(cp / SOAK_EDGE, 0.0, 1.0);
       sharp = smoothstep(0.25, 1.0, c);
       tide = smoothstep(0.0, 0.14, cp) * (1.0 - smoothstep(0.14, 0.5, c));

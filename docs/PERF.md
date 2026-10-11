@@ -74,6 +74,25 @@ changes carry a 300 ms CSS transition); the handwritten title is complete; the l
 play, being content; the chapters' own scroll (the model's beats, the Work's plate, the copy ramps, the coda,
 the Questions cards, the application) stays under the reader's hand.
 
+## Phase 15
+
+The cut review (`docs/CUTS-REVIEW.md`, "Performance") re-profiled every cut at local t = 0.2, 0.5 and 0.8 and
+every rest state on this machine (Apple M2 Pro, 19 GPU cores), production builds of the phase-14 tree and of the
+fixed tree served side by side and measured back to back at each position. Two things came out of it.
+
+- **How to read the figures above.** With `?finish` a drawn frame waits for the GPU through a one-pixel
+  `readPixels`, and that drain is about 3 ms whatever the pass draws (the application at rest, one tap and the
+  grain, is the floor); at rest the breath draws every second frame, so the HUD's mean, which the tables above
+  carry, is half of a drawn frame's time. The review's table gives the drawn frame itself, before and after,
+  for every cut position and rest state: 3 to 9.6 ms with the drain in it, the moire the heaviest, no position
+  moved outside the 1.5 ms run-to-run spread. `?repeat=N` turned out not to measure the fragment cost on this
+  machine: N opaque full-frame draws into one target are shaded once on a tile-based GPU, so the frame time
+  barely rises with N; it is left in the engine for GPUs where it does.
+- **Two fast paths where the cut frames measured heaviest** (rule 14, exact: no still changed). The moire reads
+  a cell's arrival first and draws the landed painting in one tap where it is complete (no canopy, tone,
+  print-in or second screen) and the canopy alone where it has not begun; the finale's print-in skips both bites
+  in a cell provably ahead of the front. Before and after per position are in the review.
+
 ## What could not be measured here
 
 - A real phone GPU and thermal behaviour: the throttle slows the CPU only.

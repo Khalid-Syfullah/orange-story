@@ -57,8 +57,8 @@ float gTm;
 float gZk;
 vec2 gOff;
 
-// The Work's film grain, +-1.5%, re-hashed every 1/24 s.
-float grain(vec2 frag) { return (hash(frag + floor(gTm * 24.0) * vec2(37.1, 17.3)) - 0.5) * 0.03; }
+// The Work's film grain, +-1.5%.
+float grain(vec2 frag) { return filmGrain(frag, gTm, 0.03); }
 
 // Screen uv -> work uv: the window of the Work's last frame the camera sees now.
 vec2 toWork(vec2 uv) { return uPushO + (uv - uPushO) * uPushW; }
@@ -121,10 +121,7 @@ void main() {
   // printed, not faded (rules 1, 2). Away from the parchment a pixel's fill runs over FAR_SPAN of
   // uFlat; on the parchment it runs to the end of the push, so the parchment is the last thing to
   // become the sheet.
-  float n1 = fbm4(ph * 7.0 + 3.0) - 0.5;
-  float n2 = fbm4(ph * 19.0 - 5.0) - 0.5;
-  float d = DELAY_MAX * clamp(base + n1 * 0.32 + n2 * 0.12
-                              + (bayer4(frag) - 0.5) * 0.03 + (hash(floor(frag / 2.0)) - 0.5) * 0.02, 0.0, 1.0);
+  float d = DELAY_MAX * clamp(base + bite2(ph, 7.0, 0.32, 19.0, 0.12, vec2(3.0), vec2(-5.0)) + printEdge(frag, 0.03, 0.02), 0.0, 1.0);
   float fl = smoothstep(d, mix(d + FAR_SPAN, 1.0, near), uFlat);
 
   // Soft near the lens in the last stretch, radially from the origin (rule 7). It blends in over its

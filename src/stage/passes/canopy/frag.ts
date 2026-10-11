@@ -55,10 +55,8 @@ void canopyFrame(float tm) {
 vec2 canopyUV(vec2 uv) { return dollyAbout(uv - gMLag, gMO, gMS); }
 vec2 toCanopy(vec2 uv) { return cover(uv, uCanopySize, uCanPan, gKz) + gKoff; }
 
-// Film grain, +-1.2%, re-hashed every 1/24 s: the paintings' grain, as on the coda.
-float canopyGrain(vec2 frag, float tm) {
-  return (hash(frag + floor(tm * 24.0) * vec2(37.1, 17.3)) - 0.5) * 0.024;
-}
+// Film grain, +-1.2%: the paintings' grain, as on the coda.
+float canopyGrain(vec2 frag, float tm) { return filmGrain(frag, tm, 0.024); }
 
 // The one cloud's coverage at a canopy painting point: it drifts across the gap at CLOUD_DRIFT
 // widths a second and wraps behind the leaves, where nothing shows; its fbm edge advances at
@@ -199,11 +197,9 @@ void main() {
   }
 
   // The front, bitten by two decorrelated fields (4 octaves everywhere: motion fields), printed.
-  float n1 = fbm4(q * N1_FREQ + vec2(7.3, 1.9)) - 0.5;
-  float n2 = fbm4(q * N2_FREQ + vec2(-3.1, 8.6) + vec2(0.0, uRingP * 0.3) + tm * 0.02) - 0.5;
-  float front = f0 + (n1 * N1_AMP + n2 * N2_AMP) * uBite;
+  float front = f0 + bite2(q, N1_FREQ, N1_AMP, N2_FREQ, N2_AMP, vec2(7.3, 1.9), vec2(-3.1, 8.6) + vec2(0.0, uRingP * 0.3) + tm * 0.02) * uBite;
   float thr = bayer4(frag);
-  float edge = front + (thr - 0.5) * BAYER + (hash(floor(frag / 2.0) + 6.1) - 0.5) * STIPPLE;
+  float edge = front + printEdge(frag, BAYER, STIPPLE);
   // 1 = the canopy is here: behind the ring, once the cut has begun to print it in.
   float inside = (1.0 - smoothstep(-EDGE_SOFT, EDGE_SOFT, edge)) * dither(uReveal, thr);
 
@@ -230,8 +226,7 @@ void main() {
   // The crest: a gaussian band on the ring with the channels split apart, printed through the Bayer
   // threshold; the halo's light ahead of it and a little of it behind.
   if (uCrest > 0.001) {
-    vec3 e3 = vec3(edge) + vec3(SPLIT, 0.0, -SPLIT);
-    vec3 band = exp(-(e3 * e3) / BAND_SIGMA2);
+    vec3 band = crestBand(edge, SPLIT, BAND_SIGMA2);
     vec3 printed = smoothstep(vec3(thr - 0.1), vec3(thr + 0.1), band);
     vec3 crest = mix(band, printed, 0.65);
     float ahead = step(0.0, edge);

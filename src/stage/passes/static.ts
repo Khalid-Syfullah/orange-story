@@ -97,12 +97,11 @@ float cutD(vec2 uv) {
 vec2 cutDir() { return vec2(-0.7071 * uRes.y / uRes.x, -0.7071); }
 
 // The signed front distance: negative behind the crest (new picture), positive ahead (old one).
+// Bitten by two decorrelated fields (rule 1), both creeping with time so a held frame still moves.
 float cutFront(vec2 uv, float c) {
   float tm = uTime * (1.0 - uStill);
   vec2 q = aspectUV(uv);
-  float n1 = fbm4(q * 2.0 + vec2(3.1, 1.7) + tm * 0.03);
-  float n2 = fbm4(q * 5.3 - vec2(11.0, 4.0) - tm * 0.05);
-  return cutD(uv) - c + (n1 - 0.5) * 0.30 + (n2 - 0.5) * 0.10;
+  return cutD(uv) - c + bite2(q, 2.0, 0.30, 5.3, 0.10, vec2(3.1, 1.7) + tm * 0.03, -vec2(11.0, 4.0) - tm * 0.05);
 }
 
 vec3 staticCut(vec2 uv, vec2 frag, float c, float amp) {
@@ -131,7 +130,7 @@ vec3 staticCut(vec2 uv, vec2 frag, float c, float amp) {
   vec2 uvS = vec2(fragQ.x, uRes.y - fragQ.y) / uRes;
 
   // Which picture: the boundary is printed, not faded (rule 2).
-  float edge = f + (bayer4(frag) - 0.5) * 0.03 + (hash(floor(frag / 2.0)) - 0.5) * 0.02;
+  float edge = f + printEdge(frag, 0.03, 0.02);
   float behind = 1.0 - smoothstep(-0.02, 0.02, edge);
   float lag = exp(-max(-f, 0.0) / 0.12);
   vec3 col;

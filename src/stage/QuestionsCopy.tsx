@@ -113,7 +113,11 @@ export function QuestionsCopy() {
     const state = near ? "on" : "off";
     if (w.root !== state) {
       w.root = state;
+      // The root's opacity goes with its visibility: a piece's own inline `visibility: visible`
+      // (written while it was in range) shows through a hidden parent, so a jump or a fast glide
+      // that crosses the chapter between two frames would leave its pieces on screen (rule 11).
       root.style.visibility = near ? "visible" : "hidden";
+      root.style.opacity = near ? "" : "0";
     }
     if (!near) return;
 

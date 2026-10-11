@@ -2,6 +2,11 @@
 // this object, so the HUD can show them and `?tune=key:value,key:value` can retune them by eye
 // without a rebuild. The defaults are the table's. Tuning order: front speed, bite, rind width,
 // lag distance; then the rest in the order of the table.
+//
+// Band widths (rindWidth, lagDist, pith*, zestWidth) are in frame heights across the front: the
+// shader divides the printed front distance by the metric's gradient, so a band is the same width
+// along the seam as across it (phase 15; before that they were in the metric's own units, 2.6x
+// taller than wide, and the pith read as a cream column rather than a rim).
 export const SPLIT_TUNE = {
   // ---- front speed: R(t) = tt·(lin + (1 − lin)·tt²)·gain + offset, tt = (t − partFrom) / partSpan
   frontLin: 0.55,
@@ -20,8 +25,8 @@ export const SPLIT_TUNE = {
   bayer: 0.03,
   stipple: 0.02,
   onsetTo: 0.22,
-  // ---- rind band ahead of the cut: smoothstep(rindWidth, 0, edge); A desaturates and darkens
-  rindWidth: 0.18,
+  // ---- rind band ahead of the cut: smoothstep(rindWidth, 0, edgeS); A desaturates and darkens
+  rindWidth: 0.09,
   rindDesat: 0.3,
   rindDark: 0.25,
   rindSmear: 0.01,
@@ -46,15 +51,15 @@ export const SPLIT_TUNE = {
   softFrom: 0.7,
   softTo: 0.95,
   soft: 0.006,
-  pithIn: -0.07,
-  pithPeak: -0.09,
-  pithOut: -0.24,
+  pithIn: -0.012,
+  pithPeak: -0.024,
+  pithOut: -0.07,
   pithFadeFrom: 0.75,
   fibreX: 40,
   fibreY: 6,
   // ---- zest specks and the fast paths
   zestThreshold: 0.985,
-  zestWidth: 0.04,
+  zestWidth: 0.03,
   zestCell: 3,
   zestRate: 6,
   zestVel: 40,
