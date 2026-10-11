@@ -57,8 +57,9 @@ export const segments: readonly Segment[] = [
   { id: "split", start: 0.19, end: 0.22, chapter: "work", ground: { from: "milk", to: "sky", at: 0.45 } },
   // The tall plate scrolled through its own height; the three Work cards.
   { id: "work", start: 0.22, end: 0.37, chapter: "work", ground: "sky" },
-  // The push into the parchment she holds; the painting fades to paper around it.
-  { id: "parchment", start: 0.37, end: 0.4, chapter: "work", ground: { from: "sky", to: "paper", at: 0.5 } },
+  // The push into the parchment she holds; the painting fades to paper around it. The rail already
+  // reads The Terms. The chrome turns to ink on the push's own uFlat ramp (Chrome.tsx), not at `at`.
+  { id: "parchment", start: 0.37, end: 0.4, chapter: "terms", ground: { from: "sky", to: "paper", at: 0.5 } },
   // The procedural sheet; the drawing soaks in from the middle.
   { id: "sheet", start: 0.4, end: 0.42, chapter: "terms", ground: "paper" },
   // The orbit from eye level to plan while the window draws back toward the margin.
@@ -165,8 +166,13 @@ export function chapterAt(p: number): ChapterId | null {
   return active(p).chapter;
 }
 
-/** The first segment of a chapter (where the rail and the menu scroll to). */
+/**
+ * Where the rail and the menu scroll to for a chapter: its anchor's segment (#terms opens on the
+ * sheet, not on the push that leads into it, though the rail already reads The Terms there), else
+ * the first segment of the chapter.
+ */
 export function chapterStart(chapter: ChapterId): SegmentId {
+  if (chapter in ANCHORS) return ANCHORS[chapter];
   const first = segments.find((s) => s.chapter === chapter);
   return first ? first.id : "hero";
 }

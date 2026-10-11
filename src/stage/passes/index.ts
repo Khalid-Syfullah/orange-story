@@ -5,8 +5,21 @@ import type { PassDef } from "../gl/passes";
 import { bridgePass } from "./bridge";
 import { heroPass } from "./hero";
 import { modelPass } from "./model";
+import { parchmentPass } from "./parchment";
 import { placeholderPass } from "./placeholder";
+import { sheetPass } from "./sheet";
 import { splitPass } from "./split";
 import { workPass } from "./work";
 
-export const storyPasses: readonly PassDef[] = [heroPass, bridgePass, modelPass, splitPass, workPass, placeholderPass];
+// The first pass to claim a segment draws it: a pass that takes `drawing` or `panel` from the
+// sheet must come before sheetPass here.
+export const storyPasses: readonly PassDef[] = [
+  heroPass,
+  bridgePass,
+  modelPass,
+  splitPass,
+  workPass,
+  parchmentPass,
+  sheetPass,
+  placeholderPass,
+];

@@ -4,11 +4,14 @@
 // arrives with the part of the painting it sits beside. A card travels at 0.6x the plate's speed;
 // each ramps in over 60 scroll units, the title (with its tag and panel) 12 units ahead of the body,
 // and leaves as it passes the top of the frame. Positions and windows come from
-// passes/work/timeline.ts, the same numbers the picture uses. Text is DOM, never WebGL.
+// passes/work/timeline.ts, the same numbers the picture uses. Text is DOM, never WebGL. A card still
+// on screen when The Work ends (the blueprint's) leaves with the push into the parchment: it drifts
+// with the dolly at the same 0.6 parallax and ramps out over the push's first 60 units.
 import { useCallback, useRef } from "react";
 import { work } from "@/content/copy";
 import type { FrameCtx } from "./frame";
 import { useFrame } from "./hub";
+import { CARD_PUSH_PARALLAX, cardLeaveAt, PARCHMENT_TUNE, parchmentT, pushedPoint } from "./passes/parchment/timeline";
 import {
   CARD_ANCHORS,
   cardScreenY,
@@ -16,6 +19,7 @@ import {
   rampIn,
   rampOut,
   WORK_TUNE,
+  WORK_UNITS,
   workUnits,
   type CardWindow,
 } from "./passes/work/timeline";
@@ -54,21 +58,29 @@ interface CardRefs {
 export function WorkCopy() {
   const cards = useRef<CardRefs[]>(work.cards.map(() => ({ root: null, panel: null, tag: null, title: null, body: null })));
   const written = useRef(work.cards.map(() => ({ panel: blank(), tag: blank(), title: blank(), body: blank(), y: "" })));
-  const windows = useRef<{ key: string; list: CardWindow[] }>({ key: "", list: [] });
+  const windows = useRef<{ key: string; list: CardWindow[]; centres: number[] }>({ key: "", list: [], centres: [] });
 
   const onFrame = useCallback((f: FrameCtx) => {
     const key = `${f.css[0]}x${f.css[1]}`;
-    if (windows.current.key !== key) windows.current = { key, list: cardWindows(f.css) };
+    if (windows.current.key !== key) {
+      // Each card's horizontal centre (layout, read once per frame size; transforms do not move it).
+      const centres = cards.current.map((c) => (c.root ? c.root.offsetLeft + c.root.offsetWidth / 2 : 0));
+      windows.current = { key, list: cardWindows(f.css), centres };
+    }
     const x = workUnits(f.p);
-    const t = Math.min(1, Math.max(0, f.t));
+    // The Work's own t (its first frame before it, its last after it: the push holds the plate at
+    // its last frame and moves it on screen by the dolly).
+    const workT = f.segment.id === "work" ? Math.min(1, Math.max(0, f.t)) : x <= 0 ? 0 : 1;
+    const pushT = parchmentT(f.p);
+    const leave = cardLeaveAt(f.p);
     // Only while the chapter (and its neighbours' ramps) are near: the cards are hidden elsewhere.
-    const near = x > -100 && x < 1700;
+    const near = x > -100 && x < WORK_UNITS + PARCHMENT_TUNE.cardLeave + 20;
     for (let i = 0; i < cards.current.length; i++) {
       const refs = cards.current[i];
       const w = written.current[i];
       const win = windows.current.list[i];
       if (!refs.root || !win) continue;
-      const out = near ? rampOut(x, win.outAt) : 0;
+      const out = near ? rampOut(x, win.outAt) * leave : 0;
       const titleIn = near ? rampIn(x, win.inAt) : 0;
       const bodyIn = near ? rampIn(x, win.inAt + WORK_TUNE.cardLead) : 0;
       const arriving = 1 - titleIn;
@@ -78,8 +90,18 @@ export function WorkCopy() {
       write(refs.tag, w.tag, titleIn * out, lift);
       write(refs.title, w.title, titleIn * out, lift);
       write(refs.body, w.body, bodyIn * out, lift);
-      // Pinned to its plate y, at 0.6x the plate's speed; the card's centre sits on that y.
-      const y = `translate3d(0, ${(cardScreenY(CARD_ANCHORS[i], t, f.css) * f.css[1]).toFixed(1)}px, 0) translateY(-50%)`;
+      // Pinned to its plate y, at 0.6x the plate's speed; the card's centre sits on that y. Through
+      // the push it drifts with the dolly about the parchment, at the same parallax.
+      const cy = cardScreenY(CARD_ANCHORS[i], workT, f.css);
+      let dx = 0;
+      let dy = 0;
+      if (pushT > 0 && out > 0) {
+        const at = { x: windows.current.centres[i] / f.css[0], y: cy };
+        const moved = pushedPoint(at, pushT, f.css);
+        dx = (moved.x - at.x) * CARD_PUSH_PARALLAX * f.css[0];
+        dy = (moved.y - at.y) * CARD_PUSH_PARALLAX * f.css[1];
+      }
+      const y = `translate3d(${dx.toFixed(1)}px, ${(cy * f.css[1] + dy).toFixed(1)}px, 0) translateY(-50%)`;
       if (w.y !== y) refs.root.style.transform = w.y = y;
     }
   }, []);

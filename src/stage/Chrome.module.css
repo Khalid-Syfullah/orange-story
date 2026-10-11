@@ -3,6 +3,9 @@
    surface (paint / flat) are switched by segment from the frame subscription. */
 
 .chrome {
+  /* Over paintings the hairlines are 55% milk; on the flat sheet 20% of the foreground. A ramp
+     (the push into the parchment) writes this variable inline, between the two. */
+  --chrome-line: var(--line-on-paint);
   position: absolute;
   inset: 0;
   z-index: 10;
@@ -11,13 +14,24 @@
   transition: color 420ms var(--ease);
 }
 
+.chrome[data-surface="flat"] {
+  --chrome-line: var(--line-on-flat);
+}
+
 .chrome :global(.hairline) {
+  background: var(--chrome-line);
   transition: background-color 420ms var(--ease);
 }
 
-/* Over paintings the hairlines are 55% milk; on the flat sheet 20% of the foreground. */
-.chrome[data-surface="paint"] :global(.hairline) {
-  background: var(--line-on-paint);
+/* While a scroll-driven ramp writes the colours every frame they follow p exactly, so the
+   time-based colour transitions are off (the rail's opacity switch keeps its own). */
+.chrome[data-ramp],
+.chrome[data-ramp] :global(.hairline),
+.chrome[data-ramp] .midStar,
+.chrome[data-ramp] .menu,
+.chrome[data-ramp] .apply,
+.chrome[data-ramp] .apply :global(.pill__chip) {
+  transition: none;
 }
 
 .left,

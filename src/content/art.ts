@@ -49,6 +49,14 @@ export interface Framing {
   zoom: number;
 }
 
+/** A region of a painting in painting coordinates: top-left corner and size, 0..1, y down. */
+export interface Rect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 export type StillTiers = Record<Tier, string>;
 
 interface ArtBase {
@@ -218,6 +226,22 @@ export const art = {
       /** The woman reading the blueprint on the lower stage: Work card 3. */
       blueprint: { x: 0.42, y: 0.73 },
     },
+    rects: {
+      /**
+       * The parchment she holds open: the sheet between its two rollers (rollers, hands and the
+       * drawn plan's frame inside it). Measured on the plate by eye; the push into the sheet lands
+       * on it (passes/parchment).
+       */
+      parchment: { x: 0.507, y: 0.7055, w: 0.1875, h: 0.0738 },
+    },
+    framings: {
+      /**
+       * Where the push lands: the parchment rect cover-fitted to the frame, `zoom` beyond that fit
+       * (so the rollers and the rect's edges stay out of frame through the push's 2% drift), its
+       * centre moved by `pan` (painting units) off the rect's centre.
+       */
+      parchment: { pan: { x: 0, y: 0 }, zoom: 1.06 },
+    },
   },
 
   drawing: frames("drawing", "1:1", 121, "The Terms (window)"),
@@ -291,6 +315,10 @@ export const art = {
     anchors?: Record<string, Point>;
     /** Named radii as fractions of the painting's width. */
     radii?: Record<string, number>;
+    /** Named regions in painting coordinates (0..1, y down). */
+    rects?: Record<string, Rect>;
+    /** Named framings of a region (a landing shot inside the painting). */
+    framings?: Record<string, Framing>;
     /** Extra keyframe still (share's second keyframe). */
     last?: StillTiers;
   }
