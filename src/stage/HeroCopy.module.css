@@ -1,0 +1,83 @@
+/* The hero copy: title, subtitle and button in the open sky (upper left), the tag and paragraph in
+   the lower left under the mid rule. Positions come from the layout tokens in globals.css. The
+   layers div ignores pointer events; the button opts back in. Opacity and lift are written from the
+   frame subscription, so the elements start hidden until the first frame. */
+
+.hero {
+  position: absolute;
+  inset: 0;
+  color: var(--milk);
+}
+
+.top,
+.low {
+  position: absolute;
+  left: var(--col-a);
+  opacity: 0;
+  visibility: hidden;
+  will-change: opacity, transform;
+  /* Milk copy over marble or orange: a soft sky-blue halo keeps it readable without a box. */
+  text-shadow: 0 0 18px color-mix(in srgb, var(--sky) 65%, transparent);
+}
+
+.top {
+  top: calc(var(--rule-top) + 3.5vh);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: clamp(0.9rem, 2.2vh, 1.5rem);
+  width: min(40vw, 40rem);
+}
+
+/* Sized by height as well as width so the block clears the attendant standing lower left. */
+.title {
+  font-size: clamp(2.75rem, min(1rem + 4.2vw, 8.4vh), 4.75rem);
+  font-weight: 300;
+}
+
+.subtitle {
+  max-width: 30rem;
+  font-size: clamp(1rem, min(0.8rem + 0.5vw, 2.6vh), 1.25rem);
+  opacity: 0.92;
+}
+
+.button {
+  pointer-events: auto;
+  margin-top: 0.4rem;
+  text-shadow: none;
+  background: color-mix(in srgb, var(--sky) 40%, transparent);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+.low {
+  bottom: 6vh;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  width: min(20vw, 24rem);
+  min-width: 15rem;
+}
+
+.tag {
+  text-shadow: none;
+}
+
+.paragraph {
+  opacity: 0.94;
+}
+
+/* Tall phones: one column, the title and the button up top, the paragraph under the mid rule. */
+@media (max-aspect-ratio: 4 / 5) {
+  .top {
+    width: calc(100% - var(--col-a) * 2);
+    top: calc(var(--rule-top) + 4vh);
+  }
+
+  .low {
+    width: calc(100% - var(--col-a) * 2);
+    min-width: 0;
+    bottom: 5vh;
+  }
+}

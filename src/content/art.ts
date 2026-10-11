@@ -147,6 +147,8 @@ const frames = (
 export const art = {
   hero: {
     ...loop("hero", "Hero"),
+    /** A 2% push-in so pointer parallax and drift never show the painting's edge. */
+    framing: { pan: { x: 0, y: 0 }, zoom: 1.02 },
     anchors: {
       /** Rainbow glint on the peel: upper-left of the giant orange, where the light hits. */
       glint: { x: 0.64, y: 0.3 },

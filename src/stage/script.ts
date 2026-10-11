@@ -112,6 +112,13 @@ export function indexOf(id: SegmentId): number {
   return segments.indexOf(byId[id]);
 }
 
+/**
+ * One scroll unit, as progress: copy ramps and lead times in the phase prompts ("over 60 scroll
+ * units", "12 units ahead") are counted in these. 1/10000 of the story is about 5 px of scroll on a
+ * 900 px screen, so 60 units is a ramp of about 320 px and 12 units a lead of about 64 px.
+ */
+export const SCROLL_UNIT = 1e-4;
+
 const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x);
 
 /** Local progress 0..1 inside a segment, clamped: 0 before it, 1 after it. */
