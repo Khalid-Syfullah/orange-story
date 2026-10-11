@@ -1,0 +1,5 @@
+feature(polish): remove every remaining mechanical tell from the cuts
+
+A reviewed pass over every transition and rest state against the motion rules:
+fronts, edges, easing, lag, smear, breath and hashing tuned, shared gestures
+unified into one hand, segment handovers made seamless, frame times recorded.

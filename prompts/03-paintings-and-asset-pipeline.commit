@@ -1,0 +1,4 @@
+feature(art): add the painting briefs, the import pipeline and painted placeholders
+
+Every asset in the manifest now exists on disk: real paintings when a source is
+present, painted stand-ins otherwise, with tiers, loops, frame sequences and anchors.

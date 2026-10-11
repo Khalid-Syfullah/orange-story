@@ -1,0 +1,4 @@
+feature(qa): automate the checks and pass them against a production build
+
+Playwright scrub, pop, still-frame, edge, frame-time, reduced-motion and phone
+tests for every cut, with the fixes they required and the numbers recorded.

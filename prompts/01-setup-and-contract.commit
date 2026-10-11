@@ -1,0 +1,5 @@
+feature(setup): rebuild the foundation for the raw-WebGL scroll story
+
+Replace the previous stack with a plain Next.js app: fonts, tokens, the copy deck,
+the art manifest, a dev design page and a README. Keeps the EC2 deploy contract
+(build, start on 3000) and the CI scripts green.

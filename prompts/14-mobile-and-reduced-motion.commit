@@ -1,0 +1,5 @@
+feature(mobile): hold the story on phones, under reduced motion and with a keyboard
+
+Phone framing and pans, touch scrolling, octave and resolution budgets, fast paths
+and gating for even frame time, reduced-motion collapse, accessibility and
+scroll restoration.

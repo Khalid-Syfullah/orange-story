@@ -1,0 +1,4 @@
+feature(hero): paint the hero with halftone clouds, a rainbow glint and a pour
+
+The hero loop through the engine's cover mapping, canvas-made clouds, glint, pour,
+grain and ring, the on-load print-in, and the hero copy layer.

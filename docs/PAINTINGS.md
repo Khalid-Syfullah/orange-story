@@ -1,0 +1,113 @@
+# Paintings
+
+Every painting shares one style preamble so the sections cut together as one hand. Prepend it to every image prompt. Sizes are the generation targets; the import script (`npm run art:import`) makes the tiers.
+
+Assets live in `art/source/<id>.<png|mp4>` (gitignored, large) and are imported to `public/art/<id>/` by `scripts/art-import.mjs`: stills become `1440.jpg` and `768.jpg`; videos become frame sequences `1440/f_000.jpg …` and `768/…` plus `manifest.json` (`{"tiers":{"1440":{"count":N},"768":{"count":N}}}`). Loops stay as mp4 (`public/art/<id>.mp4`) with a poster. When a source is missing, the import writes a painted placeholder (silhouettes and colour fields in the right palette) at the same paths so nothing in the build depends on art being present.
+
+```text
+STYLE PREAMBLE (prepend to every painting prompt)
+Neoclassical academic oil painting in the manner of a 19th-century salon painter: smooth modelling, fine visible brushwork, warm skin, cream and ochre drapery, white Carrara marble, one deep cobalt-blue sky with no gradient banding. Light from the upper left, long soft shadows. Museum finish, no frame, no text, no watermark, no signature. Subject colours: orange peel in saturated orange-gold with burnished highlights and visible dimples, glossy dark-green leaves.
+```
+
+| id | Kind | Size | Used in |
+| --- | --- | --- | --- |
+| `hero` | video loop 10 s (or still) | 16:9, 2048x1152 | Hero |
+| `bridge` | 121 frames | 16:9 | Hero → Model |
+| `graft` | still or 5 s video | 16:9 | Model beat 1 |
+| `grove` | still or 5 s video | 16:9 | Model beat 2 |
+| `share` | two keyframes or 5 s video | 16:9 | Model beat 3 (last frame = the halves held apart) |
+| `plate` | still | 9:16, 1152x2048 | The Work, the push into the parchment |
+| `drawing` | 121 frames | 1:1 | The Terms (window) |
+| `plan` | still | 1:1, 1536x1536 | Last frame of `drawing` |
+| `coda` | 89 frames | 16:9 | The Terms (blue) |
+| `share-orange` | still | 1:1 | Last frame of `coda` |
+| `canopy` | video loop 10 s | 16:9 | Questions |
+| `application` | still | 16:9 | Application |
+| `sapling` | still | 16:9 | The rise |
+| `finale` | video loop 10 s | 16:9 | Finale |
+
+## hero
+
+```text
+A monumental ripe orange as tall as a house rests on a stepped white marble plinth on the right half of the canvas, short woody stem and two glossy leaves on top. Three women in Greek drapery attend it: lower left, one in a cream gown with a rust-red sash tilts an empty brass watering can toward the steps; centre, one in a cream tunic with a golden-ochre sash stands on the steps polishing the peel with a white cloth; far right, one in an ochre shawl stands with a hand on her chest. The whole upper left is clear cobalt sky with no clouds. Subjects grouped lower right so the upper left stays open for copy.
+MOTION (10 s loop): the cloth moves slowly over the peel; the can tilts a little; drapery stirs; the camera holds.
+```
+
+## bridge
+
+```text
+First frame = the hero's last frame. Last frame = graft's first frame.
+MOTION (image-to-video with both keyframes, 6 s): the white marble plinth turns to bark from the bottom up along a torn edge, the orange stays exactly where it is and becomes fruit hanging from the branch the plinth has become, leaves sprout along the branch, the attendants fade out with the sky as the ground goes paper-white, and a grafting knife and a coil of raffia come to rest on the branch. The camera holds; nothing cuts. Keep the orange's position in frame identical in the first and last frames.
+```
+
+## graft
+
+```text
+Close on two hands grafting a citrus scion onto a cut branch: the left hand steadies the branch, the right hand winds pale raffia twine around the join; a small grafting knife with a boxwood handle rests on the branch; four young orange leaves and a white blossom bud sprout from the scion. Background a flat warm paper-white, no sky, no horizon. The hands fill the lower two thirds; the scion rises into empty space above.
+MOTION (5 s): the right hand completes one slow wrap of the twine; the leaves barely stir; camera static.
+```
+
+## grove
+
+```text
+Looking up into an orange tree heavy with fruit against a pale overcast-white sky: dozens of oranges among dark glossy leaves, one gilded orange at centre brighter than the rest. From the lower right a single hand in a white lace cuff and green velvet sleeve reaches up and closes around the gilded orange. Branches frame the edges; no ground visible.
+MOTION (5 s): the hand rises from below frame and takes the gilded orange; the branch dips slightly under the pull.
+```
+
+## share
+
+```text
+A young man with auburn curls in a dark-green velvet doublet with gold-embroidered collar and white lace cuffs, three-quarter profile facing left, holds a gilded orange at eye level in his right hand and studies it. Flat paper-white background. He sits right of centre; the left third is empty.
+SECOND KEYFRAME: two hands, one his and one entering from the left in a plain cuff, hold the orange cut cleanly in half, the two halves tilted toward the viewer showing bright segments and a bead of juice, a hand's width apart. This frame is the one The Split opens.
+MOTION (5 s): the orange turns a quarter in his fingers, then parts into halves; the second hand arrives from the left and takes one.
+```
+
+## plate
+
+```text
+Portrait 9:16, taller than any viewport. Top third: clear cobalt sky, nothing in it (clouds are added in the shader). Middle: the same monumental orange from the hero, now wrapped in a timber scaffold of lashed poles, planks and rope ladders; a man in a white tunic with a red sash stands on a plank at the orange's shoulder polishing the peel with a cloth, his back to us; a coil of rope and a bucket on the plank. Lower third: the white marble plinth, and on a lower scaffold stage a woman in a white gown with a red sash holds open a large parchment blueprint showing the orange's plan in ink lines, reading it. Scaffold poles run off the right edge. Keep the left 35% of the middle and lower thirds quiet (sky and plain marble) for copy.
+```
+
+## drawing and plan
+
+```text
+DRAWING (121 frames, square): the plate's scene as an architect's ink-and-watercolour construction drawing on cream paper: sepia line work, thin washes of ochre on the orange, grey-blue on the sky, the scaffold as measured timber with a ladder and a hoist, a labourer on the stage, a mosaic floor with a meander border round the plinth, pencil construction lines and dimension ticks left showing. Loose, confident, unfinished at the edges.
+MOTION: one continuous orbit from eye level up and over to directly above, the drawing redrawing itself as the view changes (lines wobble, washes re-pool). First frame: eye-level three-quarter view. Last frame: PLAN.
+
+PLAN (square 1:1, 1536x1536, generate first and use as the orbit's end keyframe): a top-down architectural plan of the colossus: the orange seen from directly above as a dimpled gold disc with its stem and two leaves, centred on the square marble plinth, inside a ring of timber scaffolding drawn as a measured square frame with four corner towers, a hoist, two tiny workers and a ladder, the mosaic floor's meander border round the outside. Ink line work in sepia with light watercolour: ochre on the fruit, cool grey on the marble, raw umber on the timber. Pencil grid, a north arrow, dimension ticks, a worn fold crease. Aged cream paper fills the square; the drawing occupies the middle 70%.
+```
+
+## coda and share-orange
+
+```text
+CODA (89 frames, 16:9): against a flat deep-blue backdrop, a woman in a white gown with a crimson sash stands on the left of a white marble plinth, lifting a long gilded picking rod toward a small orange tree growing from a marble urn on the plinth; the tree carries eight oranges, three of them gilded. Soft studio light from the left; the blue backdrop has no horizon and no texture. The tree and plinth sit right of centre; the left third is open blue.
+MOTION: the rod touches one gilded orange, it detaches and floats down slowly to hang in mid-air left of the tree; the camera pushes in and drifts right so the woman and the tree leave the frame on the right; a few leaves scatter as the fruit comes free. Last frame: SHARE-ORANGE.
+
+SHARE-ORANGE (square, generate first and use as the coda's end keyframe): one gilded orange with a short stem and one leaf, floating at the centre of a flat cobalt field, lit from the upper left, casting no shadow. Nothing else in the frame. The halo and the blurred copy behind it are drawn in the shader.
+```
+
+## canopy
+
+```text
+Looking straight up through the branches of an orange tree: dark glossy leaves and a dozen oranges around all four edges, some lit from behind so the peel glows, framing an open patch of cobalt sky in the centre. No ground, no trunk, no clouds (the cloud is added in the shader). The branches must leave the centre 50% of the frame as clear sky.
+MOTION (10 s loop): leaves stir in a light wind; one orange sways on its stem; the camera holds.
+```
+
+## application
+
+```text
+A woman in a white Greek gown with a crimson sash over one shoulder stands on the left on a flight of white marble steps, seen from behind at three-quarter, right arm raised and index finger pointing up into a cobalt sky that fills the right two thirds. Large soft cumulus clouds in the sky, brightest near her hand, thinning toward the top right. Dark curls tied up. A small gilded orange sits on the top step beside her. No stars (the constellation is drawn in SVG over the painting).
+```
+
+## sapling
+
+```text
+A young orange sapling with a slim trunk, a dozen leaves and three small green oranges, growing from bare marble at the bottom centre of a cobalt sky; nothing else. Painted small, leaving most of the frame as sky.
+```
+
+## finale
+
+```text
+A young orange tree with five gilded oranges at the centre of a cobalt sky. Left: a woman in a white gown with a red sash pours from a brass watering can at its roots (the can is empty; the pour is added in the shader). Right: a young man in dark-green drapery, auburn curls, bends to tie up a branch. Both figures cropped at the waist by the frame edges. Open sky above the tree for the wordmark.
+MOTION (10 s loop): the can tilts a little further; the man's hands finish the knot; leaves stir; the camera holds.
+```

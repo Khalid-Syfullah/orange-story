@@ -1,0 +1,5 @@
+feature(engine): add the scroll clock, WebGL stage, GLSL library and texture manager
+
+One pinned stage, smoothed scroll as progress, a single full-screen pass per frame,
+cover/uncover mapping, frame-sequence scrubbing with decode-ahead, the chrome and a
+dev page to verify the mapping.
