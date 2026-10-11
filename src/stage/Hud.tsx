@@ -8,6 +8,7 @@
 // close the burn's travel and front, over the coda the frame, the halo and the copy's ramps.
 import { useEffect, useRef } from "react";
 import { useStage } from "./hub";
+import { applicationHud } from "./passes/application";
 import { canopyHud } from "./passes/canopy";
 import { codaHud } from "./passes/coda";
 import { parchmentHudLines } from "./passes/parchment/timeline";
@@ -57,6 +58,7 @@ export function Hud() {
       if (pass === "terms") lines.push(...termsHud(f.p, f.css));
       if (pass === "close" || pass === "coda") lines.push(...codaHud(f.p, f.css));
       if (pass === "matchcut" || pass === "questions") lines.push(...canopyHud(f.p, f.css));
+      if (pass === "moire" || pass === "application" || pass === "rise") lines.push(...applicationHud(f.p, f.css));
       el.textContent = lines.join("\n");
     });
   }, [hub]);

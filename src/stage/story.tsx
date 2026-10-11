@@ -1,6 +1,7 @@
 "use client";
 // The home page's stage: the story passes with the chrome. DOM layers for each chapter's copy are
 // added here as children by later phases.
+import { ApplicationCopy } from "./ApplicationCopy";
 import { CodaCopy } from "./CodaCopy";
 import { HeroCopy } from "./HeroCopy";
 import { ModelCopy } from "./ModelCopy";
@@ -19,6 +20,7 @@ export function StoryStage() {
       <TermsCopy />
       <CodaCopy />
       <QuestionsCopy />
+      <ApplicationCopy />
     </Stage>
   );
 }

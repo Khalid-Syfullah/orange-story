@@ -200,6 +200,15 @@ export const application = {
   /** Right-arrow chip. */
   submit: "Send application",
   success: "Received. We'll read it and reply within a week.",
+  /** Plain inline messages: one per field that fails validation, and one for a send that fails. */
+  errors: {
+    name: "Tell us your name.",
+    email: "Enter a work email like name@company.com.",
+    grow: "Tell us what should grow.",
+    send: "That did not send. Please try again, or write to us directly.",
+  },
+  /** Shown on the button while the request is in flight. */
+  sending: "Sending",
 } as const;
 
 // ---------------------------------------------------------------------------------------------

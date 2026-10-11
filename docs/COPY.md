@@ -53,6 +53,9 @@ All copy lives in `src/content/copy.ts`, typed and grouped by chapter, so it can
 - Fields: "Your name", "Work email", "What should grow?"
 - Submit button: "Send application" (right-arrow chip)
 - Success message: "Received. We'll read it and reply within a week."
+- Validation messages: name "Tell us your name."; email "Enter a work email like name@company.com."; grow "Tell us what should grow."
+- Send failure (inline, plain): "That did not send. Please try again, or write to us directly."
+- Button while the request is in flight: "Sending"
 - The form posts JSON (name, email, grow) to `NEXT_PUBLIC_APPLY_ENDPOINT` when set; unset, it validates and shows the success message without sending.
 
 ## Finale

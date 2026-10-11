@@ -303,6 +303,16 @@ export const art = {
       /** Tip of the woman's raised index finger: the constellation's first line starts here. */
       fingertip: { x: 0.3, y: 0.2 },
     },
+    rects: {
+      /**
+       * The figure, from her hair to the hem of her gown (a little generous: it is a feathered mask).
+       * The moire print-in brings the clouds and the sky in first and her last
+       * (passes/application).
+       */
+      figure: { x: 0.15, y: 0.18, w: 0.2, h: 0.74 },
+      /** The marble steps along the bottom, with the gilded orange on the top one: they resolve with her. */
+      steps: { x: 0.0, y: 0.83, w: 0.64, h: 0.17 },
+    },
   },
 
   sapling: {
@@ -310,6 +320,14 @@ export const art = {
     anchors: {
       /** Foot of the trunk at the bottom centre: the print-in front is measured from here. */
       trunkFoot: { x: 0.5, y: 0.9 },
+    },
+    rects: {
+      /**
+       * The sapling alone, trunk foot to crown, with a margin of sky: the rise prints only what is
+       * not sky inside this box onto the application painting, so its own marble and sky never
+       * replace the figure and the steps.
+       */
+      tree: { x: 0.42, y: 0.55, w: 0.17, h: 0.352 },
     },
   },
 

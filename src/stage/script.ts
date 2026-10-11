@@ -39,7 +39,7 @@ export interface Segment {
   /** Inclusive start, exclusive end (the last segment includes 1). */
   start: number;
   end: number;
-  /** Chapter shown on the left rail; null before the story starts and after Questions. */
+  /** Chapter shown on the left rail; null before the story starts and from the rise on. */
   chapter: ChapterId | null;
   ground: GroundSpec;
 }
@@ -77,9 +77,10 @@ export const segments: readonly Segment[] = [
   { id: "questions", start: 0.59, end: 0.76, chapter: "questions", ground: "sky" },
   // The coarse halftone screen with moiré; the next painting's clouds print in.
   { id: "moire", start: 0.76, end: 0.79, chapter: "questions", ground: "sky" },
-  // The woman on the steps points at the constellation whose stars are the form fields.
-  { id: "application", start: 0.79, end: 0.9, chapter: null, ground: "sky" },
-  // The sapling prints in; the constellation retracts to her fingertip.
+  // The woman on the steps points at the constellation whose stars are the form fields. The rail
+  // still reads Questions here; it goes dark with the rise.
+  { id: "application", start: 0.79, end: 0.9, chapter: "questions", ground: "sky" },
+  // The sapling prints in; the constellation retracts to her fingertip. Nothing is highlighted.
   { id: "rise", start: 0.9, end: 0.96, chapter: null, ground: "sky" },
   // The footer loop under the wordmark.
   { id: "finale", start: 0.96, end: 1.0, chapter: null, ground: "sky" },

@@ -1,0 +1,189 @@
+/* The application's layer over the painting: the form in the sky on the right and the constellation
+   whose stars are its fields. The container carries the `on-sky` ground (milk on the painting's
+   cobalt, with the shader's scrim under the column). Position, opacity and lift are written from the
+   frame subscription (ApplicationCopy.tsx), so every piece starts hidden until the first frame; the
+   column takes the pointer only while the fields are on screen. */
+
+.application {
+  position: absolute;
+  inset: 0;
+  color: var(--fg);
+  pointer-events: none;
+  text-shadow:
+    0 0 14px color-mix(in srgb, var(--sky) 85%, transparent),
+    0 0 3px color-mix(in srgb, var(--sky) 60%, transparent);
+}
+
+/* The column: its left and width are written from the layout (formLayout in the timeline). It sits
+   below the top rule and centres its box in the rest of the frame. */
+.wrap {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  padding-top: var(--rule-top);
+  pointer-events: none;
+}
+
+.box {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: clamp(0.7rem, 1.9vh, 1.1rem);
+  width: 100%;
+}
+
+.piece {
+  position: relative;
+  opacity: 0;
+  visibility: hidden;
+  will-change: opacity, transform;
+}
+
+.title {
+  /* Sized by height as well as width so the column fits short frames. */
+  font-size: clamp(1.6rem, min(0.6rem + 2.2vw, 4.7vh), 2.75rem);
+  line-height: 1.04;
+  max-width: 100%;
+}
+
+.subtitle {
+  max-width: 34em;
+  color: color-mix(in srgb, var(--fg) 90%, transparent);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: clamp(0.7rem, 1.9vh, 1.1rem);
+  width: 100%;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+/* The label starts with the star's anchor: the circle and its flare are drawn in the SVG over it. */
+.label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.mark {
+  flex: none;
+  width: 22px;
+  height: 22px;
+}
+
+/* The input: no box, a 1px hairline at 55% milk under the type, the type at 16px so a phone does
+   not zoom into it. */
+.input {
+  width: 100%;
+  padding: 0.45rem 0 0.4rem 32px;
+  margin: 0;
+  border: 0;
+  border-bottom: 1px solid var(--line-on-paint);
+  border-radius: 0;
+  background: transparent;
+  color: var(--fg);
+  font-family: var(--font-text), system-ui, sans-serif;
+  font-size: 1rem;
+  line-height: 1.4;
+  text-shadow: inherit;
+  caret-color: var(--orange);
+  resize: none;
+  transition: border-color 220ms var(--ease);
+}
+
+.input:hover {
+  border-bottom-color: var(--fg);
+}
+
+.input:focus-visible {
+  border-bottom-color: var(--orange);
+  box-shadow: 0 1px 0 var(--orange);
+  outline: none;
+}
+
+.input[aria-invalid="true"] {
+  border-bottom-color: color-mix(in srgb, var(--orange) 55%, var(--milk));
+}
+
+.error {
+  margin: 0.2rem 0 0 32px;
+  color: color-mix(in srgb, var(--orange) 45%, var(--milk));
+  text-transform: none;
+  letter-spacing: 0.01em;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding-top: 0.4rem;
+}
+
+.actions :global(.pill) {
+  pointer-events: auto;
+}
+
+.success {
+  margin: 0;
+  max-width: 24em;
+  outline: none;
+}
+
+.constellation {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  text-shadow: none;
+}
+
+.line {
+  stroke: var(--line-on-paint);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+  fill: none;
+}
+
+.star {
+  color: var(--fg);
+}
+
+.ring {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+
+.flare {
+  fill: currentColor;
+}
+
+/* Tall phones: the form is one column between the gutters, from under the top rule. */
+@media (max-aspect-ratio: 4 / 5) {
+  .wrap {
+    align-items: flex-start;
+    padding-top: calc(var(--rule-top) + 5vh);
+  }
+
+  .title {
+    font-size: clamp(1.5rem, 7vw, 2.25rem);
+  }
+}
+
+/* A failed send reads under the button, flush with it (the field messages are indented to the type). */
+.actions .error {
+  margin-left: 0;
+}
