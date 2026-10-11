@@ -26,6 +26,12 @@ export interface PassTextureDecl {
    * Default: local progress across the whole sequence, `t * (count - 1)`.
    */
   frame?: (ctx: FrameCtx, count: number) => number;
+  /**
+   * Frame sequences only: which end of the sequence to warm while this pass's segment is merely
+   * near (the frame the scroll will enter on). Default: the first frame when the segment is ahead,
+   * the last when it is behind. A pass that shows only a sequence's last frame says "last".
+   */
+  warm?: "first" | "last";
 }
 
 export interface PassDef {
@@ -35,8 +41,11 @@ export interface PassDef {
   /** The pass's fragment source; the header and library are prepended by the program builder. */
   frag: string;
   textures?: readonly PassTextureDecl[];
-  /** Per-frame uniforms beyond the shared set. */
-  uniforms?: (ctx: FrameCtx, u: UniformSetter) => void;
+  /**
+   * Per-frame uniforms beyond the shared set. Runs after the textures are bound and the sequences
+   * have taken their nearest decoded frame, so `textures.frames(id).current` is the frame on screen.
+   */
+  uniforms?: (ctx: FrameCtx, u: UniformSetter, textures: TextureManager) => void;
   /**
    * The pass has time-driven breath and wants a redraw every frame. Default true. Under reduced
    * motion the engine redraws only when something changed, whatever this says.
@@ -130,15 +139,24 @@ export class PassManager {
   preload(p: number): void {
     const near = new Set<string>();
     const seen = new Set<BoundPass>();
+    const aimed = new Set<Handle>();
+    const current = this.bySegment.get(active(p).id);
+    // A sequence the active pass draws is aimed by that pass's own draw; warming it here too would
+    // make two passes pull its decode window back and forth (thrash).
+    for (const h of current?.handles ?? []) aimed.add(h);
     for (const seg of nearby(p, NEAR_MARGIN)) {
       const bound = this.bySegment.get(seg.id);
       if (!bound || seen.has(bound)) continue;
       seen.add(bound);
-      for (const h of bound.handles) {
+      const decls = bound.def.textures ?? [];
+      for (let i = 0; i < bound.handles.length; i++) {
+        const h = bound.handles[i];
         near.add(h.key);
-        if (h.kind === "frames" && seg.id !== active(p).id) {
-          // Not active yet: warm the frame the scroll will enter on.
-          h.aim(seg.start > p ? 0 : h.count - 1);
+        if (h.kind === "frames" && seg.id !== active(p).id && !aimed.has(h)) {
+          // Not active yet: warm the frame the scroll will enter on. First pass to ask wins.
+          aimed.add(h);
+          const warm = decls[i]?.warm ?? (seg.start > p ? "first" : "last");
+          h.aim(warm === "first" ? 0 : h.count - 1);
         }
       }
     }
@@ -196,7 +214,7 @@ export class PassManager {
       u.set2f(`${decl.uniform}Size`, h.size[0], h.size[1]);
     }
 
-    bound.def.uniforms?.(frame, u);
+    bound.def.uniforms?.(frame, u, this.textures);
 
     this.triangle.bind();
     this.triangle.draw();

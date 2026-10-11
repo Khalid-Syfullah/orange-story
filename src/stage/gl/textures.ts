@@ -598,6 +598,14 @@ export class TextureManager {
     return handle;
   }
 
+  /**
+   * The second keyframe of the share beat: the orange cut in half, the halves held apart. The
+   * model's last frame and The Split's first frame are both this texture, so it is one handle.
+   */
+  get shareLast(): StillHandle {
+    return this.still("share", "last");
+  }
+
   /** A video loop. The hero uses the element from the stage markup; others get their own. */
   loop(id: ArtId, element?: HTMLVideoElement | null): LoopHandle {
     const key = `loop:${id}`;

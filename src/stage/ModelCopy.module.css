@@ -1,0 +1,95 @@
+/* The Model's copy: the grove beat (title and subtitle) and the share beat (title, tag and the
+   typed line), in column A over the pale ground. Opacity and lift are written from the frame
+   subscription, so every piece starts hidden until the first frame. The container carries the
+   `on-milk` ground (ink on the pale model ground), which also feeds the tag's tint. */
+
+.model {
+  position: absolute;
+  inset: 0;
+  color: var(--fg);
+  pointer-events: none;
+}
+
+.beat {
+  position: absolute;
+  left: var(--col-a);
+  top: calc(var(--rule-top) + 3.5vh);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: clamp(0.9rem, 2.2vh, 1.5rem);
+  width: min(38vw, 36rem);
+}
+
+.piece {
+  opacity: 0;
+  visibility: hidden;
+  will-change: opacity, transform;
+  /* Ink over a painting: a soft milk halo keeps it readable without a box. */
+  text-shadow: 0 0 18px color-mix(in srgb, var(--milk) 70%, transparent);
+}
+
+.title {
+  margin: 0;
+}
+
+.subtitle {
+  margin: 0;
+  max-width: 26rem;
+  opacity: 0;
+}
+
+.tag {
+  text-shadow: none;
+}
+
+.typed {
+  margin: 0;
+  max-width: 26rem;
+  white-space: pre-wrap;
+}
+
+/* The part not typed yet keeps its space (the line never re-wraps) but is not drawn. */
+.untyped {
+  visibility: hidden;
+}
+
+.caret {
+  display: inline-block;
+  width: 0.09em;
+  height: 1.05em;
+  margin: 0 0.06em 0 0.04em;
+  vertical-align: -0.16em;
+  background: currentColor;
+  animation: blink 1.06s steps(1, end) infinite;
+}
+
+/* Typing is done: the caret stops blinking and leaves. */
+.caret[data-done="true"] {
+  animation: none;
+  opacity: 0;
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .caret {
+    animation: none;
+  }
+}
+
+/* Tall phones: one column under the top rule. */
+@media (max-aspect-ratio: 4 / 5) {
+  .beat {
+    width: calc(100% - var(--col-a) * 2);
+    top: calc(var(--rule-top) + 4vh);
+  }
+}

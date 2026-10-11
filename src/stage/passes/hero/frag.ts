@@ -11,13 +11,19 @@
 //      driver so nothing switches on (rule 3)
 // Scroll-driven state is a function of uP/uT; time only feeds breath, the glint, the pour, the
 // grain and the two events (print-in, ring).
-export const HERO_FRAG = /* glsl */ `
+import { REST_GLSL } from "../rest";
+
+// HERO_LIB is everything but main(): the bridge pass reuses it so the film it hands over from is
+// exactly the hero (clouds, glint, pour, grain and all), never a copy of it.
+export const HERO_LIB = /* glsl */ `
+${REST_GLSL}
 uniform sampler2D uHero;
 uniform vec2 uHeroSize;
 uniform vec2 uPan;
 uniform float uZoom;
 uniform vec2 uAGlint, uASpout, uAPourEnd, uAOrange;   // painting points, 0..1, y down
 uniform float uPush;      // scroll push-in, 0.. (about the orange)
+uniform float uHeroT;     // how far the hero's scroll drift has run (1 at the end of the hero)
 uniform float uIntro;     // 0..1 print-in progress, 1 = complete
 uniform float uRingAge;   // seconds since the ring left, -1 = none
 uniform float uPhone;     // 0 wide .. 1 tall phone
@@ -95,20 +101,20 @@ vec3 pour(vec3 col, vec2 q, vec2 A, vec2 B, float tm) {
   return mix(col, water, m * 0.92);
 }
 
-void main() {
-  vec2 uv = screenUV();
-  vec2 frag = gl_FragCoord.xy;
+// Sets the mapping globals from the rest state and the scroll push (call once per fragment).
+void heroFrame() {
+  float tm = uTime * (1.0 - uStill);
+  gZoom = restZoom(uZoom, tm);
+  gOff = restOffset(tm);
+  gO = uncover(uAOrange, uHeroSize, uPan, gZoom);
+  gS = 1.0 + uPush;
+}
+
+// The hero as it is at this screen position: the whole look, ending in grain. heroFrame() first.
+vec3 heroColor(vec2 uv, vec2 frag) {
   vec2 q = aspectUV(uv);
   float tm = uTime * (1.0 - uStill);
   float aspect = uHeroSize.x / uHeroSize.y;
-
-  // Breath is a sum of incommensurate sines (5.3 / 7.9 / 11.4 s), never one; the scroll-stop kick
-  // decays from the last event. Pointer parallax is 0.45% / 0.32%, ambient drift 0.22% from two sines.
-  float breath = 0.5 * sin(tm * TAU / 5.3) + 0.3 * sin(tm * TAU / 7.9 + 1.3) + 0.2 * sin(tm * TAU / 11.4 + 2.1);
-  gZoom = uZoom * (1.0 + 0.004 * breath + 0.015 * uKick);
-  gOff = -uMouse * vec2(0.0045, 0.0032) + 0.0022 * vec2(sin(tm * TAU * 0.17), sin(tm * TAU * 0.13 + 1.1));
-  gO = uncover(uAOrange, uHeroSize, uPan, gZoom);
-  gS = 1.0 + uPush;
 
   vec2 glintQ = toScreenA(uAGlint);
 
@@ -167,11 +173,11 @@ void main() {
     vec2 pa = vec2(cpp.x * aspect, cpp.y);
     // Larger clouds are slower: sway periods 47 / 31 / 23 s, scroll drift falls with size.
     vec2 swayA = vec2(0.012 * (sin(tm * TAU / 47.0 + 1.0) + 0.5 * sin(tm * TAU / 29.5 + 2.0)), 0.002 * sin(tm * TAU / 37.0))
-               + vec2(-uT * 0.012 / (0.3 + 0.30 * 2.0), 0.0);
+               + vec2(-uHeroT * 0.012 / (0.3 + 0.30 * 2.0), 0.0);
     vec2 swayB = vec2(0.008 * (sin(tm * TAU / 31.0 + 4.0) + 0.5 * sin(tm * TAU / 19.5 + 0.5)), 0.0015 * sin(tm * TAU / 26.0 + 2.0))
-               + vec2(-uT * 0.012 / (0.3 + 0.13 * 2.0), 0.0);
+               + vec2(-uHeroT * 0.012 / (0.3 + 0.13 * 2.0), 0.0);
     vec2 swayC = vec2(0.006 * (sin(tm * TAU / 23.0 + 2.5) + 0.5 * sin(tm * TAU / 14.5 + 3.0)), 0.001 * sin(tm * TAU / 17.0 + 1.0))
-               + vec2(-uT * 0.012 / (0.3 + 0.12 * 2.0), 0.0);
+               + vec2(-uHeroT * 0.012 / (0.3 + 0.12 * 2.0), 0.0);
     float cov = cloud(pa, vec2(0.47 * aspect, 0.15), 0.30, 1.0, swayA);
     cov = max(cov, cloud(pa, vec2(0.83 * aspect, 0.22), 0.13, 2.0, swayB));
     cov = max(cov, cloud(pa, vec2(0.33 * aspect, 0.50), 0.12, 3.0, swayC) * uCloud3);
@@ -248,6 +254,14 @@ void main() {
   float gr = hash(frag + floor(tm * 24.0) * vec2(37.1, 17.3)) - 0.5;
   col += gr * 0.03 * drv;
 
-  gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
+  return clamp(col, 0.0, 1.0);
+}
+`;
+
+export const HERO_FRAG = /* glsl */ `
+${HERO_LIB}
+void main() {
+  heroFrame();
+  gl_FragColor = vec4(heroColor(screenUV(), gl_FragCoord.xy), 1.0);
 }
 `;

@@ -161,14 +161,42 @@ export const art = {
     },
   },
 
-  bridge: frames("bridge", "16:9", 121, "Hero to Model (morph)"),
+  bridge: {
+    ...frames("bridge", "16:9", 121, "Hero to Model (morph)"),
+    /**
+     * The pan table, keyed to the reel's frames: rows of [frame, panX, panY] in painting units,
+     * added to the hero's pan and linearly interpolated between rows (see bridgePanAt). It exists
+     * so the orange stays exactly where the hero film had it while the real morph (which may drift
+     * a little between frames) is retuned by eye in the dev HUD. Default: zero on every frame.
+     */
+    pans: [
+      [0, 0, 0],
+      [120, 0, 0],
+    ] as readonly PanKey[],
+  },
 
-  graft: still("graft", "16:9", "Model beat 1"),
+  graft: {
+    ...still("graft", "16:9", "Model beat 1"),
+    /** Each beat has its own pan; a small drift (painting units) is walked across the beat by scroll. */
+    framing: { pan: { x: 0, y: 0 }, zoom: 1.04 },
+    drift: { x: -0.012, y: 0.004 },
+  },
 
-  grove: still("grove", "16:9", "Model beat 2"),
+  grove: {
+    ...still("grove", "16:9", "Model beat 2"),
+    framing: { pan: { x: 0.01, y: 0 }, zoom: 1.04 },
+    drift: { x: 0.012, y: -0.004 },
+  },
 
   share: {
     ...still("share", "16:9", "Model beat 3"),
+    framing: { pan: { x: 0, y: 0 }, zoom: 1.04 },
+    /**
+     * Framing of the LAST keyframe. The Split (phase 6) cover-fits `share.last` with exactly this,
+     * so the model's final frame and the split's first frame are the same picture. It equals
+     * `framing` (the share beat does not drift), so the cut between the two keyframes holds still.
+     */
+    lastFraming: { pan: { x: 0, y: 0 }, zoom: 1.04 },
     /**
      * Second keyframe: the orange cut in half, the halves held a hand's width apart.
      * The Split (phase 6) opens on exactly this frame.
@@ -243,6 +271,12 @@ export const art = {
 } satisfies Record<
   ArtId,
   ArtEntry & {
+    /** Bridge: pan table rows of [frame, panX, panY]. */
+    pans?: readonly PanKey[];
+    /** A beat's drift across its scroll range, in painting units. */
+    drift?: Point;
+    /** Framing of the extra `last` keyframe. */
+    lastFraming?: Framing;
     /** Named points in painting coordinates (0..1, y down). */
     anchors?: Record<string, Point>;
     /** Named radii as fractions of the painting's width. */
@@ -253,6 +287,26 @@ export const art = {
 >;
 
 export type Art = typeof art;
+
+/** One row of the bridge pan table: [frame, panX, panY]. */
+export type PanKey = readonly [frame: number, x: number, y: number];
+
+/** The bridge's extra pan at a (fractional) frame: linear between rows, clamped at both ends. */
+export function bridgePanAt(frame: number): Point {
+  const rows = art.bridge.pans;
+  if (rows.length === 0) return { x: 0, y: 0 };
+  if (frame <= rows[0][0]) return { x: rows[0][1], y: rows[0][2] };
+  for (let i = 1; i < rows.length; i++) {
+    if (frame <= rows[i][0]) {
+      const [f0, x0, y0] = rows[i - 1];
+      const [f1, x1, y1] = rows[i];
+      const k = f1 > f0 ? (frame - f0) / (f1 - f0) : 1;
+      return { x: x0 + (x1 - x0) * k, y: y0 + (y1 - y0) * k };
+    }
+  }
+  const last = rows[rows.length - 1];
+  return { x: last[1], y: last[2] };
+}
 
 export const ART_IDS = Object.keys(art) as ArtId[];
 
