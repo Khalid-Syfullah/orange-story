@@ -35,3 +35,6 @@ npm-debug.log*
 
 # vercel
 .vercel
+
+# art-video: the committed template is allowed, the real key file is not
+!.env.art.example

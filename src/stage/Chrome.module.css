@@ -1,0 +1,193 @@
+/* The chrome: hairline frame, mark, menu button, Apply pill, rail and percentage, positioned by
+   the layout tokens in src/app/globals.css. The ground class (on-sky / on-paper / on-milk) and the
+   surface (paint / flat) are switched by segment from the frame subscription. */
+
+.chrome {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  color: var(--fg);
+  pointer-events: none;
+  transition: color 420ms var(--ease);
+}
+
+.chrome :global(.hairline) {
+  transition: background-color 420ms var(--ease);
+}
+
+/* Over paintings the hairlines are 55% milk; on the flat sheet 20% of the foreground. */
+.chrome[data-surface="paint"] :global(.hairline) {
+  background: var(--line-on-paint);
+}
+
+.left,
+.right {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
+.left {
+  left: var(--hair-left);
+}
+
+.right {
+  left: var(--hair-right);
+}
+
+.top,
+.mid {
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+
+.top {
+  top: var(--rule-top);
+}
+
+.mid {
+  top: var(--rule-mid);
+}
+
+.midStar {
+  position: absolute;
+  left: var(--hair-left);
+  top: var(--rule-mid);
+  transform: translate(-50%, -50%);
+  transition: color 420ms var(--ease);
+}
+
+/* Top-left: the Orange mark in the top band, the grid button under it on the left hairline. */
+.mark {
+  position: absolute;
+  left: var(--col-a);
+  top: calc(var(--rule-top) / 2);
+  transform: translateY(-50%);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.menu {
+  position: absolute;
+  left: var(--hair-left);
+  top: calc(var(--rule-top) + 1.25rem);
+  transform: translateX(-50%);
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--border-pill);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  pointer-events: auto;
+  transition:
+    border-color 420ms var(--ease),
+    color 420ms var(--ease);
+}
+
+.menu svg {
+  width: 12px;
+  height: 12px;
+}
+
+.menuList {
+  position: absolute;
+  left: var(--col-a);
+  top: calc(var(--rule-top) + 1.25rem);
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  pointer-events: auto;
+}
+
+.menuItem {
+  display: inline-flex;
+  gap: 0.75rem;
+  padding: 0.25rem 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.menuItem span:first-child {
+  opacity: 0.55;
+}
+
+/* Top-right: the Apply pill, right edge on the right hairline. */
+.apply {
+  position: absolute;
+  left: var(--hair-right);
+  top: calc(var(--rule-top) / 2);
+  transform: translate(-100%, -50%);
+  pointer-events: auto;
+  transition:
+    color 420ms var(--ease),
+    border-color 420ms var(--ease),
+    background-color 420ms var(--ease);
+}
+
+.apply :global(.pill__chip) {
+  transition:
+    background-color 420ms var(--ease),
+    color 420ms var(--ease),
+    transform 420ms var(--ease);
+}
+
+/* Left rail: the four chapter labels along the left hairline, reading upward. */
+.rail {
+  position: absolute;
+  left: calc(var(--hair-left) + 0.5rem);
+  top: calc(var(--rule-top) + 4.5rem);
+  bottom: calc(100% - var(--rule-mid) + 1.5rem);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  pointer-events: auto;
+}
+
+.railItem {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.38;
+  transition: opacity 420ms var(--ease);
+}
+
+.railItem[aria-current="true"] {
+  opacity: 1;
+}
+
+/* Bottom-right: the scroll percentage, right edge on the right hairline. */
+.percent {
+  position: absolute;
+  left: var(--hair-right);
+  bottom: 1.25rem;
+  transform: translateX(-100%);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 640px) {
+  .rail {
+    display: none;
+  }
+}

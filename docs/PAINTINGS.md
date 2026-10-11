@@ -111,3 +111,14 @@ A young orange sapling with a slim trunk, a dozen leaves and three small green o
 A young orange tree with five gilded oranges at the centre of a cobalt sky. Left: a woman in a white gown with a red sash pours from a brass watering can at its roots (the can is empty; the pour is added in the shader). Right: a young man in dark-green drapery, auburn curls, bends to tie up a branch. Both figures cropped at the waist by the frame edges. Open sky above the tree for the wordmark.
 MOTION (10 s loop): the can tilts a little further; the man's hands finish the knot; leaves stir; the camera holds.
 ```
+
+## Video generation (Veo)
+
+The loops and sequences are made from the stills by `scripts/art-video.mjs`, which calls Veo through the Gemini API. Run `node scripts/art-video.mjs` for a dry run that prints the clips and the cost; add `--only <id> --yes` to make one, `--yes` for all.
+
+- **Model and price:** default `veo-3.1-fast-generate-preview` at 1080p, $0.12 per second of video, so six 8 s clips cost about $5.76 (Standard is about $19.20; prices are previews, check ai.google.dev/gemini-api/docs/pricing). You are charged only for clips that succeed.
+- **Key:** `GEMINI_API_KEY` in the environment or in `.env.art` (copy `.env.art.example`). Veo has no free tier, so the Google project needs billing. Never paste the key into chat or commit it.
+- **Keyframes:** each clip is image-to-video with a first and a last frame from the stills in `art/source/`: `hero`, `canopy` and `finale` use the same still for both so they loop; `bridge` runs from the last frame of `hero.mp4` (or `hero.png`) to `graft.png`; `drawing` from `drawing.png` to `plan.png`; `coda` from `coda.png` to `share-orange.png`.
+- **Veo limits that differ from the table above:** clips are 4, 6 or 8 s, 16:9 or 9:16 only, and 1080p needs 8 s. So loops are 8 s, not 10 s, `bridge` is 8 s, and `drawing` is made inside a 16:9 frame (cream bars) and cropped to its centre square by the import (`art/source/drawing.json` carries `cropSquare`). The import samples the frame counts (121, 121, 89) evenly from each clip.
+- **Audio:** Veo adds a soundtrack; the script strips it. Generated videos are kept by Google for 2 days, so the script downloads each one as soon as it finishes.
+- **Seamless loops are not guaranteed.** If a loop jumps, regenerate that clip with `--only <id> --force`, or let the import crossfade the end into the start.

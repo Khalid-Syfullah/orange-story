@@ -1,0 +1,70 @@
+/* The stage shell: a tall scroll track, a sticky pin filling the viewport, one canvas, the hidden
+   hero video, DOM layers over the canvas, and the dev HUD. Class names are plain (not a module)
+   because docs/STORY.md and the checks refer to `.stage`, `.pin`, `canvas.gl` and `.layers`. */
+
+.stage {
+  position: relative;
+  /* About 60 viewport heights (docs/STORY.md); dev pages pass 1. */
+  height: calc(var(--stage-heights, 60) * 100vh);
+  background: var(--sky);
+}
+
+.pin {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--sky);
+}
+
+.gl {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* `?nogl` or no WebGL context: the pin's background stands in for the painting. */
+.gl--off {
+  display: none;
+}
+
+/* The hero loop's source element: decoded by the browser, drawn by the shader, never shown. */
+.stage-video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 2px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* DOM text over the canvas. Layers opt into pointer events on the elements that need them. */
+.layers {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* ?hud: the dev readout (p, segment, local t, frame ms, texture uploads per second). */
+.hud {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 50;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 4px;
+  background: rgb(0 0 0 / 0.6);
+  color: #fff;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: pre;
+  pointer-events: none;
+}

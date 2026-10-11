@@ -1,0 +1,29 @@
+.labels {
+  position: absolute;
+  inset: 0;
+  color: var(--ink);
+}
+
+/* Each label sits to the right of its ring, pinned by the TypeScript uncover(). */
+.label {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(28px, -50%);
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-tag);
+  background: var(--milk);
+  white-space: nowrap;
+}
+
+.caption {
+  position: absolute;
+  left: var(--gutter-min);
+  top: var(--gutter-min);
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-tag);
+  background: var(--milk);
+  text-transform: none;
+}

@@ -27,7 +27,11 @@ Node 20.9 or newer (CI and the server use Node 22).
 - `src/content/art.ts`: the art manifest, one typed entry per painting with its kind, aspect, file paths and anchor points.
 - `src/app/globals.css`: colour, type, shape and layout tokens.
 - `src/ui/primitives.tsx`: pill button, tag, hairline and star mark.
+- `src/stage/`: the engine (phase 2). `Stage.tsx` is the one client component that owns the frame loop; `script.ts` is the single source of segment ranges (`local`, `active`, `nearby`); `scroll.ts` the smoothed scroll clock; `gl/` the WebGL 1 core (context, program builder, `lib.glsl.ts`, texture manager, pass manager); `passes/` the story's passes; `Chrome.tsx` the hairline frame, mark, menu, Apply pill, rail and percentage; `hub.ts` the subscribe API DOM layers use (`useFrame`), never React state per frame.
 - `/design` (development only, not linked): the type scale, swatches, buttons, tags and hairlines.
+- `/stage-test` (development only, not linked): a checkerboard drawn through `cover()` with GLSL rings and DOM labels at `uncover()` of the same points, for checking the painting-to-screen mapping by eye (`?pan=0.1,-0.05&zoom=1.3&aspect=9:16`).
+
+URL flags on any stage page: `?hud` shows p, segment, local t, frame time and texture uploads per second; `?nogl` hides the canvas and runs the DOM layers alone; `?p=0.42` lands on that progress; `#model`, `#work`, `#terms`, `#questions` and `#apply` land on their segments.
 
 ## The pack
 
