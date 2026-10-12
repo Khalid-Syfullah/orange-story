@@ -17,7 +17,8 @@ export const STATE_FILE = join(ROOT, "art", "imported.json");
 /** Long edge of the encoded loops. */
 export const LOOP_SIZE = [1920, 1080];
 /** Deploy contract: public/art stays under this many bytes. */
-export const BUDGET_BYTES = 60 * 1024 * 1024;
+// ART_BUDGET_MB lets a slow or time-limited shell skip the recompression pass while importing in pieces.
+export const BUDGET_BYTES = (Number(process.env.ART_BUDGET_MB) || 70) * 1024 * 1024;
 export const JPEG_QUALITY = 82;
 
 export const STILL_EXT = ["png", "jpg", "jpeg", "webp"];

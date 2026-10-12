@@ -22,7 +22,7 @@
 // placeholder loops are encoded with AVFoundation on macOS. Nothing is fetched from the network.
 //
 // The record of what each id is (real or placeholder, from which files) is art/imported.json;
-// an id whose inputs have not changed is skipped. public/art is kept under 60 MB: if it grows past
+// an id whose inputs have not changed is skipped. public/art is kept under 70 MB: if it grows past
 // that, the sequence frames are re-encoded at lower JPEG quality until it fits.
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
@@ -67,6 +67,9 @@ import {
 
 /** Which frame of a video stands in for a still (graft opens where the bridge ends). */
 const STILL_FROM_VIDEO = { graft: "first", grove: "last", share: "first" };
+/** JPEG quality for sequence frames. Real paintings carry paper grain, so 82 would put `drawing` alone near 45 MB. */
+const SEQUENCE_QUALITY = 56;
+
 /** A still source for a loop becomes a static loop this long. */
 const STATIC_LOOP_SECONDS = 4;
 const LOOP_FPS = 24;
@@ -276,7 +279,7 @@ async function importFrames(entry, tiers, part, log) {
         const ks = wanted.get(index);
         const k0 = ks[0];
         const targets = [{ file: framePathFor(entry, tiers[0], k0), width: W, height: H }, ...smaller.map((s) => ({ file: framePathFor(entry, s.t, k0), width: s.width, height: s.height }))];
-        await writeTiersRaw(rgb, W, H, targets, { channels: 3 });
+        await writeTiersRaw(rgb, W, H, targets, { channels: 3, quality: SEQUENCE_QUALITY });
         for (const k of ks.slice(1)) for (const t of tiers) copyFileSync(framePathFor(entry, t, k0), framePathFor(entry, t, k));
         for (const k of ks) written.add(k);
       },

@@ -2,7 +2,7 @@
 name: build-orange
 description: Build the orange.io scroll story by running the numbered prompt files in prompts/ one phase at a time, each phase on its assigned model (Fable 5.1 for the most demanding engine and shader phases, Opus 5.5 or Sonnet 5.5 for the rest) and effort level, with a build check and a commit and push per phase. Generates the paintings with Figma AI before the art phase when that tool is available, after quoting the credit cost. Use only when the user runs /build-orange or asks to continue the orange.io build.
 argument-hint: "[next | status | reset | art]"
-allowed-tools: Bash(${CLAUDE_SKILL_DIR}/scripts/phase.sh *) Bash(git status *) Bash(git log *) Bash(ls art/*) Bash(mkdir -p art/source) Bash(curl -L -o art/source/* *)
+allowed-tools: Bash(${CLAUDE_SKILL_DIR}/scripts/phase.sh *) Bash(git status *) Bash(git log *) Bash(ls art/*) Bash(mkdir -p art/source) Bash(curl -L -o art/source/* *) Bash(node scripts/art-video.mjs) Bash(node scripts/art-video.mjs *)
 ---
 
 # build-orange
@@ -26,6 +26,15 @@ The paintings are specified in `docs/PAINTINGS.md`, one prompt per asset id, wit
 1. List `art/source/`. Every id in `docs/PAINTINGS.md` that has no file there is missing.
 2. If an image generation tool is available in this session (for example Figma's `generate_image`, which spends the user's Figma AI credits), tell the user which assets are missing, which model you will use, and that each call spends credits, and ask for a yes before generating anything. On a yes, generate each missing still (stills only: the loops and sequences need a video model; use their first keyframe prompt as a still so the site has the right picture) with the preamble plus that asset's prompt at the size in the table, download the result into `art/source/<id>.png` with the exact id as the file name, and show the user a one-line summary per asset. Never generate an asset that already exists.
 3. If no such tool is available, say so in one line and continue; the briefs in `art/briefs/` are written for any generator and the placeholders carry the build.
+
+### The video step (loops and sequences)
+
+The six animated assets (`hero`, `canopy`, `finale` loops; `bridge`, `drawing`, `coda` sequences) are made from the stills with Veo through the Gemini API, by `scripts/art-video.mjs`. It spends the user's Google API money, so it is always a dry run first.
+
+1. Run it only when the stills exist in `art/source/` (hero, canopy, finale, graft, drawing, plan, coda, share-orange) and `scripts/art-video.mjs` exists. If either is missing, say which and skip.
+2. Run `node scripts/art-video.mjs` (no `--yes`). It prints which clips it would make and the estimate. Show the user that and ask for a yes. If there is no key (`GEMINI_API_KEY` in the environment or in `.env.art`), tell them to copy `.env.art.example` to `.env.art` and add their key themselves; never ask for the key in chat, never read `.env.art`, never print it.
+3. On a yes, generate ONE clip first: `node scripts/art-video.mjs --only hero --yes`. Report the result in one line. If it fails, show the error and stop; do not retry in a loop. If it works, ask once whether to continue with the rest, then run `node scripts/art-video.mjs --yes`.
+4. A clip that already exists is never regenerated (`--force` only when the user asks). The files land in `art/source/<id>.mp4` with a `<id>.json` sidecar, and phase 03's import picks them up.
 
 ## For each phase
 

@@ -1,86 +1,115 @@
 {
   "hero": {
-    "source": "placeholder",
-    "from": [],
-    "fingerprint": "1d8a8943fcdc3081",
-    "updated": "2026-10-11T10:47:34.493Z"
+    "source": "real",
+    "from": [
+      "hero.mp4"
+    ],
+    "fingerprint": "e3a2df7dc12611a0",
+    "updated": "2026-10-12T02:17:20.856Z"
   },
   "bridge": {
-    "source": "placeholder",
-    "from": [],
-    "fingerprint": "5a6f34feffeec9e2",
-    "updated": "2026-10-11T10:47:42.783Z"
+    "source": "real",
+    "from": [
+      "bridge.mp4"
+    ],
+    "fingerprint": "cb63e5f8586e8c74",
+    "updated": "2026-10-12T02:16:23.835Z"
   },
   "graft": {
-    "source": "placeholder",
-    "from": [],
-    "fingerprint": "737a287e049baf52",
-    "updated": "2026-10-11T10:47:44.222Z"
+    "source": "real",
+    "from": [
+      "graft.png"
+    ],
+    "fingerprint": "aa321adde360c8b3",
+    "updated": "2026-10-12T02:17:21.188Z"
   },
   "grove": {
-    "source": "placeholder",
-    "from": [],
-    "fingerprint": "737a287e049baf52",
-    "updated": "2026-10-11T10:47:47.513Z"
+    "source": "real",
+    "from": [
+      "grove.png"
+    ],
+    "fingerprint": "64a663843a12e194",
+    "updated": "2026-10-12T02:17:21.567Z"
   },
   "share": {
-    "source": "placeholder",
-    "from": [],
-    "fingerprint": "fdba1779f6f2af11",
-    "updated": "2026-10-11T10:47:49.667Z"
+    "source": "real",
+    "from": [
+      "share.png",
+      "share-last.png"
+    ],
+    "fingerprint": "1fff4a96b221b734",
+    "updated": "2026-10-12T02:17:22.075Z"
   },
   "plate": {
-    "source": "placeholder",
-    "from": [],
-    "fingerprint": "de1194f07063462e",
-    "updated": "2026-10-11T10:48:01.208Z"
+    "source": "real",
+    "from": [
+      "plate.png"
+    ],
+    "fingerprint": "d088a7726eb41268",
+    "updated": "2026-10-12T02:17:22.790Z"
   },
   "drawing": {
-    "source": "placeholder",
-    "from": [],
-    "fingerprint": "5e79a14b201b4f55",
-    "updated": "2026-10-11T10:48:56.040Z"
+    "source": "real",
+    "from": [
+      "drawing.mp4"
+    ],
+    "fingerprint": "ccd5e400d6e948dc",
+    "updated": "2026-10-12T02:17:10.209Z"
   },
   "plan": {
-    "source": "placeholder",
-    "from": [],
-    "fingerprint": "bd13bcdda27ec8ed",
-    "updated": "2026-10-11T10:48:57.035Z"
+    "source": "real",
+    "from": [
+      "plan.png"
+    ],
+    "fingerprint": "9b9b0a8f2260bc02",
+    "updated": "2026-10-12T02:17:23.459Z"
   },
   "coda": {
-    "source": "placeholder",
-    "from": [],
-    "fingerprint": "2d3c40e901e8132f",
-    "updated": "2026-10-11T10:49:26.773Z"
+    "source": "real",
+    "from": [
+      "coda.mp4"
+    ],
+    "fingerprint": "4404d3fea9023719",
+    "updated": "2026-10-12T02:16:34.177Z"
   },
   "share-orange": {
-    "source": "placeholder",
-    "from": [],
-    "fingerprint": "bd13bcdda27ec8ed",
-    "updated": "2026-10-11T10:49:27.431Z"
+    "source": "real",
+    "from": [
+      "share-orange.png"
+    ],
+    "fingerprint": "eb2ce1c83c478450",
+    "updated": "2026-10-12T02:17:23.835Z"
   },
   "canopy": {
-    "source": "placeholder",
-    "from": [],
-    "fingerprint": "1d8a8943fcdc3081",
-    "updated": "2026-10-11T10:50:00.522Z"
+    "source": "real",
+    "from": [
+      "canopy.mp4"
+    ],
+    "fingerprint": "67865fa4f2aaf896",
+    "updated": "2026-10-12T02:17:33.041Z"
   },
   "application": {
-    "source": "placeholder",
-    "from": [],
-    "fingerprint": "737a287e049baf52",
-    "updated": "2026-10-11T10:50:01.973Z"
+    "source": "real",
+    "from": [
+      "application.png"
+    ],
+    "fingerprint": "6a07cc0b071430df",
+    "updated": "2026-10-12T02:17:33.358Z"
   },
   "sapling": {
-    "source": "placeholder",
-    "from": [],
-    "fingerprint": "737a287e049baf52",
-    "updated": "2026-10-11T10:50:02.732Z"
+    "source": "real",
+    "from": [
+      "sapling.png"
+    ],
+    "fingerprint": "3b60b146000cf5e7",
+    "updated": "2026-10-12T02:17:33.586Z"
   },
   "finale": {
-    "source": "placeholder",
-    "from": [],
-    "fingerprint": "1d8a8943fcdc3081",
-    "updated": "2026-10-11T10:53:04.044Z"
+    "source": "real",
+    "from": [
+      "finale.mp4"
+    ],
+    "fingerprint": "24e6a9773e3fe315",
+    "updated": "2026-10-12T02:17:42.947Z"
   }
 }
