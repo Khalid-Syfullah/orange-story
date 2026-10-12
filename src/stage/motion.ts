@@ -197,6 +197,27 @@ export function depthTravelMax(depth: Depth, room: Point, aspect: number): Point
   };
 }
 
+/**
+ * The bound on a camera travel that is NOT carried by the painting's pan (the hero's orbit, the
+ * bridge's relaxing orbit): the layers move `near` and `far` times the travel from rest (not (rate - 1)
+ * times, as in depthTravelMax, where the pan already carries the flat share), so the lead is the larger
+ * rate itself. The same two limits: neither layer leaves `room`, and the layers never part by more than
+ * FOLD_SHARE of the mask's lattice cell. Feed it to softBound with the travel.
+ */
+export function orbitTravelMax(depth: Depth, room: Point, aspect: number): Point {
+  return depthTravelMax({ near: depth.near + 1, far: depth.far + 1, cell: depth.cell }, room, aspect);
+}
+
+/**
+ * The room a leaf sway may use when it shares a frame's room with a depth layer: the smaller of a share
+ * (`share`, 0.3) of the room and what the foliage mask's lattice cell can take without folding the warp
+ * (FOLD_SHARE of the cell). `aspect` is the painting's (the cell is in painting heights). The depth layer
+ * takes the rest (`room` less this), so the two together never leave the room.
+ */
+export function swayRoom(room: Point, cell: number, aspect: number, share = 0.3): Point {
+  return { x: Math.min(room.x * share, (FOLD_SHARE * cell) / aspect), y: Math.min(room.y * share, FOLD_SHARE * cell) };
+}
+
 // ---------------------------------------------------------------------------------------------
 // (d) The scroll's speed
 // ---------------------------------------------------------------------------------------------

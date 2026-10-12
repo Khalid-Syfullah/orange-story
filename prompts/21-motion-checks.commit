@@ -1,0 +1,3 @@
+feature(motion): test the new motion and record its cost
+
+Scrub, edge, pop, reduced-motion and frame-time tests for every chapter's new motion, with the numbers in docs/PERF.md.

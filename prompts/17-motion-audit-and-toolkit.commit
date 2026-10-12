@@ -1,0 +1,3 @@
+feature(motion): audit the motion and add the shared wind, depth and settle toolkit
+
+Fix the drawing pop test, write docs/MOTION-AUDIT.md and add scrub-safe GLSL helpers for wind, masks, depth parallax, velocity response and overshoot.

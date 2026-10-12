@@ -141,6 +141,35 @@ export interface Depth {
   cell: number;
 }
 
+/**
+ * The hero's response to the scroll's speed (lib.glsl.ts velAmount): the speed in px a frame at which
+ * the response is 63% (`knee`; 40 is a hard flick), the camera's smear at a flick (painting widths),
+ * the glint's extra brightness and the pour's extra spray (shares of the rest value at a full flick).
+ */
+export interface HeroVelocity {
+  knee: number;
+  smear: number;
+  glint: number;
+  pour: number;
+}
+
+/**
+ * The hero sky's painted light (passes/hero/frag.ts), in the sky only and in the far layer's coordinates:
+ * a grade (darker at the top, lighter toward the horizon) of `grade` of the colour, a haze toward the soft
+ * sky blue at the horizon of `haze`, two scales of slow turbulence (`mottle`, `fine`, shares of the
+ * colour) at `scale` cells a painting height drifting `drift` cells a second, and the softening of the
+ * sky's hard cut-out edges (`soften`, painting heights of blur).
+ */
+export interface SkyLight {
+  grade: number;
+  haze: number;
+  mottle: number;
+  fine: number;
+  scale: number;
+  drift: number;
+  soften: number;
+}
+
 const R16_9 = 16 / 9;
 const R9_16 = 9 / 16;
 const R1_1 = 1;
@@ -203,6 +232,22 @@ export const art = {
     ...loop("hero", "Hero"),
     /** A 2% push-in so pointer parallax and drift never show the painting's edge. */
     framing: { pan: { x: 0, y: 0 }, zoom: 1.02 },
+    /**
+     * The orbit (passes/hero/timeline.ts): over the hero the camera travels this far sideways (x) and
+     * rises and falls (y, an arc that is back at 0 where the hero ends), painting units. Eased in from
+     * rest. The bridge holds the end of it and relaxes it with its dolly.
+     */
+    orbit: { x: 0.016, y: 0.005 } as Point,
+    /**
+     * Two layers from the sky mask (the sky is far, the figures, the fruit and the steps near), as rates of
+     * the orbit's travel from rest: the near layer moves 1.5x, the sky 0.3x, so the fruit and the women
+     * slide across the sky and the halftone clouds. The mask lattice is 0.07 painting heights (about 63 px).
+     */
+    depth: { near: 1.5, far: 0.3, cell: 0.07 } satisfies Depth,
+    /** The scroll's speed on the camera's smear, the glint and the pour; bounded, 0 at rest. */
+    velocity: { knee: 30, smear: 0.012, glint: 0.35, pour: 0.6 } satisfies HeroVelocity,
+    /** The painted light of the flat cobalt sky; see SkyLight. */
+    sky: { grade: 0.05, haze: 0.16, mottle: 0.035, fine: 0.02, scale: 2.4, drift: 0.012, soften: 0.0014 } satisfies SkyLight,
     anchors: {
       /** Rainbow glint on the peel: upper-left of the giant orange, where the light hits. */
       glint: { x: 0.64, y: 0.3 },
@@ -233,14 +278,18 @@ export const art = {
     ...still("graft", "16:9", "Model beat 1"),
     /** Each beat has its own pan; a small drift (painting units) is walked across the beat by scroll. */
     framing: { pan: { x: 0, y: 0 }, zoom: 1.04 },
-    drift: { x: -0.012, y: 0.004 },
+    drift: { x: -0.028, y: 0.006 },
     /**
      * Depth: the pale cream ground is the far layer, the hands, branch, knife and leaves the near one;
      * the near slides 1.8x the camera's travel (the drift, the pointer, the ambient drift), the ground
-     * 0.5x, so the hands move over the ground. The mask lattice is 0.05 painting heights (about 47 px):
-     * the cream ground is flat, so the soft band it gives the layers' boundary does not show.
+     * 0.5x, so the hands move over the ground. The mask lattice is 0.1 painting heights (about 90 px):
+     * the cream ground is flat, so the soft band it gives the layers' boundary does not show, and the
+     * wider lattice lets the beat's slow lateral dolly (the drift, 0.028 of the width) part the layers
+     * by about 22 px before the warp would fold (motion.ts depthTravelMax).
      */
-    depth: { near: 1.8, far: 0.5, cell: 0.05 } satisfies Depth,
+    depth: { near: 1.8, far: 0.5, cell: 0.1 } satisfies Depth,
+    /** The scion's leaves barely stir (the painting's own motion line): foliage mask x wind, a few px, held by the room the framing leaves. */
+    sway: { wind: { scale: 1.2, speed: 0.22, flutter: 3, flutterSpeed: 3.5 }, amp: 0.006, cell: 0.02 } satisfies Sway,
     /** Phone pans (painting units, added on tall phones): the window is 0.4 of the width, so it centres on the hands and the fruit. */
     phonePan: { x: 0.04, y: 0 },
   },
@@ -248,6 +297,18 @@ export const art = {
   grove: {
     ...still("grove", "16:9", "Model beat 2"),
     framing: { pan: { x: 0.01, y: 0 }, zoom: 1.04 },
+    /**
+     * The cloudscape is the far layer (the pale sky, left behind at 0.3x of the camera's lateral travel
+     * while the branch and fruit keep the camera's own move: near rate 1), so the clouds lag the leaves as
+     * the camera crosses. The mask lattice is 0.1 painting heights. `hold` is the velvet sleeve, the lace
+     * cuff and the sky beside them: the cuff is pale like cloud but sewn to the sleeve, so the region
+     * stays in the near layer and its leaves-like velvet sways at `holdSway` of the leaves' amount.
+     */
+    depth: { near: 1, far: 0.3, cell: 0.1 } satisfies Depth,
+    hold: { x: 0.5, y: 0.58, w: 0.5, h: 0.42 } satisfies Rect,
+    holdSway: 0.3,
+    /** The leaves stir in the wind (foliage mask x wind): a little more than the graft's, there are more of them. */
+    sway: { wind: { scale: 1.4, speed: 0.26, flutter: 3.2, flutterSpeed: 3.8 }, amp: 0.008, cell: 0.02 } satisfies Sway,
     /**
      * The grove's camera: a push-in at constant speed with a lateral travel, running through the
      * cuts on both sides (like The Work's creep, it never stops). `zoom` is a multiplier on
@@ -441,6 +502,13 @@ export const art = {
     depth?: Depth;
     /** Leaf sway in the wind (the motion toolkit). */
     sway?: Sway;
+    /** The hero: the orbit's travel, the scroll's speed on the film, the sky's painted light. */
+    orbit?: Point;
+    velocity?: HeroVelocity;
+    sky?: SkyLight;
+    /** The grove: the region held in the near layer, and how much of the sway it keeps. */
+    hold?: Rect;
+    holdSway?: number;
     /** Added to the framing's pan on tall phones, in proportion to how tall (src/stage/framing.ts phoned). */
     phonePan?: Point;
     /** Named points in painting coordinates (0..1, y down). */

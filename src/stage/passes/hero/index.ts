@@ -9,25 +9,26 @@ import type { UniformSetter } from "../../gl/program";
 import { HERO_FRAG } from "./frag";
 import { stepHero } from "./events";
 import { heroFraming, phoneWeight } from "./framing";
+import { heroCam, heroCamMax, heroPose, HERO_END_POSE, HERO_PUSH_END, heroPush, type HeroPose } from "./timeline";
+
+export { HERO_END_POSE, HERO_PUSH_END, heroPose, heroPush };
 
 const hero = art.hero;
 
-
-/** The scroll push-in about the orange that the hero ends on: 5%. The bridge holds it. */
-export const HERO_PUSH_END = 0.05;
-
-/** Accelerating push (rule 4): 5% over the hero segment, reached at its local t = 1. */
-export function heroPush(t: number): number {
-  return HERO_PUSH_END * t * (0.5 + 0.5 * t * t);
-}
-
 /**
- * Every uniform the hero film needs. `push` is the dolly about the orange and `heroT` how far the
- * scroll drift of the clouds has run; the hero passes its local t, the bridge passes the values the
+ * Every uniform the hero film needs. The pose is the camera: the dolly about the orange (`push`), how
+ * far the clouds' scroll drift has run (`heroT`), the orbit's progress and speed and how much of the
+ * scroll's speed reaches the film. The hero passes its local t's pose, the bridge passes the pose the
  * hero ended on, so the film does not change at the segment boundary.
  */
-export function setHeroUniforms(ctx: FrameCtx, u: UniformSetter, push: number, heroT: number): void {
+export function setHeroUniforms(ctx: FrameCtx, u: UniformSetter, pose: HeroPose): void {
   const framing = heroFraming(ctx.css);
+  const cam = heroCam(pose.orbit);
+  const camMax = heroCamMax(ctx.css, pose.push);
+  u.set2f("uHeroCam", cam.x, cam.y);
+  u.set2f("uHeroCamMax", camMax.x, camMax.y);
+  u.set1f("uHeroRate", pose.rate);
+  u.set1f("uVelGate", pose.velGate);
   const events = stepHero(ctx);
   u.set2f("uPan", framing.pan.x, framing.pan.y);
   u.set1f("uZoom", framing.zoom);
@@ -35,8 +36,8 @@ export function setHeroUniforms(ctx: FrameCtx, u: UniformSetter, push: number, h
   u.set2f("uASpout", hero.anchors.spout.x, hero.anchors.spout.y);
   u.set2f("uAPourEnd", hero.anchors.pourEnd.x, hero.anchors.pourEnd.y);
   u.set2f("uAOrange", hero.anchors.orange.x, hero.anchors.orange.y);
-  u.set1f("uPush", push);
-  u.set1f("uHeroT", heroT);
+  u.set1f("uPush", pose.push);
+  u.set1f("uHeroT", pose.heroT);
   u.set1f("uIntro", events.intro);
   u.set1f("uRingAge", events.ringAge);
   u.set1f("uPhone", phoneWeight(ctx.css));
@@ -49,6 +50,6 @@ export const heroPass: PassDef = {
   frag: HERO_FRAG,
   textures: [{ uniform: "uHero", asset: "hero" }],
   uniforms(ctx, u) {
-    setHeroUniforms(ctx, u, heroPush(ctx.t), ctx.t);
+    setHeroUniforms(ctx, u, heroPose(ctx.t));
   },
 };

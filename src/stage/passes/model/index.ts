@@ -7,13 +7,14 @@
 import { phoned, sizeFromAspect } from "../../framing";
 import { art, bridgePanAt } from "@/content/art";
 import type { PassDef } from "../../gl/passes";
-import { coverRoom, depthTravelMax } from "../../motion";
+import { coverRoom, depthTravelMax, swayRoom } from "../../motion";
 import { heroFraming } from "../hero/framing";
 import { crestAt, CUT_START } from "../static";
 import { MODEL_FRAG } from "./frag";
-import { beatPan, beatProgress, BEAT_SPAN, cutAt, groveCamera, modelUnits, shareCamera } from "./timeline";
+import { beatPan, beatProgress, BEAT_SPAN, cutAt, foregroundGain, groveCamera, modelUnits, shareCamera, shareLightGain } from "./timeline";
 
 const GRAFT_TEX = sizeFromAspect(art.graft.aspect);
+const GROVE_TEX = sizeFromAspect(art.grove.aspect);
 
 export const modelPass: PassDef = {
   id: "model",
@@ -51,9 +52,29 @@ export const modelPass: PassDef = {
       x: Math.abs(graftF.pan.x) + Math.abs(art.graft.drift.x) / 2,
       y: Math.abs(graftF.pan.y) + Math.abs(art.graft.drift.y) / 2,
     });
-    const camMax = depthTravelMax(art.graft.depth, room, art.graft.aspect);
+    // The leaves' sway takes its share of that room; the layers take the rest.
+    const gSway = swayRoom(room, art.graft.sway.cell, art.graft.aspect);
+    const camMax = depthTravelMax(art.graft.depth, { x: room.x - gSway.x, y: room.y - gSway.y }, art.graft.aspect);
     u.set2f("uGraftCamMax", camMax.x, camMax.y);
+    u.set2f("uGraftSwayRoom", gSway.x, gSway.y);
     u.set3f("uF2", groveF.pan.x + gc.pan.x, groveF.pan.y + gc.pan.y, art.grove.framing.zoom * gc.zoom);
+    // The grove's cloudscape is its far layer: the camera's travel (groveCamera's pan) leaves it behind. The
+    // room is the one the framing leaves at the beat's smallest zoom, less the camera's widest reach.
+    const gcFrom = art.grove.camera.pan.from;
+    const gcTo = art.grove.camera.pan.to;
+    const groveRoom = coverRoom(ctx.css, GROVE_TEX, art.grove.framing.zoom * art.grove.camera.zoom.from, {
+      x: Math.abs(groveF.pan.x) + Math.max(Math.abs(gcFrom.x), Math.abs(gcTo.x)),
+      y: Math.abs(groveF.pan.y) + Math.max(Math.abs(gcFrom.y), Math.abs(gcTo.y)),
+    });
+    const vSway = swayRoom(groveRoom, art.grove.sway.cell, art.grove.aspect);
+    const vMax = depthTravelMax(art.grove.depth, { x: groveRoom.x - vSway.x, y: groveRoom.y - vSway.y }, art.grove.aspect);
+    u.set2f("uGroveCam", gc.pan.x, gc.pan.y);
+    u.set2f("uGroveCamMax", vMax.x, vMax.y);
+    u.set2f("uGroveSwayRoom", vSway.x, vSway.y);
+    // The foreground's own drift is a function of the scroll units; its gain is exactly 0 where the share lands.
+    u.set1f("uFgX", x);
+    u.set1f("uFgGain", foregroundGain(x));
+    u.set1f("uFgLight", shareLightGain(x));
     // Both share keyframes ride the same camera, so the hands parting does not jump; at the end of
     // the segment it is exactly `lastFraming`, the frame The Split opens on.
     u.set3f("uF3", shareF.pan.x + sc.pan.x, shareF.pan.y + sc.pan.y, shareF.zoom * sc.zoom);

@@ -112,6 +112,79 @@ export function cutAt(x: number): CutState {
   return { a: last.b, b: last.b, s: 0 };
 }
 
+// ---- the foreground (phase 18) --------------------------------------------------------------------
+// Layers in front of the grove and the share, each drifting at its own speed with the scroll (a function
+// of the scroll units, so a stopped page holds them and scrubbing back replays them) and swaying in the
+// wind with the clock. They are drawn over the whole frame after the cuts (passes/model/foreground.ts),
+// so the grove's and the share's own camera moves are untouched; their gain is 0 before the grove has
+// opened and exactly 0 at the segment's end, where the share is at rest on `art.share.lastFraming` and
+// The Split opens on the same picture.
+
+const smooth01 = (x: number) => {
+  const k = clamp01(x);
+  return k * k * (3 - 2 * k);
+};
+
+/** One layer of drifting motes (pollen in the light): its own cell, speed, rise, size, density and softness. */
+export interface MoteLayer {
+  /** Lattice cell, in frame heights (the layer's spacing). */
+  cell: number;
+  /** Frame heights the layer slides per 1000 scroll units: the nearer the faster. */
+  speed: number;
+  /** Frame heights a second the motes rise on their own (the clock's, still under reduced motion). */
+  rise: number;
+  /** Radius range, frame heights (every mote its own, rule 13). */
+  r: readonly [number, number];
+  /** The share of cells that hold a mote. */
+  density: number;
+  /** Peak opacity. */
+  alpha: number;
+  /** Edge softness as a share of the radius: the nearest layer is out of focus, bokeh, the farthest crisp. */
+  soft: number;
+  seed: number;
+}
+
+export const FOREGROUND = {
+  /** The layers are on once the graft -> grove cut has closed (THIRD + 35) and gone exactly at the segment's end. */
+  from: THIRD + 70,
+  to: MODEL_UNITS,
+  /** Their gain rises over `rampIn` units and falls over `rampOut`, ending at `to`. */
+  rampIn: 110,
+  rampOut: 190,
+  /** Leaves: a few olive leaves out of focus, crossing the frame at their own pace (a crossing takes about `dur` units). */
+  leaves: {
+    count: 6,
+    dur: 340,
+    /** Size (frame heights, the leaf's half length) and the lane's range (frame heights from the top; they cross low, under the copy). */
+    size: [0.11, 0.23] as readonly [number, number],
+    lane: [0.58, 1.04] as readonly [number, number],
+    /** The defocus: the edge's softness in frame heights. */
+    blur: 0.016,
+    opacity: 0.9,
+  },
+  /** Wind for the leaves and the motes' own sway (a little stronger than the paintings': they are close). */
+  wind: { scale: 1.0, speed: 0.3, flutter: 3, flutterSpeed: 3.6 },
+  motes: [
+    { cell: 0.42, speed: 3.0, rise: 0.02, r: [0.03, 0.055], density: 0.42, alpha: 0.26, soft: 0.55, seed: 11 },
+    { cell: 0.26, speed: 1.7, rise: 0.014, r: [0.006, 0.016], density: 0.6, alpha: 0.6, soft: 0.3, seed: 23 },
+    { cell: 0.15, speed: 0.9, rise: 0.008, r: [0.0025, 0.006], density: 0.7, alpha: 0.8, soft: 0.2, seed: 37 },
+  ] as readonly MoteLayer[],
+  /** The share's white ground takes a warm drifting light between these units (it is gone, exactly, at the end). */
+  light: { from: 2 * THIRD + 40, rampIn: 160, rampOut: 210, strength: 0.55 },
+} as const;
+
+/** The foreground's gain at `x` units: 0 until the grove has opened, 1 through the middle, exactly 0 at the end. */
+export function foregroundGain(x: number): number {
+  const f = FOREGROUND;
+  return smooth01((x - f.from) / f.rampIn) * (1 - smooth01((x - (f.to - f.rampOut)) / f.rampOut));
+}
+
+/** The share's ground light at `x` units: after the grove -> share cut has closed, exactly 0 at the end. */
+export function shareLightGain(x: number): number {
+  const l = FOREGROUND.light;
+  return smooth01((x - l.from) / l.rampIn) * (1 - smooth01((x - (MODEL_UNITS - l.rampOut)) / l.rampOut));
+}
+
 // ---- the copy -----------------------------------------------------------------------------------
 
 /** Every copy ramp is this long, in scroll units. */
