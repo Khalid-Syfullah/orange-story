@@ -3,7 +3,7 @@
 // typing) read the same numbers from here, so the grove's words are never on screen over the share
 // still. Nothing here is a `p` value: positions come from the segment, so retiming the script
 // retimes the beats.
-import type { Point } from "@/content/art";
+import { art, type Point } from "@/content/art";
 import { SCROLL_UNIT, segment } from "../../script";
 
 const model = segment("model");
@@ -58,6 +58,43 @@ export function beatPan(pan: Point, drift: Point | undefined, progress: number):
   return { x: pan.x + drift.x * (progress - 0.5), y: pan.y + drift.y * (progress - 0.5) };
 }
 
+const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x);
+const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
+
+export interface Camera {
+  /** Added to the beat's framing pan. */
+  pan: Point;
+  /** Multiplier on the beat's framing zoom. */
+  zoom: number;
+}
+
+/**
+ * The grove's camera at `x` units: linear across the beat plus half a cut either side, so it is
+ * already moving when the cut opens and still moving when it closes (a camera that eased to a stop
+ * at every boundary is what made the beat read as a still).
+ */
+export function groveCamera(x: number): Camera {
+  const c = art.grove.camera;
+  const [a, b] = BEAT_SPAN.grove;
+  const k = clamp01((x - (a - CUT_UNITS / 2)) / (b - a + CUT_UNITS));
+  return {
+    pan: { x: lerp(c.pan.from.x, c.pan.to.x, k), y: lerp(c.pan.from.y, c.pan.to.y, k) },
+    zoom: lerp(c.zoom.from, c.zoom.to, k),
+  };
+}
+
+/**
+ * The share's camera at `x` units: starts moving where the grove's push-in left off and decelerates
+ * (quadratic ease-out) to rest at the segment's end, where it is exactly `lastFraming`.
+ */
+export function shareCamera(x: number): Camera {
+  const c = art.share.camera;
+  const from = 2 * THIRD - CUT_UNITS / 2;
+  const u = clamp01((x - from) / (MODEL_UNITS - from));
+  const k = 1 - (1 - u) * (1 - u);
+  return { pan: { x: lerp(c.pan.x, 0, k), y: lerp(c.pan.y, 0, k) }, zoom: lerp(c.zoom, 1, k) };
+}
+
 export interface CutState {
   a: ImgIndex;
   b: ImgIndex;
@@ -100,7 +137,6 @@ export const COPY_WINDOWS = {
 export const TYPE_FROM = 2 * THIRD + 100;
 export const TYPE_TO = 2 * THIRD + 290;
 
-const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x);
 const smooth = (x: number) => {
   const k = clamp01(x);
   return k * k * (3 - 2 * k);

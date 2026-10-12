@@ -10,7 +10,7 @@ import type { PassDef } from "../../gl/passes";
 import { heroFraming } from "../hero/framing";
 import { crestAt, CUT_START } from "../static";
 import { MODEL_FRAG } from "./frag";
-import { beatPan, beatProgress, BEAT_SPAN, cutAt, modelUnits } from "./timeline";
+import { beatPan, beatProgress, BEAT_SPAN, cutAt, groveCamera, modelUnits, shareCamera } from "./timeline";
 
 export const modelPass: PassDef = {
   id: "model",
@@ -38,11 +38,14 @@ export const modelPass: PassDef = {
     const shareF = phoned(art.share.framing, art.share.phonePan);
     const lastF = phoned(art.share.lastFraming, art.share.phonePan);
     const graft = beatPan(graftF.pan, art.graft.drift, beatProgress(x, BEAT_SPAN.graft));
-    const grove = beatPan(groveF.pan, art.grove.drift, beatProgress(x, BEAT_SPAN.grove));
+    const gc = groveCamera(x);
+    const sc = shareCamera(x);
     u.set3f("uF1", graft.x, graft.y, art.graft.framing.zoom);
-    u.set3f("uF2", grove.x, grove.y, art.grove.framing.zoom);
-    u.set3f("uF3", shareF.pan.x, shareF.pan.y, shareF.zoom);
-    u.set3f("uF4", lastF.pan.x, lastF.pan.y, lastF.zoom);
+    u.set3f("uF2", groveF.pan.x + gc.pan.x, groveF.pan.y + gc.pan.y, art.grove.framing.zoom * gc.zoom);
+    // Both share keyframes ride the same camera, so the hands parting does not jump; at the end of
+    // the segment it is exactly `lastFraming`, the frame The Split opens on.
+    u.set3f("uF3", shareF.pan.x + sc.pan.x, shareF.pan.y + sc.pan.y, shareF.zoom * sc.zoom);
+    u.set3f("uF4", lastF.pan.x + sc.pan.x, lastF.pan.y + sc.pan.y, lastF.zoom * sc.zoom);
 
     const cut = cutAt(x);
     u.set1f("uImgA", cut.a);

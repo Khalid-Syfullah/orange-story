@@ -195,7 +195,15 @@ export const art = {
   grove: {
     ...still("grove", "16:9", "Model beat 2"),
     framing: { pan: { x: 0.01, y: 0 }, zoom: 1.04 },
-    drift: { x: 0.012, y: -0.004 },
+    /**
+     * The grove's camera: a push-in at constant speed with a lateral travel, running through the
+     * cuts on both sides (like The Work's creep, it never stops). `zoom` is a multiplier on
+     * `framing.zoom`; `pan` is added to `framing.pan`.
+     */
+    camera: {
+      zoom: { from: 1.06, to: 1.2 },
+      pan: { from: { x: -0.03, y: 0.012 }, to: { x: 0.03, y: -0.012 } },
+    },
     phonePan: { x: 0.05, y: 0 },
   },
 
@@ -208,6 +216,12 @@ export const art = {
      * `framing` (the share beat does not drift), so the cut between the two keyframes holds still.
      */
     lastFraming: { pan: { x: 0, y: 0 }, zoom: 1.04 },
+    /**
+     * The share's camera: a pull-back from the grove's push-in that decelerates onto
+     * `lastFraming`, so the beat ends at rest on exactly the frame The Split opens on. `zoom` is a
+     * multiplier on the framing zoom at the start (1 at the end); `pan` is the offset at the start.
+     */
+    camera: { zoom: 1.17, pan: { x: 0.025, y: -0.012 } },
     /** The man and the fruit he holds; the last keyframe takes the same pan, so the cut holds still on a phone too. */
     phonePan: { x: 0.06, y: 0 },
     /**
@@ -360,6 +374,8 @@ export const art = {
     drift?: Point;
     /** Framing of the extra `last` keyframe. */
     lastFraming?: Framing;
+    /** A beat's scroll-driven camera move (see passes/model/timeline.ts). */
+    camera?: object;
     /** Added to the framing's pan on tall phones, in proportion to how tall (src/stage/framing.ts phoned). */
     phonePan?: Point;
     /** Named points in painting coordinates (0..1, y down). */
