@@ -170,6 +170,22 @@ export interface SkyLight {
   soften: number;
 }
 
+/**
+ * The hero's signal rings (passes/hero/rings.ts): `count` concentric rings of tiny halftone dots leave the
+ * orange's crown and ripple outward over the sky, each with its own phase and largest radius (`minR` to `maxR`,
+ * frame heights), slower the larger (`speed` cycles a second at radius 0, falling as 1 / (0.35 + radius)), a
+ * hashed jitter on every cycle's reach and brightness (never a metronome); `cell` is the dot screen's pitch in
+ * CSS px and `strength` the dots' opacity at the crest of a ring.
+ */
+export interface Rings {
+  count: number;
+  minR: number;
+  maxR: number;
+  speed: number;
+  cell: number;
+  strength: number;
+}
+
 const R16_9 = 16 / 9;
 const R9_16 = 9 / 16;
 const R1_1 = 1;
@@ -230,22 +246,29 @@ const frames = (
 export const art = {
   hero: {
     ...loop("hero", "Hero"),
-    /** A 2% push-in so pointer parallax and drift never show the painting's edge. */
-    framing: { pan: { x: 0, y: 0 }, zoom: 1.02 },
+    /**
+     * A 4.5% push-in so pointer parallax, drift, the orbit's layers and the bridge reel's handheld camera never
+     * show the painting's edge (it was 2% before phase 18: on a 16:9 screen that left under 1% above and below).
+     * The hero, the bridge's film and reel and the Model's first frame all read it through heroFraming, so
+     * they stay one picture.
+     */
+    framing: { pan: { x: 0, y: 0 }, zoom: 1.045 },
     /**
      * The orbit (passes/hero/timeline.ts): over the hero the camera travels this far sideways (x) and
      * rises and falls (y, an arc that is back at 0 where the hero ends), painting units. Eased in from
      * rest. The bridge holds the end of it and relaxes it with its dolly.
      */
-    orbit: { x: 0.016, y: 0.005 } as Point,
+    orbit: { x: 0.022, y: 0.006 } as Point,
     /**
      * Two layers from the sky mask (the sky is far, the figures, the fruit and the steps near), as rates of
      * the orbit's travel from rest: the near layer moves 1.5x, the sky 0.3x, so the fruit and the women
-     * slide across the sky and the halftone clouds. The mask lattice is 0.07 painting heights (about 63 px).
+     * slide across the sky and the halftone clouds. The mask lattice is 0.09 painting heights (about 81 px).
      */
-    depth: { near: 1.5, far: 0.3, cell: 0.07 } satisfies Depth,
+    depth: { near: 1.5, far: 0.3, cell: 0.09 } satisfies Depth,
+    /** Dotted rings rippling outward from the crown like a signal, over the sky (and over the bridge's ground until it is white). */
+    rings: { count: 6, minR: 0.2, maxR: 0.95, speed: 0.045, cell: 4.4, strength: 0.6 } satisfies Rings,
     /** The scroll's speed on the camera's smear, the glint and the pour; bounded, 0 at rest. */
-    velocity: { knee: 30, smear: 0.012, glint: 0.35, pour: 0.6 } satisfies HeroVelocity,
+    velocity: { knee: 30, smear: 0.005, glint: 0.35, pour: 0.6 } satisfies HeroVelocity,
     /** The painted light of the flat cobalt sky; see SkyLight. */
     sky: { grade: 0.05, haze: 0.16, mottle: 0.035, fine: 0.02, scale: 2.4, drift: 0.012, soften: 0.0014 } satisfies SkyLight,
     anchors: {
@@ -253,6 +276,8 @@ export const art = {
       glint: { x: 0.64, y: 0.3 },
       /** Centre of the giant orange (the bridge keeps it in place; the ring leaves from the glint). */
       orange: { x: 0.7, y: 0.42 },
+      /** The orange's crown, where the stem meets the peel: the signal rings ripple outward from here. */
+      crown: { x: 0.675, y: 0.115 },
       /** Spout of the brass watering can held by the woman lower left. */
       spout: { x: 0.33, y: 0.7 },
       /** Where the halftone pour lands: the step below the spout. */
@@ -502,8 +527,9 @@ export const art = {
     depth?: Depth;
     /** Leaf sway in the wind (the motion toolkit). */
     sway?: Sway;
-    /** The hero: the orbit's travel, the scroll's speed on the film, the sky's painted light. */
+    /** The hero: the orbit's travel, the scroll's speed on the film, the sky's painted light, the signal rings. */
     orbit?: Point;
+    rings?: Rings;
     velocity?: HeroVelocity;
     sky?: SkyLight;
     /** The grove: the region held in the near layer, and how much of the sway it keeps. */

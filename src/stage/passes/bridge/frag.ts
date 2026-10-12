@@ -8,7 +8,6 @@ import { STATIC_GLSL } from "../static";
 import { REEL_CAM } from "./timeline";
 
 const f = (x: number) => x.toFixed(4);
-const wind = REEL_CAM.wind;
 const vel = REEL_CAM.vel;
 
 // Phase 18: the reel is filmed, not scrubbed (timeline.ts has the whole camera). On top of the film's
@@ -27,10 +26,10 @@ uniform float uCutC;      // the crest position (static.ts)
 uniform float uReelHold;  // the share of the film's orbit still held: 1 through the wave, easing to 0 with the dolly
 uniform vec3 uReelHand;   // the handheld camera: sway x and y (painting units) and roll (radians), already on their envelope
 uniform float uReelWind;  // the wind's sway of the camera, painting units
-uniform vec2 uReelVel;    // the scroll-speed envelope (0 until the reel is revealed and again at its end), and the lean at a flick (radians)
+uniform vec2 uReelGust;   // the wind's gust at the orange (motion.ts windAt, on the CPU), unit-free
+uniform vec3 uReelVel;    // the scroll-speed envelope (0 until the reel is revealed and again at its end), the lean at a flick (radians) and the tilt at a flick (painting heights)
 ${STATIC_GLSL}
 
-const vec4 REEL_WIND = vec4(${f(wind.scale)}, ${f(wind.speed)}, ${f(wind.flutter)}, ${f(wind.flutterSpeed)});   // timeline.ts REEL_CAM.wind
 const float REEL_KNEE = ${f(vel.knee)};      // the scroll's speed (px a frame) at which the lean is 63%
 const float REEL_PUSH = ${f(vel.push)};      // the extra push at a flick
 const float REEL_SMEAR = ${f(vel.smear)};    // the radial smear at a flick, painting widths
@@ -42,13 +41,11 @@ vec2 gReelCam;        // the film's orbit, still held (bounded travel from rest)
 float gReelV;         // the scroll's speed on the reel, signed, 0 until the reel is revealed
 
 void reelFrame() {
-  float tm = uTime * (1.0 - uStill);
   float vAmt = velAmount(REEL_KNEE) * uReelVel.x;
   gReelV = velSigned(REEL_KNEE) * uReelVel.x;
-  // The wind's gust at the orange (windAt is 0 under reduced motion): the camera sways with the air.
-  // (A uniform branch: the film and the wave pay nothing for a camera that is not yet handheld.)
-  vec2 w = uReelWind > 1.0e-7 ? windAt(uAOrange * vec2(uHeroSize.x / uHeroSize.y, 1.0), tm, REEL_WIND) : vec2(0.0);
-  gReelSway = (uReelHand.xy + vec2(w.x, w.y * 0.6) * uReelWind) * (1.0 - uStill);
+  vec2 w = uReelGust;   // the wind's gust at the orange (0 under reduced motion): the camera sways with the air
+  // The camera tilts up with the scroll: the sample point rises as the scroll goes down (content slides down the frame).
+  gReelSway = (uReelHand.xy + vec2(w.x, w.y * 0.6) * uReelWind + vec2(0.0, -uReelVel.z * gReelV)) * (1.0 - uStill);
   gReelRoll = (uReelHand.z + uReelVel.y * gReelV) * (1.0 - uStill);
   gReelS = uReelS * (1.0 + REEL_PUSH * vAmt);
   gReelCam = gCam * uReelHold;
@@ -75,7 +72,7 @@ vec2 reelPaint(vec2 uv) {
   vec2 pf = reelFlat(uv);
   if (dot(gReelCam, gReelCam) < 1.0e-12) return pf;
   vec2 cell = vec2(HERO_CELL * uReelSize.y / uReelSize.x, HERO_CELL);
-  float near = 1.0 - SOFT_MASK(uReel, pf + gReelCam * HERO_FAR, cell, skyMask);
+  float near = 1.0 - skyLayer(uReel, pf + gReelCam * HERO_FAR, cell);
   return pf + depthShift(near, gReelCam * HERO_NEAR, gReelCam * HERO_FAR);
 }
 
@@ -103,7 +100,11 @@ vec3 cutB(vec2 uv, vec2 frag, float lag) {
     vec2 dp = cutDir() * coverScale(uReelSize) / gZoom;
     c = smear5(uReel, p0, dp, lag * 0.03);
   }
-  return c + grain(frag);
+  // The signal rings run on over the reel: over its sky, and over its ground once that is pale; dots go from
+  // milk to ink as the ground whitens (rings.ts), and the rings are gone by the time the knife is at rest.
+  float ground = max(skyMask(c), paleMask(c) * uRingPale);
+  vec3 cr = signalRings(c, frag, toScreenA(uACrown), uRingGain, ground, uTime * (1.0 - uStill));
+  return cr + grain(frag);
 }
 
 vec3 cutRaw(vec2 uv, float behind) {

@@ -29,6 +29,9 @@ export function setHeroUniforms(ctx: FrameCtx, u: UniformSetter, pose: HeroPose)
   u.set2f("uHeroCamMax", camMax.x, camMax.y);
   u.set1f("uHeroRate", pose.rate);
   u.set1f("uVelGate", pose.velGate);
+  u.set2f("uACrown", hero.anchors.crown.x, hero.anchors.crown.y);
+  u.set1f("uRingGain", pose.rings);
+  u.set1f("uRingPale", pose.ringPale);
   const events = stepHero(ctx);
   u.set2f("uPan", framing.pan.x, framing.pan.y);
   u.set1f("uZoom", framing.zoom);

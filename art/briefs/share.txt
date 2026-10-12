@@ -5,3 +5,5 @@ A young man with auburn curls in a dark-green velvet doublet with gold-embroider
 SECOND KEYFRAME: two hands, one his and one entering from the left in a plain cuff, hold the orange cut cleanly in half, the two halves tilted toward the viewer showing bright segments and a bead of juice, a hand's width apart. This frame is the one The Split opens.
 
 MOTION (5 s): the orange turns a quarter in his fingers, then parts into halves; the second hand arrives from the left and takes one.
+
+REPLACEMENT NOTE (phase 18, motion): the ground is pure #FFFFFF with no tooth, light or shadow, so the figure reads as a cut-out. The shader lays a warm drifting light over exactly that white (passes/model/foreground.ts shareLight) and fades it to nothing where the Split opens (which keeps the plain white, so the Split's first frame is this one). If the keyframes are regenerated: ask for a warm paper-white (about #F6F1E6) with a faint canvas tooth and a soft pool of light high on the left, and a cast shadow of the figure on the ground behind him; keep both keyframes on the same ground.

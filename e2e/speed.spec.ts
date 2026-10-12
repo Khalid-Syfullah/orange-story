@@ -64,3 +64,61 @@ test.describe("speed", () => {
     });
   }
 });
+
+// Phase 18: the opening chapters answer the scroll's speed where the crest does not. The hero's pour,
+// glint and camera smear grow with it (bounded) until its last stretch; the bridge's reel leans with it
+// once the wave has crossed (the crest test above holds at t = 0.3, where only the crest answers); and
+// neither answers at the frames the hero ends on and the reel ends on, so the handovers are the same
+// frame at any speed.
+test.describe("speed: the hero and the reel", () => {
+  const changed = (a: Awaited<ReturnType<typeof frame>>, b: Awaited<ReturnType<typeof frame>>) => {
+    const d = delta(a, b);
+    let sum = 0;
+    let over = 0;
+    for (let i = 0; i < d.length; i++) {
+      sum += d[i];
+      if (d[i] > CHANGED) over++;
+    }
+    return { mean: sum / d.length, over };
+  };
+
+  test("the hero's pour, glint and sweep grow with the speed, bounded, and have let go by the hero's end", async ({ page }) => {
+    await openStage(page, { p: 0.02 });
+    await land(page, 0.02);
+    const rest = await frame(page, 0);
+    const slow = changed(rest, await frame(page, SLOW));
+    const flick = changed(rest, await frame(page, FLICK));
+    test.info().annotations.push({ type: "speed", description: `hero t 0.5: slow mean ${slow.mean.toFixed(3)} (${slow.over} px), flick ${flick.mean.toFixed(3)} (${flick.over} px)` });
+    expect(slow.over, "a slow wheel already answers").toBeGreaterThan(0);
+    expect(flick.mean, "a flick answers more").toBeGreaterThan(slow.mean);
+    expect(flick.over).toBeGreaterThan(slow.over);
+    // A flick shifts the painting by a few pixels (a smear and a lean), which on a painted texture reads as a mean
+    // change of 8 of 255; a frame remade (a cut's crest, a different picture) measures 60 and over.
+    expect(flick.mean, "bounded: a flick never remakes the frame").toBeLessThan(14);
+
+    await land(page, 0.0399);
+    const endRest = await frame(page, 0);
+    const endFlick = changed(endRest, await frame(page, FLICK));
+    expect(endFlick.over, "the hero's last frame is the same at any speed").toBe(0);
+  });
+
+  test("the bridge's reel leans with the speed once the wave has crossed, and is the Model's first frame at any speed at its end", async ({ page }) => {
+    const cut = readCuts().find((c) => c.slug === "bridge");
+    expect(cut).toBeTruthy();
+    const pMid = pAtCut(cut!, 0.8);
+    await openStage(page, { p: pMid });
+    await land(page, pMid);
+    const rest = await frame(page, 0);
+    const slow = changed(rest, await frame(page, SLOW));
+    const flick = changed(rest, await frame(page, FLICK));
+    test.info().annotations.push({ type: "speed", description: `bridge t 0.8: slow mean ${slow.mean.toFixed(3)} (${slow.over} px), flick ${flick.mean.toFixed(3)} (${flick.over} px)` });
+    expect(flick.over, "the reel's camera answers the speed").toBeGreaterThan(0);
+    expect(flick.mean).toBeGreaterThan(slow.mean);
+    expect(flick.mean, "bounded: a flick never remakes the frame").toBeLessThan(18);
+
+    const pEnd = pAtCut(cut!, 1) - 1e-6;
+    await land(page, pEnd);
+    const endRest = await frame(page, 0);
+    expect(changed(endRest, await frame(page, FLICK)).over, "the reel's last frame is the same at any speed").toBe(0);
+  });
+});

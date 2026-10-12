@@ -13,9 +13,9 @@ Neoclassical academic oil painting in the manner of a 19th-century salon painter
 | --- | --- | --- | --- |
 | `hero` | video loop 10 s (or still) | 16:9, 2048x1152 | Hero |
 | `bridge` | 121 frames | 16:9 | Hero → Model |
-| `graft` | still or 5 s video | 16:9 | Model beat 1 |
-| `grove` | still or 5 s video | 16:9 | Model beat 2 |
-| `share` | two keyframes or 5 s video | 16:9 | Model beat 3 (last frame = the halves held apart) |
+| `graft` | still or 5 s video | 16:9 | Model beat 1 (no copy) |
+| `grove` | still or 5 s video | 16:9 | Model beats 2 and 3: the canopy (We build it.), then the camera drops to the picking hand (We rank it.) |
+| `share` | three keyframes or an 8 s video | 16:9 | Model beat 4 (We share in what it earns.); last frame = the halves held apart |
 | `plate` | still | 9:16, 1152x2048 | The Work, the push into the parchment |
 | `drawing` | 121 frames | 1:1 | The Terms (window) |
 | `plan` | still | 1:1, 1536x1536 | Last frame of `drawing` |
@@ -30,36 +30,37 @@ Neoclassical academic oil painting in the manner of a 19th-century salon painter
 
 ```text
 A monumental ripe orange as tall as a house rests on a stepped white marble plinth on the right half of the canvas, short woody stem and two glossy leaves on top. Three women in Greek drapery attend it: lower left, one in a cream gown with a rust-red sash tilts an empty brass watering can toward the steps; centre, one in a cream tunic with a golden-ochre sash stands on the steps polishing the peel with a white cloth; far right, one in an ochre shawl stands with a hand on her chest. The whole upper left is clear cobalt sky with no clouds. Subjects grouped lower right so the upper left stays open for copy.
-MOTION (10 s loop): the cloth moves slowly over the peel; the can tilts a little; drapery stirs; the camera holds.
+MOTION (10 s loop): the cloth moves slowly over the peel; the can tilts a little; drapery stirs; the camera holds. Keep the sky around the orange's crown clear: the shader draws faint concentric rings of tiny dots rippling outward from it like a signal, and a small rainbow glint near the headline.
 ```
 
 ## bridge
 
 ```text
 First frame = the hero's last frame. Last frame = graft's first frame.
-MOTION (image-to-video with both keyframes, 6 s): the white marble plinth turns to bark from the bottom up along a torn edge, the orange stays exactly where it is and becomes fruit hanging from the branch the plinth has become, leaves sprout along the branch, the attendants fade out with the sky as the ground goes paper-white, and a grafting knife and a coil of raffia come to rest on the branch. The camera holds; nothing cuts. Keep the orange's position in frame identical in the first and last frames.
+MOTION (image-to-video with both keyframes, 8 s): the scene transforms in place; nothing cuts. The camera tilts up from the steps to a low upward angle. The white marble plinth turns to gnarled orange-tree bark from the bottom up along a torn, irregular edge, while the plinth's top slab, the part the orange rests on, stays exactly where it is until the bark reaches it; the slab then lifts away like a cap, turning slowly as it goes, and leaves the trunk's cut top. The orange stays where it is for the first part of the move and becomes fruit hanging from a branch the trunk puts out; the tilt then carries it out of the bottom of the frame. Leaves sprout along new branches. The three attendants and the cobalt sky fade out together as the ground goes paper-white. A grafting knife with a boxwood handle falls past the lens, tumbling, then lies on the bough; a coil of raffia drifts down beside it. The orange's screen position and size at the first frame are identical to the hero's last frame.
 ```
 
 ## graft
 
 ```text
-Close on two hands grafting a citrus scion onto a cut branch: the left hand steadies the branch, the right hand winds pale raffia twine around the join; a small grafting knife with a boxwood handle rests on the branch; four young orange leaves and a white blossom bud sprout from the scion. Background a flat warm paper-white, no sky, no horizon. The hands fill the lower two thirds; the scion rises into empty space above.
-MOTION (5 s): the right hand completes one slow wrap of the twine; the leaves barely stir; camera static.
+Close on two hands grafting a citrus scion onto a cut branch: the left hand steadies the branch, the right hand, in a dark-blue velvet cuff with gold embroidery, winds pale raffia twine around the join; a small grafting knife with a boxwood handle lies on the bough below; four young orange leaves and a white blossom bud sprout from the scion. Background a flat warm paper-white, no sky, no horizon (the cobalt of the bridge has just gone). The hands fill the lower two thirds; the scion rises into empty space above.
+MOTION (5 s): the knife settles on the bough, the right hand completes one slow wrap of the twine and ties it off; the leaves barely stir; then the camera pushes forward through the scion's leaves, which sweep across the lens (this push-through lands in the grove). Otherwise the camera is static.
 ```
 
 ## grove
 
 ```text
-Looking up into an orange tree heavy with fruit against a pale overcast-white sky: dozens of oranges among dark glossy leaves, one gilded orange at centre brighter than the rest. From the lower right a single hand in a white lace cuff and green velvet sleeve reaches up and closes around the gilded orange. Branches frame the edges; no ground visible.
-MOTION (5 s): the hand rises from below frame and takes the gilded orange; the branch dips slightly under the pull.
+Looking up into a dense orange tree heavy with fruit against a pale overcast-white sky: dozens of oranges among dark glossy leaves across the whole frame, one gilded orange low and a little right of centre, brighter than the rest. From the lower right a single hand in a white lace cuff and green velvet sleeve reaches up and closes around the gilded orange. Branches frame the edges; no ground visible. The upper half of the frame is canopy only (leaves and fruit, no hand), because the first beat's copy sits over it.
+MOTION (5 s): the camera first holds on the upper canopy (fruit and leaves stirring), then drops down the tree; the hand rises from below the frame and takes the gilded orange; the branch dips slightly under the pull. The gilded orange ends where `share` holds it in its first keyframe, at the same screen position and size. Optional, painted small into the lower-right corner of the still: the top of an auburn-curled head and a green velvet shoulder entering as the camera finishes dropping.
 ```
 
 ## share
 
 ```text
 A young man with auburn curls in a dark-green velvet doublet with gold-embroidered collar and white lace cuffs, three-quarter profile facing left, holds a gilded orange at eye level in his right hand and studies it. Flat paper-white background. He sits right of centre; the left third is empty.
+MIDDLE KEYFRAME: the same pose, a small knife with a boxwood handle in his left hand, the blade entering the peel at the orange's equator.
 SECOND KEYFRAME: two hands, one his and one entering from the left in a plain cuff, hold the orange cut cleanly in half, the two halves tilted toward the viewer showing bright segments and a bead of juice, a hand's width apart. This frame is the one The Split opens.
-MOTION (5 s): the orange turns a quarter in his fingers, then parts into halves; the second hand arrives from the left and takes one.
+MOTION (8 s): the orange turns a quarter in his fingers; the knife comes in and slices it; the second hand arrives from the left and takes one half; the halves are held a hand's width apart.
 ```
 
 ## plate

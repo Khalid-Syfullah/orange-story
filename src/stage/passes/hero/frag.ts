@@ -5,6 +5,7 @@
 //   1. the loop, sampled through dolly(cover(uv)) + parallax, with the ring's radial displacement
 //   2. halftone clouds in the open sky (three instances, masked to the sky by the loop's own blue;
 //      the cloud shape and the dot screen are the shared chunk in ../clouds.ts)
+//   2b. the signal rings: dotted rings rippling outward from the crown over the sky (rings.ts)
 //   3. the halftone pour from the spout to the step below it
 //   4. the rainbow glint on the peel
 //   5. the print-in from the orange (a halftone screen that grows until the dots merge)
@@ -25,6 +26,7 @@ import { art } from "@/content/art";
 import { CLOUDS_GLSL } from "../clouds";
 import { POUR_GLSL } from "../pour";
 import { REST_GLSL } from "../rest";
+import { RINGS_GLSL } from "./rings";
 
 const f = (x: number) => x.toFixed(4);
 const { depth, velocity, sky: skyLight } = art.hero;
@@ -35,6 +37,7 @@ export const HERO_LIB = /* glsl */ `
 ${REST_GLSL}
 ${CLOUDS_GLSL}
 ${POUR_GLSL}
+${RINGS_GLSL}
 uniform sampler2D uHero;
 uniform vec2 uHeroSize;
 uniform vec2 uPan;
@@ -80,13 +83,32 @@ vec2 gFarOff;    // the sky's: HERO_FAR times the travel
 // The flat mapping (the rest state and the dolly, no layers): where the picture would be with no orbit.
 vec2 toPaint(vec2 uv) { return cover(dollyAbout(uv, gO, gS), uHeroSize, uPan, gZoom) + gOff; }
 
-// The orbit's two layers at a flat painting point pt: the far layer's offset where the sky mask (read
-// on a lattice anchored to the painting, so the warp is continuous) says sky, the near layer's where it
-// says paint, eased between; 0 with no orbit. Add it to pt for the point the picture is read at.
+// The sky layer's mask at a lattice node: the sky mask, eroded (the least of the node and four taps half a
+// cell away), so a figure smaller than a cell is not left in the far layer by a lattice point that fell in
+// the sky beside it: the soft hand-over between the layers lies in the flat sky, where a warp does not show,
+// never across a face.
+float skyNode(sampler2D tex, vec2 p, vec2 r) {
+  float m = skyMask(texture2D(tex, p).rgb);
+  m = min(m, skyMask(texture2D(tex, p + r).rgb));
+  m = min(m, skyMask(texture2D(tex, p - r).rgb));
+  return m;
+}
+
+// skyLayer: that mask on a lattice anchored to the painting and blended between the four nodes round
+// 'pt' with the toolkit's smoothstep weight (SOFT_MASK's blend): 1 in the sky, 0 on paint, continuous.
+float skyLayer(sampler2D tex, vec2 pt, vec2 cell) {
+  vec2 b = latticeBase(pt, cell);
+  vec2 r = cell * 0.5;
+  return latticeBlend(pt, cell, skyNode(tex, b, r), skyNode(tex, b + vec2(cell.x, 0.0), r), skyNode(tex, b + vec2(0.0, cell.y), r), skyNode(tex, b + cell, r));
+}
+
+// The orbit's two layers at a flat painting point pt: the far layer's offset where the eroded sky mask
+// says sky, the near layer's where it says paint, eased between; 0 with no orbit. Add it to pt for the
+// point the picture is read at.
 vec2 layerShift(vec2 pt) {
   if (dot(gNearOff, gNearOff) + dot(gFarOff, gFarOff) < 1.0e-12) return vec2(0.0);
   vec2 cell = vec2(HERO_CELL * uHeroSize.y / uHeroSize.x, HERO_CELL);
-  float near = 1.0 - SOFT_MASK(uHero, pt + gFarOff, cell, skyMask);
+  float near = 1.0 - skyLayer(uHero, pt + gFarOff, cell);
   return depthShift(near, gNearOff, gFarOff);
 }
 
@@ -212,8 +234,8 @@ vec3 heroColor(vec2 uv, vec2 frag) {
     vec2 sp = pf + gFarOff;
     vec2 sa = vec2(sp.x * aspect, sp.y);
     float sd = tm * SKY_DRIFT;
-    float m1 = fbm(sa * SKY_SCALE + vec2(3.7 + sd, 8.1 - 0.4 * sd)) - 0.5;
-    float m2 = fbm(sa * SKY_SCALE * 3.1 + vec2(-5.3 - 1.7 * sd, 2.2 + 0.6 * sd)) - 0.5;
+    float m1 = fbm(sa * SKY_SCALE + vec2(3.7 + sd, 8.1 - 0.4 * sd), 2) - 0.5;      // two octaves: it is a soft field
+    float m2 = vnoise(sa * SKY_SCALE * 3.1 + vec2(-5.3 - 1.7 * sd, 2.2 + 0.6 * sd)) - 0.5;
     float g = clamp((sp.y - 0.12) / 0.72, 0.0, 1.0);
     float lit = (m1 * SKY_MOTTLE + m2 * SKY_FINE) * 2.0 + SKY_GRADE * (g - 0.4);
     float haze = SKY_HAZE * g * g * (0.65 + 0.7 * (m1 + 0.5));
@@ -238,6 +260,9 @@ vec3 heroColor(vec2 uv, vec2 frag) {
     float m = cloudDot(frag, cellPx, cov) * sky;
     col = mix(col, uMilk, m * 0.94);
   }
+
+  // ---- 2b. the signal rings: tiny dots rippling outward from the crown over the sky (rings.ts) --------
+  col = signalRings(col, frag, toScreenA(uACrown), uRingGain * drv, sky, tm);
 
   // ---- 3. the pour ------------------------------------------------------------------------------
   // The scroll's speed sprays it wider and swings its lower end the way the camera sweeps (bounded, 0 at rest).

@@ -3,7 +3,9 @@
 // typing) read the same numbers from here, so the grove's words are never on screen over the share
 // still. Nothing here is a `p` value: positions come from the segment, so retiming the script
 // retimes the beats.
-import { art, type Point } from "@/content/art";
+import { art, type Framing, type Point } from "@/content/art";
+import type { Size } from "../../framing";
+import { coverRoom } from "../../motion";
 import { SCROLL_UNIT, segment } from "../../script";
 
 const model = segment("model");
@@ -56,6 +58,22 @@ export function beatProgress(x: number, span: readonly [number, number]): number
 export function beatPan(pan: Point, drift: Point | undefined, progress: number): Point {
   if (!drift) return pan;
   return { x: pan.x + drift.x * (progress - 0.5), y: pan.y + drift.y * (progress - 0.5) };
+}
+
+/**
+ * A beat's drift fitted to the frame: on a frame so wide that the painting's zoom is the only slack
+ * sideways (an ultrawide), the art.ts drift would walk the painting's edge into view, so it is scaled
+ * down to use at most `share` of the room the framing leaves (the rest is for the depth layers' travel
+ * and the rest state). On every frame the drift fits the art.ts value is used as it is.
+ */
+export function fitDrift(css: Size, tex: Size, framing: Framing, drift: Point, share = 0.7): Point {
+  const base = coverRoom(css, tex, framing.zoom, { x: Math.abs(framing.pan.x), y: Math.abs(framing.pan.y) });
+  const k = Math.min(
+    1,
+    (2 * share * base.x) / Math.max(Math.abs(drift.x), 1e-9),
+    (2 * share * base.y) / Math.max(Math.abs(drift.y), 1e-9),
+  );
+  return { x: drift.x * k, y: drift.y * k };
 }
 
 const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x);
@@ -160,15 +178,36 @@ export const FOREGROUND = {
     lane: [0.58, 1.04] as readonly [number, number],
     /** The defocus: the edge's softness in frame heights. */
     blur: 0.016,
-    opacity: 0.9,
+    opacity: 0.82,
   },
-  /** Wind for the leaves and the motes' own sway (a little stronger than the paintings': they are close). */
-  wind: { scale: 1.0, speed: 0.3, flutter: 3, flutterSpeed: 3.6 },
   motes: [
     { cell: 0.42, speed: 3.0, rise: 0.02, r: [0.03, 0.055], density: 0.42, alpha: 0.26, soft: 0.55, seed: 11 },
     { cell: 0.26, speed: 1.7, rise: 0.014, r: [0.006, 0.016], density: 0.6, alpha: 0.6, soft: 0.3, seed: 23 },
     { cell: 0.15, speed: 0.9, rise: 0.008, r: [0.0025, 0.006], density: 0.7, alpha: 0.8, soft: 0.2, seed: 37 },
   ] as readonly MoteLayer[],
+  /**
+   * The push-through (docs/TRANSITIONS.md, graft -> grove): leaves of the scion sweep across the lens as the camera pushes
+   * through them into the canopy. Large leaves rushing out of the frame's middle, each with its own seed, size
+   * and pace (the larger the slower), smeared along the push; the window is centred on the graft -> grove cut
+   * (THIRD) and has closed before the grove's copy has arrived.
+   */
+  push: {
+    from: THIRD - 120,
+    to: THIRD + 38,
+    rampIn: 50,
+    rampOut: 50,
+    count: 9,
+    /** Half length at the start (frame heights); a leaf grows 2.8x by the time it leaves the frame. */
+    size: [0.15, 0.3] as readonly [number, number],
+    /** Frame heights a leaf travels per scroll unit: the larger the slower. */
+    speed: [0.0045, 0.0105] as readonly [number, number],
+    /** Units a leaf may start late, so they do not rush out together. */
+    stagger: 60,
+    /** The smear along the push, in frame heights at the frame's middle (it grows with distance and with the scroll's speed). */
+    smear: 0.06,
+    /** Where they come from: the frame's middle, a little above (where the scion stands), as a share of the frame's width and height. */
+    centre: [0.5, 0.36] as readonly [number, number],
+  },
   /** The share's white ground takes a warm drifting light between these units (it is gone, exactly, at the end). */
   light: { from: 2 * THIRD + 40, rampIn: 160, rampOut: 210, strength: 0.55 },
 } as const;
@@ -177,6 +216,12 @@ export const FOREGROUND = {
 export function foregroundGain(x: number): number {
   const f = FOREGROUND;
   return smooth01((x - f.from) / f.rampIn) * (1 - smooth01((x - (f.to - f.rampOut)) / f.rampOut));
+}
+
+/** The push-through's gain at `x` units: 0 before and after its window. */
+export function pushGain(x: number): number {
+  const p = FOREGROUND.push;
+  return smooth01((x - p.from) / p.rampIn) * (1 - smooth01((x - (p.to - p.rampOut)) / p.rampOut));
 }
 
 /** The share's ground light at `x` units: after the grove -> share cut has closed, exactly 0 at the end. */

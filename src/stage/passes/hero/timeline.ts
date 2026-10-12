@@ -92,11 +92,15 @@ export interface HeroPose {
   rate: number;
   /** How much of the scroll's speed reaches the film. */
   velGate: number;
+  /** The signal rings' strength (1 in the hero; the bridge fades them out). */
+  rings: number;
+  /** How far a pale ground may carry the rings (0 in the hero: the marble is pale too). */
+  ringPale: number;
 }
 
 export function heroPose(t: number): HeroPose {
-  return { push: heroPush(t), heroT: t, orbit: orbitEase(t), rate: orbitRate(t), velGate: heroVelGate(t) };
+  return { push: heroPush(t), heroT: t, orbit: orbitEase(t), rate: orbitRate(t), velGate: heroVelGate(t), rings: 1, ringPale: 0 };
 }
 
-/** The pose the hero ends on, which the bridge's film holds. */
-export const HERO_END_POSE: HeroPose = { push: HERO_PUSH_END, heroT: 1, orbit: 1, rate: 0, velGate: 0 };
+/** The pose the hero ends on, which the bridge's film holds (the bridge sets its own `rings` and `ringPale`). */
+export const HERO_END_POSE: HeroPose = { push: HERO_PUSH_END, heroT: 1, orbit: 1, rate: 0, velGate: 0, rings: 1, ringPale: 0 };

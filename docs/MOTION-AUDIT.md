@@ -108,6 +108,92 @@ Screenshots: `motion-graft-1440-before.png` / `-after.png` and `motion-graft-390
 of its drift), `motion-graft-1440-diff.png` (what changed: only the near layer); `motion-canopy-1440-before.png` /
 `-after.png`, `motion-canopy-390-*` (p 0.62) and `motion-canopy-1440-diff.png` (only the leaves).
 
+## Phase 18: the hero, the bridge and the model
+
+What now moves, at 1440x900 unless said (distances from the code's numbers, `e2e/motion.spec.ts` holds the contracts;
+frames in `docs/screenshots/motion-<chapter>-<1440|390>-before|after.png`, taken on the production build at
+`?p=<value>&clock=5`: hero-a/b p 0.012 / 0.039, bridge-a/b p 0.048 / 0.062, graftmid 0.10, grove 0.13 / 0.145,
+share 0.17, share-end 0.1899):
+
+- **Hero.** The camera orbits the orange over the whole chapter (`passes/hero/timeline.ts`): a lateral arc eased in
+  from rest, in two layers (art.ts `hero.depth`: the sky far at 0.3x, the women, the fruit and the steps near at
+  1.5x, the mask the sky eroded at a lattice node): at the hero's end the fruit has slid 32 px against 6 px for the
+  sky and its halftone clouds (38 px on a 16:9 screen, 18 px on a phone), bounded by the room the 4.5% framing and
+  the dolly leave (`heroCamMax`). The framing zoom went from 1.02 to 1.045: on a 16:9 screen 1.02 left under 1%
+  above and below, which no layered camera can use. The glint, the spout and the orange are pinned on the near
+  layer; the glint's foil colours slide with the orbit; the scroll's speed (knee 30 px a frame) adds spray, a lean
+  and larger drops to the pour (`pourWith`), up to +35% on the glint with its flare slipping more, and a 5 px
+  smear along the sweep, all bounded, all 0 at rest and under reduced motion, and gated shut over the hero's last
+  fifth (`heroVelGate`) so the frame the bridge opens on is the same at any speed. The sky has its own painted
+  light (art.ts `hero.sky`: a grade, a haze at the horizon, two scales of turbulence drifting with the clock), and its
+  cut-out edges are softened where the sky mask changes within 2 px. The print-in and the ring are as they were.
+- **Signal rings.** Six rings of tiny halftone dots (15 degree screen, 4.4 px cells) ripple outward from the orange's crown
+  over the sky (`passes/hero/rings.ts`, art.ts `hero.rings` and `anchors.crown`): each has its own phase and largest
+  radius (0.2 to 0.95 frame heights), slower the larger (12 s a cycle for the smallest, 28 s for the largest), a hashed
+  reach and brightness every cycle, a smoothstep birth, fainter the farther from the crown (the copy sits under them).
+  The bridge draws them with the same code and clock, over the film's sky and then over the reel's sky and, once its
+  ground has gone pale, over that: the dots go from milk to ink by the ground's own luminance, and the rings are
+  gone by t 0.9 of the bridge (`reelRings`).
+- **Bridge reel.** The film is the hero held at its end pose (`HERO_END_POSE`, orbit and all); the reel is cut in on
+  the same dolly and orbit, then relaxes both together (the same smoothstep, t 0.6 to 1). From the wave's end it is
+  a handheld camera (`passes/bridge/timeline.ts`): three incommensurate sines of the reel's progress (so the sway
+  is the scroll's pace through the reel) and a gust of the wind field, a roll about the orange of 0.63 degrees
+  and a sway of 0.5% at full strength, an upward tilt (a bell of the reel's progress, 0.6% of the height, 0 before the
+  wave has crossed and at the end, and 0.4% more per flick of the scroll), the whole squeezed inside the room the dolly and the held orbit leave
+  (`reelCamera`'s scale: 0.6 to 0.9 on a laptop, about 0.35 on 16:9), on a bell envelope that is exactly 0 until
+  t 0.55 and at t 1. Once the reel is fully revealed (t 0.58 to 0.88) the scroll's speed leans it: up to 0.34
+  degrees of roll, 1% of push and a 5 px radial smear. Before that only the crest answers the speed (the speed
+  test) and at t 1 nothing does (the Model's first frame).
+- **Graft.** The beat's lateral dolly is wider (drift 0.028 of the width, fitted to the frame: `fitDrift` takes an
+  ultrawide down so no edge shows), the layers part by about 20 px (lattice 0.1), and the scion's leaves stir (foliage
+  mask x wind, `art.graft.sway`).
+- **Push-through.** As the graft hands over to the grove, nine leaves of the scion rush out of the frame's middle and
+  sweep across the lens (`foreground.ts` `pushLeaves`): each its own seed, direction, size and pace (the larger the
+  slower), growing as it comes toward the lens, smeared along its way out with five taps (more with the scroll's speed),
+  over the static treatment that takes the graft to the canopy underneath. Gain 0 outside t 280 to 438 units, so they
+  are gone before the grove's copy starts to ramp in.
+- **Grove.** The camera is as it was. The pale cloudscape is its own far layer (0.3x of the camera's lateral
+  travel, so the clouds trail the leaves by up to 24 px at the beat's ends, 49 px of relative travel across it; the lace cuff and the sleeve stay with the
+  fruit and the arm, `art.grove.hold`), the leaves stir, and the foreground (`passes/model/foreground.ts`) lays
+  three layers of gold motes (the nearest out of focus) and six olive leaves crossing low in the frame, each at its
+  own speed and size, drawn over the cuts.
+- **Share.** The camera is as it was. The foreground drifts through it (motes at three speeds, leaves), and a warm
+  light drifts through the white ground (only where the pixel is white). Gain 0 until the grove has opened, and
+  exactly 0 at the segment's end (`foregroundGain`, `shareLightGain`), so the share lands at rest on
+  `art.share.lastFraming` and the Split's first frame is the same picture.
+
+Checks: `e2e/motion.spec.ts` holds the contracts above (the orbit and the reel's camera inside their rooms at five frame
+shapes, exactly 0 where the hero, the reel and the share hand over, the masks on the real paintings), `e2e/speed.spec.ts`
+the answer to the scroll's speed (growing with it, bounded, and none at the handovers). The new TRANSITIONS row
+(Graft -> grove -> share) has the slug `model` in `e2e/lib/cuts.ts` and is followed across the push-through (forty steps
+across the whole 0.07 to 0.19 would move a 70-unit cut by half its length a step); the leaves' bounding discs report
+themselves as the crest through the probe, so a leaf crossing the lens is the largest change and in the band.
+Compile time: the Model's shader is read at every place a cut reads a picture, so it is the one that grows with
+what a picture does; the first version of this phase took 29 s to compile on SwiftShader (the e2e's fixed clock
+gives a page 60 s to come up) and now 8 s: the wind is sampled three times a frame on the CPU (the TS twin of
+`windAt`) and mixed across the painting (`windAcross`), the crest's chroma split and rubbing read the pictures flat
+(`imgFlat`) and the lag's five taps are a loop. The foreground's leaves and light are worked out on the CPU too
+(`passes/model/instances.ts`): the first version decided every leaf per pixel and cost the Model about six
+milliseconds a frame (measured against the phase 17 build, same machine, `?hud&finish`), the second about two.
+Measured the same way, the opening chapters now cost 1.2 to 2.5 ms more than before this phase at rest (the layers'
+masks, the sky's light, the rings), so a frame at rest is about 5 ms on this loaded Mac against about 3 ms before;
+`docs/PERF.md` has the unloaded numbers.
+
+Not done, because they stand on assets and beats the repo does not have yet (`docs/STORY.md`, `docs/TRANSITIONS.md`
+and `prompts/04` to `06` were rewritten while this phase ran for a story of four Model beats, a transforming bridge
+reel and a three-keyframe share): the falling knife and raffia as their own parallax layer in the reel (the imported
+reel's knife is already lying on the bough, and the boxwood and the steel share their colours with the skin and the
+bark, so no colour mask can lift them without tearing the hands), the plinth's top slab lifting away like a cap, the
+grove's hold on the upper canopy and its drop to the hand (the imported grove has the hand through its upper half,
+so a camera that shows the canopy alone does not exist in it), the grove-to-share match cut on the gilded orange
+(`art.grove.gilded` and `art.share.fruit` are not in the manifest) and the slice as a front along the knife's line
+(the share has two keyframes, not three). Each is a small step on top of this phase once those assets and the
+phase 5 and 6 rebuilds land: the layers, the room and the gains here do not depend on them.
+
+Still flat after this phase (assets, `art/briefs/hero.txt`, `bridge.txt` and `share.txt` carry the replacement notes):
+the reel's own double exposure (two oranges near frame 40, two pairs of hands near frame 90), the hero's attendants
+(they barely move in the loop), the share's figure (still), the graft's cream ground (flat; its parallax is the fix).
+
 ## For the next phases
 
 - Phase 18: the hero's camera barely moves and its sky is flat; the bridge is the scrub; the graft now has depth

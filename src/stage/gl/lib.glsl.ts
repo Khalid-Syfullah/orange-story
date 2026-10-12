@@ -323,7 +323,10 @@ float foliageMask(vec3 c) {
 // marble, paper (art.ts MASKS.pale); 0 on skin, fruit, leaves, bark and sky.
 float paleMask(vec3 c) {
   const float S = ${n4(MASKS.pale.soft)};
-  return bandMask(hueSat(c).y, ${band(MASKS.pale.sat)}, S) * bandMask(luma(c), ${band(MASKS.pale.lum)}, S);
+  // The saturation of hueSat without its hue (the same value, d / max): this mask is read a dozen times a pixel.
+  float mx = max(max(c.r, c.g), c.b);
+  float sat = (mx - min(min(c.r, c.g), c.b)) / (mx + 1.0e-4);
+  return bandMask(sat, ${band(MASKS.pale.sat)}, S) * bandMask(luma(c), ${band(MASKS.pale.lum)}, S);
 }
 
 // skyMask: 1 where a painting pixel is its blue sky (blue well above red and green), 0 on paint,

@@ -16,12 +16,15 @@ All copy lives in `src/content/copy.ts`, typed and grouped by chapter, so it can
 - Hero button: "Start a partnership" (right-arrow chip). Scrolls to the application form.
 - Bottom-left tag: "What we do"
 - Bottom-left paragraph: "We build your software, get it ranked where buyers search, and take our pay from the new revenue it brings in. No retainer. No timesheets. If you don't grow, we don't invoice."
-- Beat over the grove (picking): title "We get you found." subtitle "Search and links that put you in front of the people already looking."
-- Beat over the robed man: title "We split the harvest." tag "Revenue share" typed line "Nothing billed by the hour. We share the outcome, so we share the risk."
+- Beat 1, over the graft: no copy.
+- Beat 2, over the canopy: title "We build it." tag "Custom software" subtitle "Tailored software, built to be found."
+- Beat 3, over the picking hand: title "We rank it." tag "Search and links" subtitle "Search and links that put you in front of the people already looking."
+- Beat 4, over the young man in green velvet: title "We share in what it earns." tag "Revenue share" typed line "Nothing billed by the hour. We share the outcome, so we share the risk."
+- Each beat's copy fades in over its painting as the painting settles. Tags are set in small capitals.
 
 ## Chapter 2: The Work
 
-- Card 1: tag "Search engine optimization", title "Found, built and ranked by one team.", body "Our engineers and our search specialists are the same people. Every site is shaped for search from the first commit, not patched for it afterwards."
+- Card 1 (it arrives on the flat blue field right after The Split): tag "Search engine optimization", title "Everything it takes to be found, under one roof.", body "Our engineers and our search specialists are the same people. Every site is shaped for search from the first commit, not patched for it afterwards."
 - Card 2: tag "Content and links", title "Pages people search for, links they trust.", body "We write what your buyers are already typing into a search bar, and earn mentions from the places they already read."
 - Card 3: tag "Custom software", title "We build the thing that gets ranked.", body "Storefronts, marketplaces, booking flows: the systems a modern business sells through. Speed, structure and clean rendering decide rankings long before the copy does, so we design for them from day one. What we ship loads fast, reads cleanly, and gives search engines nothing to stumble over."
 

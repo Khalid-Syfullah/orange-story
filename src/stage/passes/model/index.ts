@@ -7,11 +7,12 @@
 import { phoned, sizeFromAspect } from "../../framing";
 import { art, bridgePanAt } from "@/content/art";
 import type { PassDef } from "../../gl/passes";
-import { coverRoom, depthTravelMax, swayRoom } from "../../motion";
+import { coverRoom, depthTravelMax, swayRoom, velAmount, windAt } from "../../motion";
 import { heroFraming } from "../hero/framing";
 import { crestAt, CUT_START } from "../static";
 import { MODEL_FRAG } from "./frag";
-import { beatPan, beatProgress, BEAT_SPAN, cutAt, foregroundGain, groveCamera, modelUnits, shareCamera, shareLightGain } from "./timeline";
+import { leafInstances, lightPools, pushInstances } from "./instances";
+import { beatPan, beatProgress, BEAT_SPAN, cutAt, fitDrift, foregroundGain, groveCamera, pushGain, modelUnits, shareCamera, shareLightGain } from "./timeline";
 
 const GRAFT_TEX = sizeFromAspect(art.graft.aspect);
 const GROVE_TEX = sizeFromAspect(art.grove.aspect);
@@ -41,7 +42,9 @@ export const modelPass: PassDef = {
     const groveF = phoned(art.grove.framing, art.grove.phonePan);
     const shareF = phoned(art.share.framing, art.share.phonePan);
     const lastF = phoned(art.share.lastFraming, art.share.phonePan);
-    const graft = beatPan(graftF.pan, art.graft.drift, beatProgress(x, BEAT_SPAN.graft));
+    // The drift is fitted to the frame (an ultrawide has no room sideways for all of it).
+    const drift = fitDrift(ctx.css, GRAFT_TEX, graftF, art.graft.drift);
+    const graft = beatPan(graftF.pan, drift, beatProgress(x, BEAT_SPAN.graft));
     const gc = groveCamera(x);
     const sc = shareCamera(x);
     u.set3f("uF1", graft.x, graft.y, art.graft.framing.zoom);
@@ -49,8 +52,8 @@ export const modelPass: PassDef = {
     // the room the framing leaves at this viewport (its pan and the drift's widest reach taken out).
     u.set2f("uGraftCam", graft.x - graftF.pan.x, graft.y - graftF.pan.y);
     const room = coverRoom(ctx.css, GRAFT_TEX, art.graft.framing.zoom, {
-      x: Math.abs(graftF.pan.x) + Math.abs(art.graft.drift.x) / 2,
-      y: Math.abs(graftF.pan.y) + Math.abs(art.graft.drift.y) / 2,
+      x: Math.abs(graftF.pan.x) + Math.abs(drift.x) / 2,
+      y: Math.abs(graftF.pan.y) + Math.abs(drift.y) / 2,
     });
     // The leaves' sway takes its share of that room; the layers take the rest.
     const gSway = swayRoom(room, art.graft.sway.cell, art.graft.aspect);
@@ -58,27 +61,61 @@ export const modelPass: PassDef = {
     u.set2f("uGraftCamMax", camMax.x, camMax.y);
     u.set2f("uGraftSwayRoom", gSway.x, gSway.y);
     u.set3f("uF2", groveF.pan.x + gc.pan.x, groveF.pan.y + gc.pan.y, art.grove.framing.zoom * gc.zoom);
-    // The grove's cloudscape is its far layer: the camera's travel (groveCamera's pan) leaves it behind. The
-    // room is the one the framing leaves at the beat's smallest zoom, less the camera's widest reach.
-    const gcFrom = art.grove.camera.pan.from;
-    const gcTo = art.grove.camera.pan.to;
-    const groveRoom = coverRoom(ctx.css, GROVE_TEX, art.grove.framing.zoom * art.grove.camera.zoom.from, {
-      x: Math.abs(groveF.pan.x) + Math.max(Math.abs(gcFrom.x), Math.abs(gcTo.x)),
-      y: Math.abs(groveF.pan.y) + Math.max(Math.abs(gcFrom.y), Math.abs(gcTo.y)),
+    // The grove's cloudscape is its far layer: the camera's travel (groveCamera's pan) leaves it behind. A
+    // layer that moves at most as fast as the camera (rates 0.3 and 1) never travels past what the camera's
+    // own move already uses, so the layers need no room of their own, only the fold's limit; the leaves'
+    // sway takes its share of the room the framing leaves at this frame (the zoom and the pan as they are now).
+    const groveRoom = coverRoom(ctx.css, GROVE_TEX, art.grove.framing.zoom * gc.zoom, {
+      x: Math.abs(groveF.pan.x + gc.pan.x),
+      y: Math.abs(groveF.pan.y + gc.pan.y),
     });
     const vSway = swayRoom(groveRoom, art.grove.sway.cell, art.grove.aspect);
-    const vMax = depthTravelMax(art.grove.depth, { x: groveRoom.x - vSway.x, y: groveRoom.y - vSway.y }, art.grove.aspect);
+    const vMax = depthTravelMax(art.grove.depth, { x: 1, y: 1 }, art.grove.aspect);
     u.set2f("uGroveCam", gc.pan.x, gc.pan.y);
     u.set2f("uGroveCamMax", vMax.x, vMax.y);
     u.set2f("uGroveSwayRoom", vSway.x, vSway.y);
-    // The foreground's own drift is a function of the scroll units; its gain is exactly 0 where the share lands.
-    u.set1f("uFgX", x);
-    u.set1f("uFgGain", foregroundGain(x));
-    u.set1f("uFgLight", shareLightGain(x));
+    // The wind over the graft and the grove, three samples across each, from the TS twin of the shader's field at the pass clock.
+    const tm = ctx.still ? 0 : ctx.time;
+    for (const [id, sway, aspect] of [
+      ["Graft", art.graft.sway, art.graft.aspect],
+      ["Grove", art.grove.sway, art.grove.aspect],
+    ] as const) {
+      [0.25, 0.5, 0.75].forEach((k, i) => {
+        const w = windAt({ x: k * aspect, y: 0.5 }, tm, sway.wind, ctx.still === 1);
+        u.set2f(`u${id}Wind${i}`, w.x, w.y);
+      });
+    }
     // Both share keyframes ride the same camera, so the hands parting does not jump; at the end of
     // the segment it is exactly `lastFraming`, the frame The Split opens on.
     u.set3f("uF3", shareF.pan.x + sc.pan.x, shareF.pan.y + sc.pan.y, shareF.zoom * sc.zoom);
     u.set3f("uF4", lastF.pan.x + sc.pan.x, lastF.pan.y + sc.pan.y, lastF.zoom * sc.zoom);
+
+    // The foreground's own drift is a function of the scroll units; its gain is exactly 0 where the share lands.
+    // Gains under 0.4% (a leaf of a tenth of a pixel) are 0: nothing to draw, and the pixels skip it all.
+    const q = (g: number) => (g < 0.004 ? 0 : g);
+    const asp = ctx.res[0] / ctx.res[1];
+    const fgGain = q(foregroundGain(x));
+    const lightGain = q(shareLightGain(x));
+    const pushOn = q(pushGain(x));
+    u.set1f("uFgX", x);
+    u.set1f("uFgGain", fgGain);
+    u.set1f("uFgLight", lightGain);
+    u.set1f("uFgPushOn", pushOn > 0 ? 1 : 0);
+    if (fgGain > 0) {
+      leafInstances(x, tm, asp, fgGain).forEach((l, i) => {
+        u.set4f(`uFgLeaf${i}`, l.x, l.y, l.ang, l.size);
+        u.set4f(`uFgLeafSoft${i}`, l.blur, 0, 0, 0);
+      });
+    }
+    if (pushOn > 0) {
+      pushInstances(x, asp, pushOn, velAmount(ctx.vel, 30, ctx.still === 1)).forEach((l, i) => {
+        u.set4f(`uFgPush${i}`, l.x, l.y, l.ang, l.size);
+        u.set4f(`uFgPushDir${i}`, l.dirX, l.dirY, l.len, l.blur);
+      });
+    }
+    if (lightGain > 0) {
+      lightPools(tm, asp).forEach((p, i) => u.set4f(`uFgPool${i}`, p.x, p.y, p.r, p.s));
+    }
 
     const cut = cutAt(x);
     u.set1f("uImgA", cut.a);

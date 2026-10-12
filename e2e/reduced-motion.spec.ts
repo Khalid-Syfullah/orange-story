@@ -38,7 +38,9 @@ test.describe("reduced motion", () => {
     expect(st.still, "uStill is 1: breath, parallax and drift stop").toBe(1);
 
     const failures: string[] = [];
-    for (const cut of readCuts()) {
+    // The Model's beats stay under the reader's hand under reduced motion (docs/PERF.md), so a row of the cuts
+    // table that lies inside the model segment (the push-through) has no end frame to collapse to.
+    for (const cut of readCuts().filter((c) => c.slug !== "model")) {
       // The cut's end frame, as the stage shows it under reduced motion.
       await land(page, cut.to - 1e-5);
       const end = await frame(page);
@@ -93,7 +95,10 @@ test.describe("reduced motion", () => {
       ["questions", 0.7],
       ["application", 0.85],
       ["finale", 0.995],
-      ...readCuts().map((c): [string, number] => [`${c.slug} end`, c.to - 1e-5]),
+      // (Not the Model's row: it ends mid-beat, with the copy part way through its ramp; the model is judged at rest above.)
+      ...readCuts()
+        .filter((c) => c.slug !== "model")
+        .map((c): [string, number] => [`${c.slug} end`, c.to - 1e-5]),
     ];
     for (const [where, p] of positions) {
       await land(page, p);

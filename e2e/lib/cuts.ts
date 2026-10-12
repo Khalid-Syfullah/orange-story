@@ -3,7 +3,8 @@
 // added to the doc is never skipped silently.
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { segments, type SegmentId } from "../../src/stage/script";
+import { SCROLL_UNIT, segment, segments, type SegmentId } from "../../src/stage/script";
+import { FOREGROUND } from "../../src/stage/passes/model/timeline";
 
 export interface Cut {
   /** The row's name in docs/TRANSITIONS.md ("Model → Work"). */
@@ -24,6 +25,7 @@ export interface Cut {
 /** File-name slugs for the rows, keyed by the row's name. */
 const SLUGS: Readonly<Record<string, string>> = {
   "Hero → Model": "bridge",
+  "Graft → grove → share (inside The Model)": "model",
   "Model → Work": "split",
   "Work → sheet": "parchment",
   "Sheet → drawing": "soak",
@@ -32,6 +34,19 @@ const SLUGS: Readonly<Record<string, string>> = {
   "Halo → canopy": "matchcut",
   "Questions → Application": "moire",
   "Application → finale": "rise",
+};
+
+/**
+ * A cut whose row spans more than one gesture is tested over the gesture the suite can follow: 40 steps
+ * across a row's whole p range would move a 70-unit cut by half its length per step. The Model's row
+ * (graft -> grove -> share, p 0.07-0.19, twelve hundred scroll units with three cuts of seventy) is
+ * followed across the push-through that opens the grove: the graft's leaves rushing across the lens as the
+ * static treatment takes the graft to the canopy (passes/model/foreground.ts).
+ */
+const modelUnits = (u: number) => segment("model").start + u * SCROLL_UNIT;
+const RANGES: Readonly<Record<string, readonly [number, number]>> = {
+  // From the first leaf to 40 units after the last has gone (the grove's copy has begun to arrive by then).
+  model: [modelUnits(FOREGROUND.push.from), modelUnits(FOREGROUND.push.to + 40)],
 };
 
 export const ROOT = path.resolve(__dirname, "..", "..");
@@ -49,8 +64,7 @@ export function readCuts(): Cut[] {
     if (!m) throw new Error(`docs/TRANSITIONS.md: no p range in the row "${name}"`);
     const slug = SLUGS[name];
     if (!slug) throw new Error(`docs/TRANSITIONS.md: the cut "${name}" has no slug in e2e/lib/cuts.ts`);
-    const from = Number(m[1]);
-    const to = Number(m[2]);
+    const [from, to] = RANGES[slug] ?? [Number(m[1]), Number(m[2])];
     return {
       name,
       slug,

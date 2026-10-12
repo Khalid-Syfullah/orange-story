@@ -9,7 +9,8 @@
 //   - a handheld sway and roll: three incommensurate sines of t (rule 9) under an envelope that is 0 until
 //     the wave has crossed and 0 again at t = 1, so the sway is the camera's pace through the reel (a
 //     faster scroll sways faster, a stopped one holds), plus a gust of the wind field on the same envelope;
-//   - the camera's lean with the scroll's speed: a roll, an extra push and a radial smear, on an envelope
+//   - the camera's upward tilt (a slow bell of the reel's progress) and its lean with the scroll's speed: a
+//     roll, an extra push, a tilt and a radial smear, on an envelope
 //     that is 0 until the reel is fully revealed (the speed test: before that only the crest answers the
 //     speed) and 0 again at the end (so the reel's last frame is the Model's first at any speed);
 //   - all of it squeezed inside the room the framing and the dolly leave (reelRoomScale), so no edge shows.
@@ -34,14 +35,20 @@ export const REEL_CAM = {
   /** The handheld envelope runs from here to the end of the reel (0 at both ends). */
   swayFrom: 0.55,
   /** Sway across and up and down. */
-  sway: { x: 0.0035, y: 0.0025 },
-  /** Roll about the orange: 0.49 degrees. */
-  roll: 0.0085,
+  sway: { x: 0.005, y: 0.0035 },
+  /** Roll about the orange: 0.63 degrees. */
+  roll: 0.011,
   /** The wind's own sway of the camera, painting units at a full gust. */
   wind: { scale: 1.1, speed: 0.35, flutter: 2.6, flutterSpeed: 3.2 } satisfies Wind,
   windAmp: 0.0022,
+  /**
+   * The camera's upward tilt (docs/STORY.md: the camera tilts up through the bridge): content slides down the
+   * frame by this much (painting heights) at the middle of the reel, on a bell that is 0 before the wave has
+   * crossed and exactly 0 at the end; and by `vel.tilt` more per full flick of the scroll, signed with it.
+   */
+  tilt: 0.006,
   /** The scroll's speed: the envelope's window, the roll's lean, the extra push and the radial smear at a flick. */
-  vel: { from: 0.58, rise: 0.14, fall: 0.88, knee: 30, lean: 0.006, push: 0.012, smear: 0.010 },
+  vel: { from: 0.58, rise: 0.14, fall: 0.88, knee: 30, lean: 0.006, push: 0.01, smear: 0.005, tilt: 0.004 },
 } as const;
 
 const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x);
@@ -50,6 +57,20 @@ const smooth = (a: number, b: number, x: number) => {
   return k * k * (3 - 2 * k);
 };
 const TAU = Math.PI * 2;
+
+/**
+ * The signal rings' strength over the reel: the hero's, until the film's sky has gone (the wave ends at SWEEP_TO),
+ * then easing out so they are gone by the time the knife is at rest (t 0.9). The rings keep their clock, so
+ * their rhythm is the hero's.
+ */
+export function reelRings(t: number): number {
+  return 1 - smooth(0.55, 0.9, t);
+}
+
+/** How far a pale ground may carry the rings: 0 while the film's marble is on screen, 1 once the reel's ground has taken over. */
+export function reelRingPale(t: number): number {
+  return smooth(SWEEP_TO - 0.12, SWEEP_TO + 0.05, t);
+}
 
 /** The share of the film's orbit and dolly still held: 1 through the wave, easing to 0 by the end of the reel. */
 export function reelHold(t: number): number {
@@ -64,14 +85,20 @@ export function reelDolly(t: number): number {
 /** The handheld envelope: 0 until the wave has crossed, rising and falling smoothly, exactly 0 at t = 1. */
 export function handEnvelope(t: number): number {
   const u = clamp01((t - REEL_CAM.swayFrom) / (1 - REEL_CAM.swayFrom));
-  const s = Math.sin(Math.PI * u);
-  return s * s;
+  const b = 4 * u * (1 - u);   // a bell, exactly 0 at both ends (a sin^2 is 1e-32 at its end, not 0)
+  return b * b;
 }
 
 /** The scroll-speed envelope: 0 while the film is on screen, 1 once the reel is fully revealed, 0 again at the end. */
 export function velEnvelope(t: number): number {
   const v = REEL_CAM.vel;
   return smooth(v.from, v.from + v.rise, t) * (1 - smooth(v.fall, 1, t));
+}
+
+/** The tilt's bell: 0 until the wave has crossed, 1 at the middle of what is left, exactly 0 at the end. */
+function tiltBell(t: number): number {
+  const u = clamp01((t - REEL_CAM.swayFrom) / (1 - REEL_CAM.swayFrom));
+  return 4 * u * (1 - u);
 }
 
 /** Three incommensurate sines of the progress (rule 9), -1..1. */
@@ -87,9 +114,10 @@ export interface ReelCamera {
   roll: number;
   /** The wind's sway amplitude, painting units. */
   windAmp: number;
-  /** The scroll-speed envelope, and the roll's lean at a flick (radians, scaled by the room). */
+  /** The scroll-speed envelope, the roll's lean at a flick (radians) and the tilt at a flick (painting heights), both scaled by the room. */
   velEnv: number;
   lean: number;
+  velTilt: number;
   /** The share of the film's orbit and dolly still held. */
   hold: number;
   /** The room's scale on everything above, 0..1. */
@@ -127,7 +155,7 @@ export function reelReach(css: Size, t: number): { x: number; y: number } {
   const dy = Math.max(Math.abs(o.y), Math.abs(1 - o.y));
   return {
     x: (roll * dy * cs[0]) / f.zoom + REEL_CAM.sway.x * env + REEL_CAM.windAmp * 1.6 * env,
-    y: (roll * dx * cs[1]) / f.zoom + REEL_CAM.sway.y * env + REEL_CAM.windAmp * 0.6 * env,
+    y: (roll * dx * cs[1]) / f.zoom + REEL_CAM.sway.y * env + REEL_CAM.windAmp * 0.6 * env + REEL_CAM.tilt * tiltBell(t) + REEL_CAM.vel.tilt * velEnvelope(t),
   };
 }
 
@@ -145,11 +173,13 @@ export function reelCamera(css: Size, t: number): ReelCamera {
   const hand = env * scale;
   return {
     swayX: REEL_CAM.sway.x * hand * sines(t, [3.1, 5.3, 8.9], [0.13, 0.71, 0.37]),
-    swayY: REEL_CAM.sway.y * hand * sines(t, [2.3, 4.1, 7.3], [0.52, 0.19, 0.88]),
+    // The tilt is the sample point rising (content slides down the frame): negative y, a bell of the progress.
+    swayY: REEL_CAM.sway.y * hand * sines(t, [2.3, 4.1, 7.3], [0.52, 0.19, 0.88]) - REEL_CAM.tilt * tiltBell(t) * scale,
     roll: REEL_CAM.roll * hand * (0.6 * Math.sin(TAU * (2.3 * t + 0.4)) + 0.4 * Math.sin(TAU * (4.1 * t + 0.9))),
     windAmp: REEL_CAM.windAmp * hand,
     velEnv,
     lean: REEL_CAM.vel.lean * scale,
+    velTilt: REEL_CAM.vel.tilt * scale,
     hold: reelHold(t),
     scale,
   };

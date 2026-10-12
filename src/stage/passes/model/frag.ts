@@ -26,8 +26,6 @@ const f = (x: number) => x.toFixed(4);
 const depth = art.graft.depth;
 const gSway = art.graft.sway;
 const grove = art.grove;
-const wv = (w: { scale: number; speed: number; flutter: number; flutterSpeed: number }) =>
-  `vec4(${f(w.scale)}, ${f(w.speed)}, ${f(w.flutter)}, ${f(w.flutterSpeed)})`;
 
 export const MODEL_FRAG = /* glsl */ `
 ${REST_GLSL}
@@ -45,6 +43,8 @@ uniform vec2 uGraftSwayRoom;       // the room the graft's leaf sway may use (mo
 uniform vec2 uGroveCam;            // the grove's camera travel off its framing (groveCamera's pan), painting units
 uniform vec2 uGroveCamMax;         // the bound on it
 uniform vec2 uGroveSwayRoom;       // the room the grove's leaf sway may use
+uniform vec2 uGraftWind0, uGraftWind1, uGraftWind2;   // the wind over the graft at a quarter, the middle and three quarters of its width (index.ts, motion.ts windAt)
+uniform vec2 uGroveWind0, uGroveWind1, uGroveWind2;   // ... and over the grove
 ${FOREGROUND_GLSL}
 ${STATIC_GLSL}
 
@@ -52,7 +52,6 @@ const float GRAFT_NEAR = ${f(depth.near)};   // the hands, branch and leaves: ra
 const float GRAFT_FAR = ${f(depth.far)};     // the cream ground
 const float GRAFT_CELL = ${f(depth.cell)};   // the layer mask's lattice, painting heights
 
-const vec4 GRAFT_WIND = ${wv(gSway.wind)};     // art.ts graft.sway
 const float GRAFT_SWAY = ${f(gSway.amp)};
 const float GRAFT_SWAY_CELL = ${f(gSway.cell)};
 const float GROVE_NEAR = ${f(grove.depth.near)};   // the leaves and fruit: rate of the camera's travel (1: the camera's own move)
@@ -60,7 +59,6 @@ const float GROVE_FAR = ${f(grove.depth.far)};     // the cloudscape
 const float GROVE_CELL = ${f(grove.depth.cell)};
 const vec4 GROVE_RECT = vec4(${f(grove.hold.x)}, ${f(grove.hold.y)}, ${f(grove.hold.w)}, ${f(grove.hold.h)});   // the sleeve, the cuff and the sky beside them
 const float GROVE_HOLD_SWAY = ${f(grove.holdSway)};
-const vec4 GROVE_WIND = ${wv(grove.sway.wind)};
 const float GROVE_SWAY = ${f(grove.sway.amp)};
 const float GROVE_SWAY_CELL = ${f(grove.sway.cell)};
 
@@ -68,19 +66,25 @@ int gA;
 int gB;
 float gZk;     // the breath, as a factor on every zoom
 vec2 gOff;     // parallax and drift
-float gTm;     // the pass clock (0 under reduced motion), for the wind
+
+// The wind over a painting, sampled once a frame on the CPU (motion.ts windAt, the same field) at three places
+// along its width (a quarter, the middle and three quarters) and mixed by x where the leaves are: the gusts
+// still cross the painting, and the ten noise octaves of windAt are neither compiled nor run per fragment (a cut
+// reads the pictures a dozen ways, and a pixel at rest would pay for the field it only needs once).
+vec2 windAcross(vec2 w0, vec2 w1, vec2 w2, float x) {
+  return mix(mix(w0, w1, smoothstep(0.0, 0.5, x)), w2, smoothstep(0.5, 1.0, x));
+}
 
 // A painting's leaves stirring in the wind: the foliage mask read on a lattice anchored to the painting
 // (a continuous field, so the warp compresses and never tears), times the wind at the point, times
 // 'keep' (0..1: a region the sway spares), squeezed inside the room it may use. The displacement to add
 // to the point 'pt' the leaves are read at; 0 under reduced motion and off the leaves.
-vec2 leafSway(sampler2D tex, vec2 size, vec2 pt, vec4 wind, float amp, float cellH, vec2 room, float keep) {
+vec2 leafSway(sampler2D tex, vec2 size, vec2 pt, vec2 w, float amp, float cellH, vec2 room, float keep) {
   if (uStill > 0.5) return vec2(0.0);
   float ar = size.x / size.y;
   vec2 cell = vec2(cellH / ar, cellH);
   float m = SOFT_MASK(tex, pt, cell, foliageMask) * keep;
   if (m < 0.002) return vec2(0.0);
-  vec2 w = windAt(vec2(pt.x * ar, pt.y), gTm, wind);
   return softBound(vec2(w.x / ar, w.y) * (amp * m), room);
 }
 
@@ -96,7 +100,7 @@ vec3 graftAt(vec2 uv) {
   vec2 ptFar = pt + farOff;
   float near = 1.0 - SOFT_MASK(uGraft, ptFar, cell, paleMask);
   vec2 p2 = pt + depthShift(near, nearOff, farOff);
-  p2 += leafSway(uGraft, uGraftSize, p2, GRAFT_WIND, GRAFT_SWAY, GRAFT_SWAY_CELL, uGraftSwayRoom, 1.0);
+  p2 += leafSway(uGraft, uGraftSize, p2, windAcross(uGraftWind0, uGraftWind1, uGraftWind2, p2.x), GRAFT_SWAY, GRAFT_SWAY_CELL, uGraftSwayRoom, 1.0);
   return texture2D(uGraft, p2).rgb;
 }
 
@@ -111,6 +115,16 @@ float groveHold(vec2 p) {
 // cloud but sewn to the sleeve, so it stays with it).
 float groveCloudAt(vec2 p) { return paleMask(texture2D(uGrove, p).rgb) * (1.0 - groveHold(p)); }
 
+// ... at a lattice node, eroded (the least of the node and two taps half a cell away on a diagonal), so a leaf or a stem
+// smaller than a cell is not left in the cloud layer by a node that fell in the gap beside it: the soft
+// hand-over between the layers lies in the open sky, never across a leaf.
+float groveCloudNode(vec2 p, vec2 r) {
+  float m = groveCloudAt(p);
+  m = min(m, groveCloudAt(p + r));
+  m = min(m, groveCloudAt(p - r));
+  return m;
+}
+
 // The grove in two layers: the camera's lateral travel (and the pointer and the ambient drift), bounded,
 // leaves the cloudscape behind (the far layer moves (far - 1) of it, 0.7 of it back), while the leaves,
 // the fruit and the branch keep the camera's own move (near 1); then the leaves stir.
@@ -122,9 +136,10 @@ vec3 groveAt(vec2 uv) {
   vec2 cell = vec2(GROVE_CELL * uGroveSize.y / uGroveSize.x, GROVE_CELL);
   vec2 ptFar = pt + farOff;
   vec2 b = latticeBase(ptFar, cell);
-  float far = latticeBlend(ptFar, cell, groveCloudAt(b), groveCloudAt(b + vec2(cell.x, 0.0)), groveCloudAt(b + vec2(0.0, cell.y)), groveCloudAt(b + cell));
+  vec2 er = cell * 0.5;
+  float far = latticeBlend(ptFar, cell, groveCloudNode(b, er), groveCloudNode(b + vec2(cell.x, 0.0), er), groveCloudNode(b + vec2(0.0, cell.y), er), groveCloudNode(b + cell, er));
   vec2 p2 = pt + depthShift(1.0 - far, nearOff, farOff);
-  p2 += leafSway(uGrove, uGroveSize, p2, GROVE_WIND, GROVE_SWAY, GROVE_SWAY_CELL, uGroveSwayRoom, mix(1.0, GROVE_HOLD_SWAY, groveHold(p2)));
+  p2 += leafSway(uGrove, uGroveSize, p2, windAcross(uGroveWind0, uGroveWind1, uGroveWind2, p2.x), GROVE_SWAY, GROVE_SWAY_CELL, uGroveSwayRoom, mix(1.0, GROVE_HOLD_SWAY, groveHold(p2)));
   return texture2D(uGrove, p2).rgb;
 }
 
@@ -144,27 +159,43 @@ vec3 cutB(vec2 uv, vec2 frag, float lag) {
   if (lag < 0.004) return img(gB, uv) + grain(frag);
   vec2 uvB = uv - cutDir() * lag * 0.05;     // still catching up with the edge that uncovered it
   vec2 d = cutDir() * lag * 0.03;
-  vec3 c = img(gB, uvB) * 0.30 + img(gB, uvB - d * 0.25) * 0.25 + img(gB, uvB - d * 0.50) * 0.20
-         + img(gB, uvB - d * 0.75) * 0.15 + img(gB, uvB - d) * 0.10;
+  // Five taps trailing along the way it moves (rule 6), in a loop so the whole picture (layers, sway and all)
+  // is compiled once for them, not five times.
+  vec3 c = vec3(0.0);
+  for (int t = 0; t < 5; t++) {
+    float ft = float(t);
+    float wt = 0.30 - 0.05 * ft;                          // 0.30 0.25 0.20 0.15 0.10, as smear5 weights them
+    c += img(gB, uvB - d * (0.25 * ft)) * wt;
+  }
   return c + grain(frag);
 }
 
+// A cheap tap of whichever side 'behind' selects, for the crest's chroma split and rubbing: the pictures as
+// they sit in their framing, without the graft's and the grove's layers and sway (a few pixels of difference
+// that those effects, which read a difference of two nearby taps or a luminance, cannot show).
+vec3 imgFlat(int k, vec2 uv) {
+  if (k == 0) return texture2D(uReel, cover(uv, uReelSize, uPan + uReelPan, uZoom * gZk) + gOff).rgb;
+  if (k == 1) return texture2D(uGraft, cover(uv, uGraftSize, uF1.xy, uF1.z * gZk) + gOff).rgb;
+  if (k == 2) return texture2D(uGrove, cover(uv, uGroveSize, uF2.xy, uF2.z * gZk) + gOff).rgb;
+  if (k == 3) return texture2D(uShare, cover(uv, uShareSize, uF3.xy, uF3.z * gZk) + gOff).rgb;
+  return texture2D(uShareLast, cover(uv, uShareLastSize, uF4.xy, uF4.z * gZk) + gOff).rgb;
+}
+
 vec3 cutRaw(vec2 uv, float behind) {
-  return behind > 0.5 ? img(gB, uv) : img(gA, uv);
+  return imgFlat(behind > 0.5 ? gB : gA, uv);
 }
 
 void main() {
   float tm = uTime * (1.0 - uStill);
   gZk = restZoom(1.0, tm);
   gOff = restOffset(tm);
-  gTm = tm;
   gA = int(uImgA + 0.5);
   gB = int(uImgB + 0.5);
   vec3 col = staticCut(screenUV(), gl_FragCoord.xy, uCutC, 0.25);
   // Over the cuts, not part of them: the foreground drifts at its own pace through the grove and the share
   // (0 elsewhere and exactly 0 at the end), and the share's white ground takes its warm light.
   vec2 fq = aspectUV(screenUV());
-  col = shareLight(col, fq, tm);
+  col = shareLight(col, fq);
   col = foreground(col, fq, gl_FragCoord.xy, tm);
   gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
