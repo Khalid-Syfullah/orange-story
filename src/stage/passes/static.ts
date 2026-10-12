@@ -72,6 +72,16 @@ vec3 cutA(vec2 uv, vec2 frag);
 vec3 cutB(vec2 uv, vec2 frag, float lag);
 vec3 cutRaw(vec2 uv, float behind);
 
+// A pass may keep a disc of the frame out of the crest's machinery (the model's match cut: the fruit is the one
+// thing that does not change): define CUT_KEEP and cutKeep(uv), 0..1, 1 inside the disc. Inside it the tear, the
+// mosaic, the chroma split, the rubbing and B's lag are scaled to 0; the front still prints, so every pixel is
+// still one picture or the other. Without the define it is 0 everywhere (the bridge).
+#ifdef CUT_KEEP
+float cutKeep(vec2 uv);
+#else
+float cutKeep(vec2 uv) { return 0.0; }
+#endif
+
 const float CUT_BOUND = 0.36;   // |d - c| beyond which no pixel can be in the band
 const float CUT_BAND = 0.13;    // half-width of the crest band in front units
 // Half-width of the smoothstep the printed front goes through: well inside the print's own reach
@@ -119,7 +129,9 @@ vec3 staticCut(vec2 uv, vec2 frag, float c, float amp) {
   // The e2e probe: the crest zone reaches CUT_BAND ahead (the tear and the chroma split) and
   // CUT_BOUND behind (the mosaic's lead band, and the lag until B's offset is under 5%).
   PROBE_ZONE(f, CUT_BAND, CUT_BOUND);
-  float band = smoothstep(CUT_BAND, 0.03, abs(f));
+  float keep = cutKeep(uv);
+  float calm = 1.0 - keep;
+  float band = smoothstep(CUT_BAND, 0.03, abs(f)) * calm;
   float slot = floor(tm * 14.0);
 
   // The tear: fine rows jitter a little, a few wide slips jump a lot; harder the faster the scroll.
@@ -131,7 +143,7 @@ vec3 staticCut(vec2 uv, vec2 frag, float c, float amp) {
   vec2 fragT = frag + vec2(tear * uRes.x, 0.0);
 
   // The mosaic: coarse at the leading edge of the crest, resolving to 1 px as the crest passes.
-  float lead = smoothstep(0.06, 0.0, f) * smoothstep(-0.15, -0.01, f);
+  float lead = smoothstep(0.06, 0.0, f) * smoothstep(-0.15, -0.01, f) * calm;
   float cell = max(1.0, floor(1.0 + 23.0 * amp * lead + 0.5)) * uDpr;
   vec2 fragQ = cell > 1.01 * uDpr ? (floor(fragT / cell) + 0.5) * cell : fragT;
   vec2 uvS = vec2(fragQ.x, uRes.y - fragQ.y) / uRes;
@@ -140,7 +152,7 @@ vec3 staticCut(vec2 uv, vec2 frag, float c, float amp) {
   float edge = f + printEdge(frag, 0.03, 0.02);
   float behind = 1.0 - smoothstep(-CUT_EDGE, CUT_EDGE, edge);
   if (abs(f) < 0.025 + CUT_EDGE) PROBE_MIX(behind);   // the e2e edge probe, where the print reaches
-  float lag = exp(-max(-f, 0.0) / 0.12);
+  float lag = exp(-max(-f, 0.0) / 0.12) * calm;
   vec3 col;
   if (behind < 0.002) col = cutA(uvS, fragQ);
   else if (behind > 0.998) col = cutB(uvS, fragQ, lag);
@@ -157,7 +169,7 @@ vec3 staticCut(vec2 uv, vec2 frag, float c, float amp) {
 
   // The rubbing: a glyph per 12 px cell, chosen by the luminance at the cell centre, inside the
   // crest band only. Cells are gated by Bayer so the band thins out into a dot screen.
-  float asc = smoothstep(0.075, 0.015, abs(f)) * amp;
+  float asc = smoothstep(0.075, 0.015, abs(f)) * amp * calm;
   if (asc > 0.0) {
     float gc = 12.0 * uDpr;
     vec2 cid = floor(frag / gc);

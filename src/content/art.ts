@@ -49,6 +49,22 @@ export interface Framing {
   zoom: number;
 }
 
+/** A fruit in a painting: its centre in painting coordinates and its radius as a share of the painting's width. */
+export interface Fruit extends Point {
+  r: number;
+}
+
+/**
+ * The knife's line through a painting, in the painting's own units: a point on it, its angle in degrees
+ * (0 along +x, 90 straight down: y is down) and the way the slice travels along it (1 with the angle,
+ * -1 against it). Angles are measured in the painting's pixels, so they hold on screen at any viewport.
+ */
+export interface Knife {
+  at: Point;
+  angle: number;
+  travel: 1 | -1;
+}
+
 /** A region of a painting in painting coordinates: top-left corner and size, 0..1, y down. */
 export interface Rect {
   x: number;
@@ -344,6 +360,17 @@ export const art = {
       pan: { from: { x: -0.03, y: 0.012 }, to: { x: 0.03, y: -0.012 } },
     },
     phonePan: { x: 0.05, y: 0 },
+    /**
+     * The gilded orange the hand closes round (measured on the 1440 tier, drawn over it in the test's marker
+     * shots): the match cut's anchor on this side. `r` is its radius, a share of the painting's width.
+     */
+    gilded: { x: 0.481, y: 0.29, r: 0.076 } satisfies Fruit,
+    /**
+     * The match cut's disc: round the fruit, out to `radius` fruit radii the cut's tear, mosaic, chroma
+     * split and rubbing are scaled to 0 and the new picture arrives without lag, eased over `soft` of a
+     * radius beyond it, so the fruit reads as the one thing that does not change.
+     */
+    matchDisc: { radius: 1.35, soft: 0.7 },
   },
 
   share: {
@@ -372,6 +399,14 @@ export const art = {
       /** The seam between the two halves in the LAST keyframe: the point The Split opens from. */
       seam: { x: 0.5, y: 0.44 },
     },
+    /** The gilded orange in the first keyframe (the last keyframe's halves come from it): the match cut's anchor on this side. */
+    fruit: { x: 0.462, y: 0.247, r: 0.046 } satisfies Fruit,
+    /**
+     * The knife's line through that orange for the slice (passes/model/slice.ts): nearly pole to pole, tipped
+     * 12 degrees off the vertical, and the front runs down it (the halves end side by side on either side of
+     * a vertical seam). The front is a thin band across the line, sweeping along it.
+     */
+    knife: { at: { x: 0.462, y: 0.247 }, angle: 78, travel: 1 } satisfies Knife,
   },
 
   plate: {
@@ -547,6 +582,13 @@ export const art = {
     framings?: Record<string, Framing>;
     /** Extra keyframe still (share's second keyframe). */
     last?: StillTiers;
+    /** The grove's gilded orange and the share's fruit: the match cut's two anchors (passes/model/match.ts). */
+    gilded?: Fruit;
+    fruit?: Fruit;
+    /** The match cut's disc round the fruit: radius in fruit radii inside which the cut's tear, mosaic and chroma split are 0, and its soft edge in radii. */
+    matchDisc?: { radius: number; soft: number };
+    /** The share's knife line for the slice (passes/model/slice.ts). */
+    knife?: Knife;
   }
 >;
 

@@ -17,10 +17,16 @@
 // is its own far layer, the leaves and fruit keep the camera's move) and its leaves stir; the grove and the
 // share gain foreground layers drifting at their own speeds (foreground.ts), drawn over the cuts, and the
 // share's white ground takes a drifting warm light. Each is 0 at the end of the segment.
+//
+// Phase 22 (docs/TRANSITIONS.md, Graft -> grove -> share): the grove -> share cut is a match cut on the gilded
+// orange (match.ts solves the share's camera so its fruit lands where the grove's does, same size; the cut's
+// tear, mosaic and chroma split are scaled to 0 in a disc round the fruit), and the keyframe cut inside the
+// share is the knife's slice (slice.ts), not the static treatment.
 import { art } from "@/content/art";
 import { REST_GLSL } from "../rest";
 import { STATIC_GLSL } from "../static";
 import { FOREGROUND_GLSL } from "./foreground";
+import { SLICE_GLSL } from "./slice";
 
 const f = (x: number) => x.toFixed(4);
 const depth = art.graft.depth;
@@ -43,9 +49,14 @@ uniform vec2 uGraftSwayRoom;       // the room the graft's leaf sway may use (mo
 uniform vec2 uGroveCam;            // the grove's camera travel off its framing (groveCamera's pan), painting units
 uniform vec2 uGroveCamMax;         // the bound on it
 uniform vec2 uGroveSwayRoom;       // the room the grove's leaf sway may use
+uniform float uShareOffK;          // the factor on the share's rest offset that keeps its fruit moving as the grove's does (match.ts)
+uniform vec3 uDisc;                // the match cut's disc: the fruit's centre (screen uv) and radius (frame heights); 0 radius = off
+uniform float uDiscSoft;           // its edge, as a share of the radius
+uniform float uSliceOn;            // 1 while the slice is the cut in progress
 uniform vec2 uGraftWind0, uGraftWind1, uGraftWind2;   // the wind over the graft at a quarter, the middle and three quarters of its width (index.ts, motion.ts windAt)
 uniform vec2 uGroveWind0, uGroveWind1, uGroveWind2;   // ... and over the grove
 ${FOREGROUND_GLSL}
+#define CUT_KEEP
 ${STATIC_GLSL}
 
 const float GRAFT_NEAR = ${f(depth.near)};   // the hands, branch and leaves: rate of the camera's travel
@@ -143,12 +154,17 @@ vec3 groveAt(vec2 uv) {
   return texture2D(uGrove, p2).rgb;
 }
 
+// The share's two keyframes ride one camera (uF3 and uF4 differ only by their framing) and one rest offset, which the
+// match scales so the fruit moves with the offset exactly as the grove's does (match.ts offScale).
+vec3 imgShare(vec2 uv) { return texture2D(uShare, cover(uv, uShareSize, uF3.xy, uF3.z * gZk) + gOff * uShareOffK).rgb; }
+vec3 imgShareLast(vec2 uv) { return texture2D(uShareLast, cover(uv, uShareLastSize, uF4.xy, uF4.z * gZk) + gOff * uShareOffK).rgb; }
+
 vec3 img(int k, vec2 uv) {
   if (k == 0) return texture2D(uReel, cover(uv, uReelSize, uPan + uReelPan, uZoom * gZk) + gOff).rgb;
   if (k == 1) return graftAt(uv);
   if (k == 2) return groveAt(uv);
-  if (k == 3) return texture2D(uShare, cover(uv, uShareSize, uF3.xy, uF3.z * gZk) + gOff).rgb;
-  return texture2D(uShareLast, cover(uv, uShareLastSize, uF4.xy, uF4.z * gZk) + gOff).rgb;
+  if (k == 3) return imgShare(uv);
+  return imgShareLast(uv);
 }
 
 float grain(vec2 frag) { return filmGrain(frag, uTime * (1.0 - uStill), 0.03); }
@@ -177,12 +193,21 @@ vec3 imgFlat(int k, vec2 uv) {
   if (k == 0) return texture2D(uReel, cover(uv, uReelSize, uPan + uReelPan, uZoom * gZk) + gOff).rgb;
   if (k == 1) return texture2D(uGraft, cover(uv, uGraftSize, uF1.xy, uF1.z * gZk) + gOff).rgb;
   if (k == 2) return texture2D(uGrove, cover(uv, uGroveSize, uF2.xy, uF2.z * gZk) + gOff).rgb;
-  if (k == 3) return texture2D(uShare, cover(uv, uShareSize, uF3.xy, uF3.z * gZk) + gOff).rgb;
-  return texture2D(uShareLast, cover(uv, uShareLastSize, uF4.xy, uF4.z * gZk) + gOff).rgb;
+  if (k == 3) return imgShare(uv);
+  return imgShareLast(uv);
 }
 
 vec3 cutRaw(vec2 uv, float behind) {
   return imgFlat(behind > 0.5 ? gB : gA, uv);
+}
+
+${SLICE_GLSL}
+
+// The match cut's disc: 1 inside it, eased to 0 over uDiscSoft of its radius beyond (0 everywhere when the cut is not the match cut).
+float cutKeep(vec2 uv) {
+  if (uDisc.z <= 0.0) return 0.0;
+  float dist = length((uv - uDisc.xy) * vec2(uRes.x / uRes.y, 1.0));
+  return 1.0 - smoothstep(uDisc.z, uDisc.z * (1.0 + uDiscSoft), dist);
 }
 
 void main() {
@@ -191,7 +216,9 @@ void main() {
   gOff = restOffset(tm);
   gA = int(uImgA + 0.5);
   gB = int(uImgB + 0.5);
-  vec3 col = staticCut(screenUV(), gl_FragCoord.xy, uCutC, 0.25);
+  vec3 col;
+  if (uSliceOn > 0.5) col = sliceCut(screenUV(), gl_FragCoord.xy);
+  else col = staticCut(screenUV(), gl_FragCoord.xy, uCutC, 0.25);
   // Over the cuts, not part of them: the foreground drifts at its own pace through the grove and the share
   // (0 elsewhere and exactly 0 at the end), and the share's white ground takes its warm light.
   vec2 fq = aspectUV(screenUV());

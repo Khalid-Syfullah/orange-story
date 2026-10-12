@@ -11,6 +11,7 @@ import { useStage } from "./hub";
 import { applicationHud } from "./passes/application";
 import { canopyHud } from "./passes/canopy";
 import { codaHud } from "./passes/coda";
+import { modelHud } from "./passes/model";
 import { parchmentHudLines } from "./passes/parchment/timeline";
 import { splitTuneLines } from "./passes/split/tune";
 import { termsHud } from "./passes/terms";
@@ -54,6 +55,7 @@ export function Hud() {
         `tex ${stats.textures}  ready ${ready.ready}/${ready.total}  uploads ${uploadsPerSecond.toFixed(0)}/s (${uploads})  frames ${stats.decoded}/${stats.frames} decoded  mouse ${f.mouse[0].toFixed(2)},${f.mouse[1].toFixed(2)}`,
       ];
       if (pass === "split") lines.push("tune (?tune=key:value,...)", ...splitTuneLines());
+      if (pass === "model") lines.push(...modelHud(f.p, f.css));
       if (pass === "parchment") lines.push(...parchmentHudLines(f.p, f.css));
       if (pass === "terms") lines.push(...termsHud(f.p, f.css));
       if (pass === "close" || pass === "coda") lines.push(...codaHud(f.p, f.css));

@@ -24,23 +24,47 @@ export type ImgIndex = (typeof IMG)[keyof typeof IMG];
 
 const THIRD = MODEL_UNITS / 3;
 /** A cut between beats runs this long, centred on the boundary. */
-const CUT_UNITS = 70;
+export const CUT_UNITS = 70;
+
+/**
+ * The typed line runs over this stretch (units from the segment start). It finishes before the slice begins
+ * (SLICE_GAP after it), so the words are whole when the knife meets the orange.
+ */
+export const TYPE_FROM = 2 * THIRD + 80;
+export const TYPE_TO = 2 * THIRD + 215;
+
+/** How a cut is drawn: the static treatment (static.ts), or the knife's slice (slice.ts). */
+export type CutKind = "static" | "slice";
 
 export interface Cut {
   a: ImgIndex;
   b: ImgIndex;
   from: number;
   to: number;
+  kind: CutKind;
 }
 
-/** The static cuts in order: bridge reel -> graft, graft -> grove, grove -> share, share -> keyframe 2. */
+/**
+ * The slice (passes/model/slice.ts): the knife's front runs through the orange over this many units, starting
+ * `SLICE_GAP` units after the typed line has finished (TYPE_TO, above) and ending before the segment does, so the
+ * beat rests on the second keyframe for the last 25 units (a test holds that).
+ */
+export const SLICE_UNITS = 150;
+export const SLICE_GAP = 10;
+
+/** The cuts in order: bridge reel -> graft, graft -> grove, grove -> share (the match cut), share -> keyframe 2 (the slice). */
 export const CUTS: readonly Cut[] = [
-  { a: IMG.reel, b: IMG.graft, from: 0, to: CUT_UNITS },
-  { a: IMG.graft, b: IMG.grove, from: THIRD - CUT_UNITS / 2, to: THIRD + CUT_UNITS / 2 },
-  { a: IMG.grove, b: IMG.share, from: 2 * THIRD - CUT_UNITS / 2, to: 2 * THIRD + CUT_UNITS / 2 },
-  // The keyframe cut sits mid-beat: the man holds the orange, then the hands part it.
-  { a: IMG.share, b: IMG.shareLast, from: 2 * THIRD + 200, to: 2 * THIRD + 200 + CUT_UNITS },
+  { a: IMG.reel, b: IMG.graft, from: 0, to: CUT_UNITS, kind: "static" },
+  { a: IMG.graft, b: IMG.grove, from: THIRD - CUT_UNITS / 2, to: THIRD + CUT_UNITS / 2, kind: "static" },
+  { a: IMG.grove, b: IMG.share, from: 2 * THIRD - CUT_UNITS / 2, to: 2 * THIRD + CUT_UNITS / 2, kind: "static" },
+  // The keyframe cut sits late in the beat: the man holds the orange and the line types, then the knife meets it.
+  { a: IMG.share, b: IMG.shareLast, from: TYPE_TO + SLICE_GAP, to: TYPE_TO + SLICE_GAP + SLICE_UNITS, kind: "slice" },
 ];
+
+/** The match cut's middle, in units: the gilded orange sits at the same place and size on both sides here. */
+export const MATCH_AT = 2 * THIRD;
+/** The slice's own span in units (its cut in CUTS). */
+export const SLICE = CUTS[3];
 
 /** Where each beat's own drift runs (the share beat does not drift). */
 export const BEAT_SPAN = {
@@ -92,9 +116,18 @@ export interface Camera {
  * at every boundary is what made the beat read as a still).
  */
 export function groveCamera(x: number): Camera {
-  const c = art.grove.camera;
+  return groveCameraAtK(clamp01(groveK(x)));
+}
+
+/** The grove camera's raw progress at `x` units: 0 where it starts, 1 where it ends, linear and unclamped. */
+export function groveK(x: number): number {
   const [a, b] = BEAT_SPAN.grove;
-  const k = clamp01((x - (a - CUT_UNITS / 2)) / (b - a + CUT_UNITS));
+  return (x - (a - CUT_UNITS / 2)) / (b - a + CUT_UNITS);
+}
+
+/** The grove camera at raw progress `k` (as groveCamera for k in 0..1; beyond it, the same move carried on). */
+export function groveCameraAtK(k: number): Camera {
+  const c = art.grove.camera;
   return {
     pan: { x: lerp(c.pan.from.x, c.pan.to.x, k), y: lerp(c.pan.from.y, c.pan.to.y, k) },
     zoom: lerp(c.zoom.from, c.zoom.to, k),
@@ -118,16 +151,29 @@ export interface CutState {
   b: ImgIndex;
   /** Progress through the cut, 0..1; 0 when holding (the crest has not arrived). */
   s: number;
+  /** How the cut in progress is drawn (static when holding). */
+  kind: CutKind;
 }
 
 /** Which two images are on screen at `x` units, and how far the cut between them has run. */
 export function cutAt(x: number): CutState {
   for (const cut of CUTS) {
-    if (x < cut.from) return { a: cut.a, b: cut.a, s: 0 };
-    if (x <= cut.to) return { a: cut.a, b: cut.b, s: (x - cut.from) / (cut.to - cut.from) };
+    if (x < cut.from) return { a: cut.a, b: cut.a, s: 0, kind: "static" };
+    if (x <= cut.to) return { a: cut.a, b: cut.b, s: (x - cut.from) / (cut.to - cut.from), kind: cut.kind };
   }
   const last = CUTS[CUTS.length - 1];
-  return { a: last.b, b: last.b, s: 0 };
+  return { a: last.b, b: last.b, s: 0, kind: "static" };
+}
+
+/**
+ * How far the knife's front has run at progress `s` through the slice, 0..1: from rest over the first 12% (rule 4:
+ * a smoothstep ramp), then accelerating the whole way (the blade picks up speed through the fruit and the man
+ * behind it), exactly 1 at the end.
+ */
+export function sliceEase(s: number): number {
+  const x = clamp01(s);
+  const ramp = clamp01(x / 0.12);
+  return ramp * ramp * (3 - 2 * ramp) * x * (0.8 + 0.2 * x * x);
 }
 
 // ---- the foreground (phase 18) --------------------------------------------------------------------
@@ -251,9 +297,6 @@ export const COPY_WINDOWS = {
   share: { in: 2 * THIRD + 60, out: MODEL_UNITS - RAMP },
 } as const satisfies Record<string, BeatCopy>;
 
-/** The typed line runs over this stretch (units from the segment start). */
-export const TYPE_FROM = 2 * THIRD + 100;
-export const TYPE_TO = 2 * THIRD + 290;
 
 const smooth = (x: number) => {
   const k = clamp01(x);

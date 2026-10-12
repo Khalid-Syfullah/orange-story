@@ -4,7 +4,7 @@
 //
 // `share.last` is the texture manager's `shareLast`: the model ends held on it, and The Split
 // (phase 6) opens on the same texture with the same framing (`art.share.lastFraming`).
-import { phoned, sizeFromAspect } from "../../framing";
+import { phoned, sizeFromAspect, type Size } from "../../framing";
 import { art, bridgePanAt } from "@/content/art";
 import type { PassDef } from "../../gl/passes";
 import { coverRoom, depthTravelMax, swayRoom, velAmount, windAt } from "../../motion";
@@ -12,7 +12,9 @@ import { heroFraming } from "../hero/framing";
 import { crestAt, CUT_START } from "../static";
 import { MODEL_FRAG } from "./frag";
 import { leafInstances, lightPools, pushInstances } from "./instances";
-import { beatPan, beatProgress, BEAT_SPAN, cutAt, fitDrift, foregroundGain, groveCamera, pushGain, modelUnits, shareCamera, shareLightGain } from "./timeline";
+import { fruitView, shareMatch } from "./match";
+import { SLICE_TUNE_KEYS, sliceDirection, sliceTune, sliceTuneLines, sliceUniform } from "./slice";
+import { beatPan, beatProgress, BEAT_SPAN, cutAt, fitDrift, foregroundGain, groveCamera, IMG, MATCH_AT, MODEL_UNITS, pushGain, modelUnits, shareLightGain, SLICE, sliceEase } from "./timeline";
 
 const GRAFT_TEX = sizeFromAspect(art.graft.aspect);
 const GROVE_TEX = sizeFromAspect(art.grove.aspect);
@@ -46,7 +48,9 @@ export const modelPass: PassDef = {
     const drift = fitDrift(ctx.css, GRAFT_TEX, graftF, art.graft.drift);
     const graft = beatPan(graftF.pan, drift, beatProgress(x, BEAT_SPAN.graft));
     const gc = groveCamera(x);
-    const sc = shareCamera(x);
+    // The share's camera: its own pull-back to rest blended with the framing that holds its fruit where the grove's is (match.ts).
+    const match = shareMatch(x, ctx.css);
+    const sc = match.camera;
     u.set3f("uF1", graft.x, graft.y, art.graft.framing.zoom);
     // The graft's depth layers ride the camera's travel off its framing (the beat's drift), bounded by
     // the room the framing leaves at this viewport (its pan and the drift's widest reach taken out).
@@ -117,9 +121,50 @@ export const modelPass: PassDef = {
       lightPools(tm, asp).forEach((p, i) => u.set4f(`uFgPool${i}`, p.x, p.y, p.r, p.s));
     }
 
+    u.set1f("uShareOffK", match.offScale);
+
     const cut = cutAt(x);
     u.set1f("uImgA", cut.a);
     u.set1f("uImgB", cut.b);
     u.set1f("uCutC", cut.a === cut.b ? CUT_START : crestAt(cut.s));
+
+    // The match cut's disc (grove -> share): the fruit's place on the grove's side, out to the art.ts radius in fruit radii.
+    const matchCutOn = cut.a === IMG.grove && cut.b === IMG.share;
+    if (matchCutOn) {
+      const fruit = fruitView(art.grove.gilded, ctx.css, GROVE_TEX, match.grove);
+      u.set3f("uDisc", fruit.x, fruit.y, art.grove.matchDisc.radius * fruit.r * asp);
+    } else {
+      u.set3f("uDisc", 0, 0, 0);
+    }
+    u.set1f("uDiscSoft", art.grove.matchDisc.soft);
+
+    // The slice (share -> keyframe 2): the knife's line, the front's travel along it, how far it has run, every tune entry.
+    const slicing = cut.kind === "slice";
+    u.set1f("uSliceOn", slicing ? 1 : 0);
+    if (slicing) {
+      const dir = sliceDirection();
+      u.set2f("uKnife", art.share.knife.at.x, art.share.knife.at.y);
+      u.set2f("uKnifeDir", dir.x, dir.y);
+      u.set2f("uSlice", sliceEase(cut.s), cut.s);
+      const tune = sliceTune();
+      for (const key of SLICE_TUNE_KEYS) u.set1f(sliceUniform(key), tune[key]);
+    }
   },
 };
+
+/**
+ * The HUD over the model (`?hud`): the segment's scroll unit (p = start + unit / 10000; `?p=` with `?clock=5` holds any
+ * point, `?model=<t>` takes t = unit / 1200), the match cut's weight and the share's camera, and from the match cut on the
+ * slice's progress and its tune (`?tune=key:value,...` retunes it live, starred entries are overridden).
+ */
+export function modelHud(p: number, css: Size): string[] {
+  const x = modelUnits(p);
+  const m = shareMatch(x, css);
+  const cut = cutAt(x);
+  const lines = [`model unit ${x.toFixed(1)} of ${MODEL_UNITS}  match weight ${m.weight.toFixed(2)}  share zoom ${m.framing.zoom.toFixed(3)}  offScale ${m.offScale.toFixed(3)}`];
+  if (x >= MATCH_AT - 40) {
+    lines.push(`slice units ${SLICE.from}-${SLICE.to}  ${cut.kind === "slice" ? `s ${cut.s.toFixed(3)}  front ${sliceEase(cut.s).toFixed(3)}` : "not running"}`);
+    lines.push("tune (?tune=key:value,...)", ...sliceTuneLines());
+  }
+  return lines;
+}

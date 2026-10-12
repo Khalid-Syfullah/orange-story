@@ -7,7 +7,7 @@ Every cut on the page is the same gesture: a front bitten by noise, something ha
 | Cut | p | What happens | Crest |
 | --- | --- | --- | --- |
 | Hero → Model | 0.04–0.07 | Not a shader cut: the bridge is a 121-frame morph scrubbed by scroll, and it transforms the scene in place (the camera tilts up, the plinth turns to bark from the bottom up, its top slab lifts away like a cap, leaves sprout, a knife falls past the lens, the ground goes paper-white). The hero's dotted rings keep pulsing across the sky while it plays, their dots shifting from milk to ink as the ground whitens, and are gone by the time the knife is at rest. The shader hands film to reel through the static treatment: a diagonal wave from the bottom-right corner (`d = ((1-x)*aspect + y)/(aspect+1)`, bent by slow noise); ahead of it the film, behind it the reel; at the crest a horizontal tear with hashed row shifts, a mosaic that starts coarse and resolves as the crest passes, a chroma split of ±0.006 along x, and a 5x5 bitmap-font ASCII rubbing of the luminance inside the crest band only. The pan is keyed to the reel's frames so the orange never jumps. | Tear, mosaic, chroma split, glyphs |
-| Graft → grove → share (inside The Model) | 0.07–0.19 | Push-through: leaves from the scion sweep across the lens (procedural leaf shapes with their own seeds and speeds, smeared along the push) and the static treatment at a quarter of its amplitude takes graft to canopy underneath them. Grove to share is a match cut on the gilded orange (same screen position and scale on both sides, so the fruit does not move while everything around it changes). Inside `share`, the slice is a thin front along the knife's line, bitten by noise, not a crossfade. | Leaves, tear at quarter amplitude, knife-line front |
+| Graft → grove → share (inside The Model) | 0.07–0.19 | Push-through: leaves from the scion sweep across the lens (procedural leaf shapes with their own seeds and speeds, smeared along the push) and the static treatment at a quarter of its amplitude takes graft to canopy underneath them. Grove to share is a match cut on the gilded orange: the share's camera is solved so its fruit lands at the grove fruit's screen position and size at every viewport, and a disc round the fruit takes none of the cut's tear, mosaic, chroma split or lag, so the fruit does not move while everything around it changes. Inside `share`, after the typed line has finished, the slice is a thin ragged front, a tip leading along the knife's line, bitten by noise and printed, not a crossfade ("The match cut and the slice in full", below). | Leaves, tear at quarter amplitude, knife-line front |
 | Model → Work | 0.19–0.22 | The Split, below. | Pith, zest, stipple, bleeding dots |
 | Work → sheet | 0.37–0.40 | The camera pushes into the parchment the figure holds (cover-fit the parchment region of the plate with its own zoom and centre) while `uFlat` takes the whole frame to the paper colour; pulp, fibre and tooth are multiplied by the same `uFlat`, so the paper arrives as the colour arrives. A faint shadow of the orange survives in the sheet for the first half of the fill. | None: a push and a colour |
 | Sheet → drawing | 0.42–0.44 | The drawing soaks in from the middle on a radius bitten by two scales of noise, holding the whole frame, as a smudge that resolves into line. `coverage = clamp(t*4.2 - dist*1.9 + (fbm(uv*3)-0.5)*0.7, 0, 1)`. | Ink patches spreading and joining |
@@ -16,6 +16,44 @@ Every cut on the page is the same gesture: a front bitten by noise, something ha
 | Halo → canopy | 0.58–0.59 | Match cut on the fruit: the picked orange's screen position and scale are driven to the nearest orange of the canopy (located once with `uncover()` on the canopy's first frame) while its halo opens outward as a ring front and the canopy is inside it. The copy fades out underneath. | Halo breath, chroma split |
 | Questions → Application | 0.76–0.79 | The sky gap takes a coarse halftone screen (cell 10px × dpr, laid at 15° so it moirés against the pixel grid); the branches dissolve from their inner edges outward through the same screen; the next painting's clouds arrive first as giant dot-screen clouds whose dots grow until they merge into paint, and the figure resolves last. | Growing dots, moiré |
 | Application → finale | 0.90–0.98 | The rise: the sapling prints in from its base upward, the constellation retracts to the fingertip one line at a time with a `0.62/(n-1)` stagger, and the finale loop takes the frame on a colour already on screen. | Retracting hairlines |
+
+## The match cut and the slice in full (inside The Model)
+
+Units are scroll units from the start of the `model` segment (1200 of them, p = 0.07 + unit / 10000; `?p=` with `?clock=5` holds any point, `?hud` shows the numbers and, from the match cut on, the slice's tune, and `?tune=key:value,...` retunes it live). Numbers live in `art.ts` (`grove.gilded`, `grove.matchDisc`, `share.fruit`, `share.knife`), `passes/model/timeline.ts` (`CUTS`, `SLICE_UNITS`, `sliceEase`), `passes/model/match.ts` and `passes/model/slice.ts` (`SLICE_TUNE`).
+
+### The match cut (grove → share, units 765–835, middle 800)
+
+| What | Value | Notes |
+| --- | --- | --- |
+| Anchors | `art.grove.gilded` (0.481, 0.29, r 0.076 of the width), `art.share.fruit` (0.462, 0.247, r 0.046) | Measured on the 1440 tier and drawn over it in the test's marker shots |
+| Solve | zoom `z_s = r_g·z_g·cs_s / (r_s·cs_g)`, pan `p_s = fruit_s − 0.5 − (P_g − 0.5)·cs_s / z_s`, with `P_g = uncover(gilded, grove framing)` | The exact inverse of `uncover()`, per frame, at the viewport's own cover scale and phone pan; the grove is never nudged |
+| Target | The grove's own camera through the cut's middle, then its speed carried on and settling (150 units) | The share inherits the push-in, so it never starts from rest |
+| Weight | 1 until the middle, then `1 − smoothstep` over the rest of the segment, exactly 0 at its end | No speed at either end; the share's camera is then exactly `lastFraming`, as before, and the Split at t = 0 is the Model's last frame (diff 0). Pan mixes linearly, zoom geometrically |
+| Rest offset | The share's breath-parallax offset is scaled by `z_g / z_s` while matched | The offset is in painting units, so it would move the share's fruit more than the grove's; the breath is a factor on both zooms and cancels |
+| Disc | Radius 1.35 fruit radii, eased over 0.7 radius beyond | Tear, mosaic, chroma split, rubbing and B's lag are scaled to 0 inside it; the front still prints through it, so every pixel is one picture or the other |
+| Result | Fruit centre and radius agree to 0.0000 px at the middle at 1440x900, 1920x1080, 2560x1080, 820x1180 and 390x844, with the rest offset at its widest in both signs; the share's fruit moves at most 0.5 px a unit (2560x1080) and its speed changes by at most 0.005 px a unit | `e2e/model.spec.ts` |
+
+### The slice (share keyframe → halves apart, units 1025–1175)
+
+The typed line now runs units 880–1015 and the slice starts 10 units after it; the segment rests on the second keyframe for the last 25 units (the copy is leaving over the last 60). Ahead of the front is the study keyframe, behind it the halves apart (the keyframe The Split opens on).
+
+| Name | Value | What it does |
+| --- | --- | --- |
+| knife | `art.share.knife`: through the fruit (0.462, 0.247), 78° (y down, painting pixels), travel +1 | The front's travel direction is the line's; a tip leads along it |
+| front | `f = d + 0.5·a² − R + bite`, `d` along the travel, `a` across it, frame heights | The flanks trail the tip |
+| bite | `bite2((a, 0.4·d), 4.5, 0.10, 15, 0.04)`, 4 octaves, the finer field creeping 0.03/s | Two decorrelated fbm fields stretched along the front (rule 1) |
+| edge | `f + printEdge(frag, 0.03, 0.02)` through a ±0.004 smoothstep | Bayer and stipple print (rule 2): pixels across the front, none caught between |
+| R(s) | from `max(dmin, −2.2 fruit radii) − pad` to `dmax + pad`; `sliceEase(s) = smoothstep(s/0.12)·s·(0.8 + 0.2 s²)` | Starts from rest (rule 4), clear of the fruit and the head; accelerates through the fruit and the man behind it; leaves the frame exactly at s = 1 |
+| lag | `exp(−behind/0.09)·(1 − smoothstep(0.78, 1, s))` | Keyframe 2 offset 0.05 along the travel and smeared 0.03 over 5 taps (rule 6); exactly 0 at the end |
+| glint | cream (1, 0.96, 0.82), 1.5 px × dpr, alpha 0.9, on the bitten front | The leading edge |
+| specks | hash > 0.972 per 3 px × dpr cell and per sixth of a second, within 0.03 of the front, only where either keyframe is peel-orange, zest (1, 0.7, 0.25), denser with the scroll's speed | Rule 10 |
+| keep-out | The top-left 0.5 × 0.55 of the frame, eased over 0.08 | Column A: the glint, the specks and the lag are 0 over the copy (the keyframes are one paper-white there) |
+| cost | 0.4–3.2 ms median (p95 7.6 ms) on an Apple M2 Pro through Metal at 1440x900, with `?finish`, across units 600–1190 including the whole slice | Under the 8 ms budget with the fast paths on (a dev build; SwiftShader cannot time a GPU) |
+| fast paths | `base > pad` → one tap of keyframe 1; `base < −(bite + 5.3·0.09)` → one tap of keyframe 2 | Plus grain; the pass is no slower where the front is not |
+
+On the phone band the grove's own framing puts the gilded orange against the left edge (centre 0.20 of the width, radius 0.22); the match follows it, so the share's fruit sits there too until the camera eases away.
+
+Why it is not mechanical: the match is solved from the two paintings' own anchors, not nudged (the fruit is the one thing that does not change, and the disc keeps the cut's machinery off it); the front is bitten twice and printed (rules 1, 2), accelerates from rest (rule 4), the second picture arrives lagged and smeared (rules 5, 6), and the glint and specks are hashed per cell and per sixth of a second (rule 10); every term is a function of the scroll units, so scrubbing back replays it (rule 11). There is no middle "slicing" painting: a third keyframe would improve it (`art/briefs/share.txt`).
 
 ## The Split in full (Model → Work)
 
