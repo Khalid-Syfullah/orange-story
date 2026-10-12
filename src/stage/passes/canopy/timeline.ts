@@ -10,8 +10,9 @@
 // Geometry is in CSS px of the frame, y down, unless a name says frame heights (the unit the cuts'
 // bands and lags are measured in: x scaled by the aspect).
 import { narrowFrame, stackState } from "../../band";
-import { art, type Framing, type Rect } from "@/content/art";
+import { art, type Framing, type Point, type Rect } from "@/content/art";
 import { coverScale, phoned, sizeFromAspect, uncover, type Size } from "../../framing";
+import { coverRoom, FOLD_SHARE } from "../../motion";
 import { local, SCROLL_UNIT, segment } from "../../script";
 import { codaOrange, haloAt } from "../coda/timeline";
 import { profile } from "../terms/timeline";
@@ -161,6 +162,21 @@ export function canopyFraming(p: number): Framing {
   const f = phoned(art.canopy.framing, art.canopy.phonePan);
   const k = clamp01(questionsUnits(p) / QUESTIONS_UNITS);
   return { pan: { x: f.pan.x, y: f.pan.y + T.canopyParallax * T.travel * k }, zoom: f.zoom };
+}
+
+/**
+ * The room (painting units) the canopy's framing leaves the leaves' sway at this frame size: the
+ * slack of its cover fit less the pan's widest reach over the whole chapter (its tilt up through the
+ * branches) and the rest state, and never more than FOLD_SHARE of the foliage mask's lattice cell
+ * (so the warp never folds). One value for the chapter, so a leaf sways the same wherever the camera
+ * is, and the match cut's landing and the moire's first frame sway exactly as the chapter does.
+ */
+export function canopySwayRoom(css: Size): Point {
+  const f = phoned(art.canopy.framing, art.canopy.phonePan);
+  const reachY = Math.max(Math.abs(f.pan.y), Math.abs(f.pan.y + T.canopyParallax * T.travel));
+  const room = coverRoom(css, CANOPY_TEX, f.zoom, { x: f.pan.x, y: reachY });
+  const cell = art.canopy.sway.cell;
+  return { x: Math.min(room.x, (FOLD_SHARE * cell) / art.canopy.aspect), y: Math.min(room.y, FOLD_SHARE * cell) };
 }
 
 /** The nearest canopy orange on screen on the chapter's first frame (CSS px: centre and radius), breath and parallax aside. */

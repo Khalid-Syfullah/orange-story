@@ -14,6 +14,7 @@ import {
   biteAt,
   canopyFraming,
   canopyHudLines,
+  canopySwayRoom,
   crestAt,
   discAt,
   dollyAt,
@@ -28,13 +29,15 @@ import {
 const near = art.canopy.anchors.nearestOrange;
 const nearR = art.canopy.radii.nearestOrange;
 
-/** The canopy's framing, the nearest orange's anchor, for both passes. */
-function setCanopyUniforms(p: number, u: UniformSetter): void {
+/** The canopy's framing, the nearest orange's anchor and the room its leaves sway in, for both passes. */
+function setCanopyUniforms(p: number, css: readonly [number, number], u: UniformSetter): void {
   const framing = canopyFraming(p);
   u.set2f("uCanPan", framing.pan.x, framing.pan.y);
   u.set1f("uCanZoom", framing.zoom);
   u.set2f("uNear", near.x, near.y);
   u.set1f("uNearR", nearR);
+  const room = canopySwayRoom(css);
+  u.set2f("uCanRoom", room.x, room.y);
 }
 
 export const matchcutPass: PassDef = {
@@ -48,7 +51,7 @@ export const matchcutPass: PassDef = {
   ],
   uniforms(ctx, u) {
     const t = ctx.t;
-    setCanopyUniforms(ctx.p, u);
+    setCanopyUniforms(ctx.p, ctx.css, u);
     setCodaUniforms(u, haloGainAt(t));
     u.set1f("uMove", orangeTravel(t));
     u.set1f("uRingP", ringProgress(t));
@@ -68,7 +71,7 @@ export const questionsPass: PassDef = {
   frag: QUESTIONS_FRAG,
   textures: [{ uniform: "uCanopy", asset: "canopy" }],
   uniforms(ctx, u) {
-    setCanopyUniforms(ctx.p, u);
+    setCanopyUniforms(ctx.p, ctx.css, u);
   },
 };
 

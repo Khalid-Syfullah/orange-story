@@ -8,7 +8,7 @@
 import { art } from "@/content/art";
 import type { PassDef } from "../../gl/passes";
 import type { UniformSetter } from "../../gl/program";
-import { canopyFraming } from "../canopy/timeline";
+import { canopyFraming, canopySwayRoom } from "../canopy/timeline";
 import { APPLICATION_FRAG, MOIRE_FRAG, RISE_FRAG } from "./frag";
 import {
   applicationFraming,
@@ -51,6 +51,9 @@ export const moirePass: PassDef = {
     const canopy = canopyFraming(ctx.p);
     u.set2f("uCanPan", canopy.pan.x, canopy.pan.y);
     u.set1f("uCanZoom", canopy.zoom);
+    // The leaves sway as they did in the chapter, so t = 0 is the chapter's last frame.
+    const room = canopySwayRoom(ctx.css);
+    u.set2f("uCanRoom", room.x, room.y);
     setAppUniforms(ctx.css, u, scrimMoire(t));
     u.set1f("uClock", moireClock(t));
     u.set1f("uScreen", screenAt(t));

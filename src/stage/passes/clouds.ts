@@ -83,9 +83,8 @@ float cloudDot(vec2 frag, float cellPx, float cov) {
   return (1.0 - smoothstep(r - aa, r + aa, dist)) * smoothstep(0.0, 0.05, r);
 }
 
-// skyMask: 1 where a painting pixel is its blue sky (blue well above red and green), 0 on paint,
-// so clouds sit behind leaves, scaffold and fruit.
-float skyMask(vec3 c) { return smoothstep(0.08, 0.22, c.b - max(c.r, c.g)); }
+// skyMask (1 on a painting's blue sky, so clouds sit behind leaves, scaffold and fruit) is in the
+// GLSL library with the motion toolkit's other masks (src/stage/gl/lib.glsl.ts).
 
 // plateFit: how the 9:16 plate sits in the frame, as (fh, zoom, cx). It is fitted to the frame's
 // width; on a frame so tall that the plate would be shorter than 1.8 frames (phones), it is zoomed

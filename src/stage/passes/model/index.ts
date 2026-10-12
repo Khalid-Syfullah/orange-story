@@ -4,13 +4,16 @@
 //
 // `share.last` is the texture manager's `shareLast`: the model ends held on it, and The Split
 // (phase 6) opens on the same texture with the same framing (`art.share.lastFraming`).
-import { phoned } from "../../framing";
+import { phoned, sizeFromAspect } from "../../framing";
 import { art, bridgePanAt } from "@/content/art";
 import type { PassDef } from "../../gl/passes";
+import { coverRoom, depthTravelMax } from "../../motion";
 import { heroFraming } from "../hero/framing";
 import { crestAt, CUT_START } from "../static";
 import { MODEL_FRAG } from "./frag";
 import { beatPan, beatProgress, BEAT_SPAN, cutAt, groveCamera, modelUnits, shareCamera } from "./timeline";
+
+const GRAFT_TEX = sizeFromAspect(art.graft.aspect);
 
 export const modelPass: PassDef = {
   id: "model",
@@ -41,6 +44,15 @@ export const modelPass: PassDef = {
     const gc = groveCamera(x);
     const sc = shareCamera(x);
     u.set3f("uF1", graft.x, graft.y, art.graft.framing.zoom);
+    // The graft's depth layers ride the camera's travel off its framing (the beat's drift), bounded by
+    // the room the framing leaves at this viewport (its pan and the drift's widest reach taken out).
+    u.set2f("uGraftCam", graft.x - graftF.pan.x, graft.y - graftF.pan.y);
+    const room = coverRoom(ctx.css, GRAFT_TEX, art.graft.framing.zoom, {
+      x: Math.abs(graftF.pan.x) + Math.abs(art.graft.drift.x) / 2,
+      y: Math.abs(graftF.pan.y) + Math.abs(art.graft.drift.y) / 2,
+    });
+    const camMax = depthTravelMax(art.graft.depth, room, art.graft.aspect);
+    u.set2f("uGraftCamMax", camMax.x, camMax.y);
     u.set3f("uF2", groveF.pan.x + gc.pan.x, groveF.pan.y + gc.pan.y, art.grove.framing.zoom * gc.zoom);
     // Both share keyframes ride the same camera, so the hands parting does not jump; at the end of
     // the segment it is exactly `lastFraming`, the frame The Split opens on.

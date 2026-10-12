@@ -6,8 +6,17 @@
 // The rest state (breath, parallax, drift) is the shared chunk, applied to every picture alike, so
 // the reel's last frame here is exactly the bridge's last frame, and the share keyframe is what
 // The Split opens on.
+//
+// The graft is drawn in two depth layers (the motion toolkit's depthShift, lib.glsl.ts): its pale
+// cream ground is the far layer and the hands, branch, knife and leaves the near one, each sliding
+// at its own rate of the camera's travel (the beat's drift, the pointer and the ambient drift), read
+// through a soft lattice mask so the picture warps and never tears (art.ts graft.depth).
+import { art } from "@/content/art";
 import { REST_GLSL } from "../rest";
 import { STATIC_GLSL } from "../static";
+
+const f = (x: number) => x.toFixed(4);
+const depth = art.graft.depth;
 
 export const MODEL_FRAG = /* glsl */ `
 ${REST_GLSL}
@@ -19,16 +28,36 @@ uniform vec2 uReelPan;    // the pan table's extra pan for the reel's last frame
 uniform vec3 uF1, uF2, uF3, uF4;   // pan.xy and zoom for graft, grove, share, share keyframe 2
 uniform float uImgA, uImgB;        // the two images on screen (equal when holding)
 uniform float uCutC;               // the crest position (static.ts)
+uniform vec2 uGraftCam;            // the graft's camera travel off its framing (the beat's drift), painting units
+uniform vec2 uGraftCamMax;         // the bound on the travel the layers are fed (motion.ts depthTravelMax)
 ${STATIC_GLSL}
+
+const float GRAFT_NEAR = ${f(depth.near)};   // the hands, branch and leaves: rate of the camera's travel
+const float GRAFT_FAR = ${f(depth.far)};     // the cream ground
+const float GRAFT_CELL = ${f(depth.cell)};   // the layer mask's lattice, painting heights
 
 int gA;
 int gB;
 float gZk;     // the breath, as a factor on every zoom
 vec2 gOff;     // parallax and drift
 
+// The graft in its two layers: the camera's travel (the beat's drift plus the pointer and the
+// ambient drift), bounded, moves the near layer (rate - 1) more and the far layer (1 - rate) less
+// than the flat picture moved; the layer is read at the far layer's point.
+vec3 graftAt(vec2 uv) {
+  vec2 pt = cover(uv, uGraftSize, uF1.xy, uF1.z * gZk) + gOff;
+  vec2 cam = softBound(uGraftCam + gOff, uGraftCamMax);
+  vec2 nearOff = cam * (GRAFT_NEAR - 1.0);
+  vec2 farOff = cam * (GRAFT_FAR - 1.0);
+  vec2 cell = vec2(GRAFT_CELL * uGraftSize.y / uGraftSize.x, GRAFT_CELL);
+  vec2 ptFar = pt + farOff;
+  float near = 1.0 - SOFT_MASK(uGraft, ptFar, cell, paleMask);
+  return texture2D(uGraft, pt + depthShift(near, nearOff, farOff)).rgb;
+}
+
 vec3 img(int k, vec2 uv) {
   if (k == 0) return texture2D(uReel, cover(uv, uReelSize, uPan + uReelPan, uZoom * gZk) + gOff).rgb;
-  if (k == 1) return texture2D(uGraft, cover(uv, uGraftSize, uF1.xy, uF1.z * gZk) + gOff).rgb;
+  if (k == 1) return graftAt(uv);
   if (k == 2) return texture2D(uGrove, cover(uv, uGroveSize, uF2.xy, uF2.z * gZk) + gOff).rgb;
   if (k == 3) return texture2D(uShare, cover(uv, uShareSize, uF3.xy, uF3.z * gZk) + gOff).rgb;
   return texture2D(uShareLast, cover(uv, uShareLastSize, uF4.xy, uF4.z * gZk) + gOff).rgb;

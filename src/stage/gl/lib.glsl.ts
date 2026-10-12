@@ -7,6 +7,12 @@
 //   - Textures are uploaded without UNPACK_FLIP_Y, so painting uv (0,0) is the top-left of the image
 //     and `texture2D(tex, cover(uv, ...))` draws it upright.
 //   - Shared uniforms are set once per frame by the pass manager (src/stage/gl/passes.ts).
+//   - The motion toolkit at the end (wind, masks, depth, velocity, growth) takes its numbers from
+//     src/content/art.ts or the calling pass's timeline.ts; its TS twins are src/stage/motion.ts.
+import { MASKS, type Band } from "@/content/art";
+
+const n4 = (x: number) => x.toFixed(4);
+const band = (b: Band) => `vec2(${n4(b[0])}, ${n4(b[1])})`;
 
 /** The vertex shader for the single full-screen triangle. */
 export const VERTEX_GLSL = `
@@ -279,5 +285,125 @@ vec3 crestBand(float edge, float split, float sigma2) {
 // filmGrain: the paintings' grain, +-amp/2, hashed per pixel and re-hashed every 1/24 s (rule 10).
 float filmGrain(vec2 frag, float tm, float amp) {
   return (hash(frag + floor(tm * 24.0) * vec2(37.1, 17.3)) - 0.5) * amp;
+}
+
+// ---- the motion toolkit (docs/MOTION-RULES.md, "The motion toolkit") ---------------------------
+// Living paintings: the wind, the masks that say what may move, the two-layer depth parallax, the
+// scroll's speed as a bounded response and the overshoot-and-settle ease for growth. Each is a pure
+// function of a painting point, of values the pass computes from p, and of the pass clock
+// tm = uTime * (1 - uStill): nothing keeps state, so scrubbing gives identical frames both ways
+// (rule 11), and each gives its rest value (no sway, no layer offset, no velocity response) under
+// reduced motion. Numbers come in as arguments from art.ts or the pass's timeline.ts, or as the mask
+// bands below (art.ts MASKS); none is tuned here. TS twins: src/stage/motion.ts.
+
+// hueSat: hue in turns (0 red, 1/6 yellow, 1/3 green, 2/3 blue) and saturation (0 grey .. 1 pure).
+vec2 hueSat(vec3 c) {
+  vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+  vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+  vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+  float d = q.x - min(q.w, q.y);
+  return vec2(abs(q.z + (q.w - q.y) / (6.0 * d + 1.0e-4)), d / (q.x + 1.0e-4));
+}
+
+// bandMask: 1 inside the range r = (from, to), 0 outside it, each edge eased over +-soft.
+float bandMask(float x, vec2 r, float soft) {
+  return smoothstep(r.x - soft, r.x + soft, x) * (1.0 - smoothstep(r.y - soft, r.y + soft, x));
+}
+
+// foliageMask: 1 on leaves, lit yellow-green to dark olive; 0 on sky, peel, gilt, skin, bark, marble,
+// linen and paper (art.ts MASKS.foliage). Green velvet reads as foliage too: it may sway like cloth.
+float foliageMask(vec3 c) {
+  vec2 hs = hueSat(c);
+  const float S = ${n4(MASKS.foliage.soft)};
+  return bandMask(hs.x, ${band(MASKS.foliage.hue)}, S) * bandMask(hs.y, ${band(MASKS.foliage.sat)}, S)
+       * bandMask(luma(c), ${band(MASKS.foliage.lum)}, S);
+}
+
+// paleMask: 1 on the pale, unsaturated things of any hue: a cream ground, linen and drapery in light,
+// marble, paper (art.ts MASKS.pale); 0 on skin, fruit, leaves, bark and sky.
+float paleMask(vec3 c) {
+  const float S = ${n4(MASKS.pale.soft)};
+  return bandMask(hueSat(c).y, ${band(MASKS.pale.sat)}, S) * bandMask(luma(c), ${band(MASKS.pale.lum)}, S);
+}
+
+// skyMask: 1 where a painting pixel is its blue sky (blue well above red and green), 0 on paint,
+// so clouds sit behind leaves, scaffold and fruit (and the wind leaves the sky alone).
+float skyMask(vec3 c) { return smoothstep(0.08, 0.22, c.b - max(c.r, c.g)); }
+
+// SOFT_MASK(tex, pt, cell, MASK): a mask (any float MASK(vec3)) read on a lattice of 'cell' (painting
+// uv per axis) anchored to the painting, and blended between the four lattice points round 'pt' with
+// a smoothstep weight: a soft field at the lattice's scale that moves with the painting, so a
+// displacement it drives warps the picture continuously and never tears it. Four taps. A full 0..1
+// change across one cell has a slope of 1.5 per cell: keep a displacement it scales under 0.4 of a
+// cell and the warp compresses by at most 60%, never folds (motion.ts FOLD_SHARE).
+vec2 latticeBase(vec2 pt, vec2 cell) { return floor(pt / cell) * cell; }
+float latticeBlend(vec2 pt, vec2 cell, float m00, float m10, float m01, float m11) {
+  vec2 f = fract(pt / cell);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(m00, m10, f.x), mix(m01, m11, f.x), f.y);
+}
+#define SOFT_MASK(tex, pt, cell, MASK) latticeBlend(pt, cell, MASK(texture2D(tex, latticeBase(pt, cell)).rgb), MASK(texture2D(tex, latticeBase(pt, cell) + vec2(cell.x, 0.0)).rgb), MASK(texture2D(tex, latticeBase(pt, cell) + vec2(0.0, cell.y)).rgb), MASK(texture2D(tex, latticeBase(pt, cell) + cell).rgb))
+
+// (a) windAt: the wind at painting point 'pt' (height units: x times the painting's aspect, so the
+// field is round on the painting) at the pass clock tm: on x (across the painting, downwind) a
+// spread of about 0.55 (95% within -0.75..1.1, rarely past 1.6), on y about a third of that (a leaf
+// lifts as it swings: y is up for a swing either way). Bound it where it must not reach an edge.
+// Broad gusts travel downwind, w.x cells a painting height and w.y cells a second, as two fields at
+// different speeds and headings, so the pattern changes as it travels instead of sliding past; a
+// finer flutter (w.z times finer, w.w times faster) rides on them, strongest inside a gust. Fixed
+// octaves, so a phone sways as a desktop does; never a sine, never periodic (rules 9, 10). Multiply
+// by a mask and an amplitude (painting units). 0 under reduced motion.
+vec2 windAt(vec2 pt, float tm, vec4 w) {
+  if (uStill > 0.5) return vec2(0.0);
+  vec2 g = pt * w.x;
+  float s = w.y * tm;
+  float gust = fbm(g - vec2(s, 0.17 * s) + vec2(3.7, 11.1), 3) + fbm(g * 0.73 - vec2(0.61 * s, -0.23 * s) + vec2(-5.3, 2.9), 3) - 1.0;
+  vec2 f = g * w.z;
+  float fs = s * w.w;
+  float strength = 0.45 + 1.6 * abs(gust);
+  float x = gust * 1.8 + (fbm(f - vec2(fs, 0.0) + vec2(9.2, -4.4), 2) - 0.5) * strength * 2.5;
+  float y = (fbm(f + vec2(0.0, 0.8 * fs) + vec2(-1.7, 6.6), 2) - 0.5) * strength - 0.15 * x * x;
+  return vec2(x, y);
+}
+
+// softBound: x squeezed smoothly inside (-room, room): slope 1 at 0, never reaching the room, no kink,
+// so a displacement or a layer's travel never shows a painting's edge (MOTION-BRIEF rule 3).
+float softBound(float x, float room) { return x / sqrt(1.0 + x * x / max(room * room, 1.0e-10)); }
+vec2 softBound(vec2 x, vec2 room) { return vec2(softBound(x.x, room.x), softBound(x.y, room.y)); }
+
+// (c) depthShift: the offset (painting units, added to the painting point) a point takes in a
+// two-layer depth parallax: the far layer's 'farOff' where 'near' (0..1, a soft mask of the near
+// layer, from SOFT_MASK) is 0, the near layer's 'nearOff' where it is 1, eased between. Near things
+// slide over far ones as a continuous warp, never a cut. Each offset is (rate - 1) times the camera's
+// travel, the travel bounded by motion.ts depthTravelMax (no edge shows, no fold). 0 under reduced motion.
+vec2 depthShift(float near, vec2 nearOff, vec2 farOff) {
+  return mix(farOff, nearOff, smoothstep(0.0, 1.0, near)) * (1.0 - uStill);
+}
+
+// (d) velAmount: the scroll's speed as a bounded response 0..1: 1 - exp(-|uVel| / knee), linear for a
+// slow wheel and saturating for a flick (uVel in px a frame: knee 20 gives 0.63 at 20 px a frame). It is
+// 0 at rest and under reduced motion, and it eases back with the scroll clock's own 180 ms smoothing,
+// so nothing snaps when the scroll stops. velSigned: the same with the scroll's direction (+ down).
+float velAmount(float knee) { return (1.0 - uStill) * (1.0 - exp(-abs(uVel) / max(knee, 1.0e-3))); }
+float velSigned(float knee) { return sign(uVel) * velAmount(knee); }
+
+// velSmear: a painting sampled with the scroll's motion smear (rule 6): five taps trailing back along
+// 'dir' (painting uv: the way the content moves while the scroll goes down), up to 'len' for a flick,
+// signed by the scroll's direction; one tap at rest.
+vec3 velSmear(sampler2D s, vec2 pt, vec2 dir, float len, float knee) {
+  float v = velSigned(knee);
+  if (abs(v) * len < 1.0e-5) return texture2D(s, pt).rgb;
+  return smear5(s, pt, dir * v, len);
+}
+
+// (e) growSettle: an ease for growth, 0 at x = 0 and exactly 1 from x = 1 on, that starts from rest
+// (a smoothstep ramp over the first 'ramp' of x, rule 4), passes 1, peaks at 1 + overshoot and
+// settles back with no speed left at x = 1. 'back' sets the overshoot (motion.ts backFor: 0.06 is
+// about 6%; 0 is a plain ease-out). A pure function of x, so a scrubbed growth shrinks back the same way.
+float growSettle(float x, float back, float ramp) {
+  float u = clamp(x, 0.0, 1.0);
+  u *= smoothstep(0.0, max(ramp, 1.0e-4), u);
+  float v = u - 1.0;
+  return 1.0 + (back + 1.0) * v * v * v + back * v * v;
 }
 `;

@@ -4,6 +4,9 @@
 // cloud (the shared cloud() function, cells 6.5 px) drifting across the sky gap at 0.008 widths a
 // second with its fbm edge advancing at 0.03 a second, sampled at each dot cell's centre in
 // painting coordinates so it stays glued to the sky through the camera's tilt and the cut's dolly.
+// The leaves sway in the wind (the motion toolkit: windAt times foliageMask read through a soft
+// lattice, art.ts canopy.sway), in painting coordinates, so the match cut's landing, the chapter
+// and the moire's first frame sway alike; the fruit, the branches and the sky hold still.
 //
 //   - QUESTIONS_FRAG: that picture, by itself.
 //   - MATCH_FRAG: the match cut. The picked orange (the coda's last frame, through CODA_GLSL) is
@@ -16,6 +19,7 @@
 //     (rule 3). The ring's crest is a gaussian band exp(-x^2 / 0.0011) with a chroma split between
 //     channels and a dithered crest (rules 2, 8); the floating fruit gives way to the canopy's own
 //     through a Bayer threshold over the last of the cut, so t = 1 is the chapter's first frame.
+import { art } from "@/content/art";
 import { CLOUDS_GLSL } from "../clouds";
 import { CODA_GLSL } from "../coda/frag";
 import { CODA_TUNE } from "../coda/timeline";
@@ -24,6 +28,7 @@ import { CANOPY_TUNE } from "./timeline";
 
 const f = (x: number) => x.toFixed(4);
 const T = CANOPY_TUNE;
+const sway = art.canopy.sway;
 
 /** The picture both shaders share. Needs REST_GLSL and CLOUDS_GLSL before it. */
 export const CANOPY_GLSL = /* glsl */ `
@@ -33,14 +38,19 @@ uniform vec2 uCanPan;         // the canopy's framing now (pan walks up through 
 uniform float uCanZoom;
 uniform vec2 uNear;           // the nearest orange on the first frame, canopy uv (y down)
 uniform float uNearR;         // its radius as a share of the canopy's width
+uniform vec2 uCanRoom;        // the room the framing leaves the leaves' sway, painting units (timeline.ts canopySwayRoom)
 
 const float CLOUD_DRIFT = ${f(T.cloudDrift)};   // widths a second
 const float CLOUD_EDGE = ${f(T.cloudEdge)};     // fbm lattice units a second
 const float CLOUD_SIZE = 0.22;                  // height units
 const vec2 CLOUD_BASE = vec2(0.95, 0.73);       // where its flat base starts at t = 0 (x is before the wrap's offset)
+const vec4 SWAY_WIND = vec4(${f(sway.wind.scale)}, ${f(sway.wind.speed)}, ${f(sway.wind.flutter)}, ${f(sway.wind.flutterSpeed)});   // art.ts canopy.sway.wind
+const float SWAY_AMP = ${f(sway.amp)};          // the sway at a full gust, painting heights
+const float SWAY_CELL = ${f(sway.cell)};        // the foliage mask's lattice, painting heights
 
 float gKz;        // the canopy's zoom with the breath
 vec2 gKoff;       // parallax and drift, painting units
+float gKtm;       // the pass clock (0 under reduced motion), for the wind
 // The cut's displacement of the canopy: a dolly about gMO (screen uv) by gMS and an offset gMLag
 // (screen uv) along the way the ring travels. Identity in the chapter.
 vec2 gMO = vec2(0.5);
@@ -50,10 +60,25 @@ vec2 gMLag = vec2(0.0);
 void canopyFrame(float tm) {
   gKz = restZoom(uCanZoom, tm);
   gKoff = restOffset(tm);
+  gKtm = tm;
 }
 
 vec2 canopyUV(vec2 uv) { return dollyAbout(uv - gMLag, gMO, gMS); }
 vec2 toCanopy(vec2 uv) { return cover(uv, uCanopySize, uCanPan, gKz) + gKoff; }
+
+// The leaves in the wind: a canopy painting point moved by the wind where the leaves are, the
+// foliage read on a lattice anchored to the painting so the warp is continuous; bounded by the
+// room the framing leaves, so no edge of the painting ever shows. Identity on the sky, the fruit and
+// the branches, and under reduced motion.
+vec2 canopySway(vec2 pt) {
+  if (uStill > 0.5) return pt;
+  float ar = uCanopySize.x / uCanopySize.y;
+  vec2 cell = vec2(SWAY_CELL / ar, SWAY_CELL);
+  float m = SOFT_MASK(uCanopy, pt, cell, foliageMask);
+  if (m < 0.002) return pt;
+  vec2 w = windAt(vec2(pt.x * ar, pt.y), gKtm, SWAY_WIND);
+  return pt + softBound(vec2(w.x / ar, w.y) * (SWAY_AMP * m), uCanRoom);
+}
 
 // Film grain, +-1.2%: the paintings' grain, as on the coda.
 float canopyGrain(vec2 frag, float tm) { return filmGrain(frag, tm, 0.024); }
@@ -71,7 +96,7 @@ float canopyCloud(vec2 pt, float tm) {
 // The canopy at a screen pixel: the loop, smeared 'smearLen' along dirUV when the cut asks for it,
 // and the halftone cloud over the sky (never over leaves or fruit).
 vec3 canopyScene(vec2 uv, vec2 frag, float tm, vec2 dirUV, float smearLen) {
-  vec2 pt = toCanopy(canopyUV(uv));
+  vec2 pt = canopySway(toCanopy(canopyUV(uv)));
   vec3 c;
   if (smearLen > 0.0005) {
     vec2 dp = dirUV * coverScale(uCanopySize) / gKz;

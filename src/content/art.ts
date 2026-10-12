@@ -95,6 +95,52 @@ export interface FramesArt extends ArtBase {
 
 export type ArtEntry = StillArt | LoopArt | FramesArt;
 
+// ---------------------------------------------------------------------------------------------
+// Motion: the numbers the shared motion toolkit reads (src/stage/gl/lib.glsl.ts, twins in
+// src/stage/motion.ts, docs/MOTION-RULES.md "The motion toolkit")
+// ---------------------------------------------------------------------------------------------
+
+/** A band [from, to] of a colour property, eased over +-soft at each end. */
+export type Band = readonly [number, number];
+
+/**
+ * Colour bands the shader's masks read (lib.glsl.ts foliageMask, paleMask). Hue in turns (0 red,
+ * 1/6 yellow, 1/3 green, 2/3 blue), saturation and luma 0..1. Measured on the real paintings
+ * (docs/MOTION-AUDIT.md, "Masks"); a band reaching past 0 or 1 is open at that end.
+ */
+export const MASKS = {
+  /** Leaves, lit yellow-green (hue 0.15) to dark olive (0.19); peel (0.06-0.09), gilt (0.11), bark (0.10) and sky (0.60) stay out. */
+  foliage: { hue: [0.14, 0.47] as Band, sat: [0.2, 1.2] as Band, lum: [-0.2, 0.93] as Band, soft: 0.02 },
+  /** Pale and unsaturated, any hue: a cream ground (sat 0.13, luma 0.94), linen in light, marble, paper; skin (sat 0.5) stays out. */
+  pale: { sat: [-0.2, 0.24] as Band, lum: [0.72, 1.2] as Band, soft: 0.06 },
+} as const;
+
+/** The wind (lib.glsl.ts windAt): gust cells per painting height, gust cells a second, the flutter's scale and speed as multiples of the gusts'. */
+export interface Wind {
+  scale: number;
+  speed: number;
+  flutter: number;
+  flutterSpeed: number;
+}
+
+/** A painting's leaf sway: its wind, the sway at a full gust (painting heights) and the lattice its foliage mask is read on (painting heights). */
+export interface Sway {
+  wind: Wind;
+  amp: number;
+  cell: number;
+}
+
+/**
+ * Two-layer depth parallax (lib.glsl.ts depthShift): the near and far layers' rates of the camera's
+ * travel (1 = with the camera, as the flat picture moved) and the lattice the layer mask is read on
+ * (painting heights; the larger, the more travel the warp can take before it would fold).
+ */
+export interface Depth {
+  near: number;
+  far: number;
+  cell: number;
+}
+
 const R16_9 = 16 / 9;
 const R9_16 = 9 / 16;
 const R1_1 = 1;
@@ -188,6 +234,13 @@ export const art = {
     /** Each beat has its own pan; a small drift (painting units) is walked across the beat by scroll. */
     framing: { pan: { x: 0, y: 0 }, zoom: 1.04 },
     drift: { x: -0.012, y: 0.004 },
+    /**
+     * Depth: the pale cream ground is the far layer, the hands, branch, knife and leaves the near one;
+     * the near slides 1.8x the camera's travel (the drift, the pointer, the ambient drift), the ground
+     * 0.5x, so the hands move over the ground. The mask lattice is 0.05 painting heights (about 47 px):
+     * the cream ground is flat, so the soft band it gives the layers' boundary does not show.
+     */
+    depth: { near: 1.8, far: 0.5, cell: 0.05 } satisfies Depth,
     /** Phone pans (painting units, added on tall phones): the window is 0.4 of the width, so it centres on the hands and the fruit. */
     phonePan: { x: 0.04, y: 0 },
   },
@@ -299,6 +352,14 @@ export const art = {
     framing: { pan: { x: 0, y: -0.11 }, zoom: 1.32 },
     /** The nearest fruit (x 0.34) sits in the left third of the narrow window the match cut lands in. */
     phonePan: { x: -0.1, y: 0 },
+    /**
+     * The leaves sway in the wind (foliage mask x windAt); the fruit, the branches and the sky hold.
+     * Gusts 1.6 cells a painting height crossing at 0.3 cells a second (one passes in about 3 s),
+     * a flutter 3.5x finer and 4x faster; 0.011 painting heights per unit of wind (about 13 px at
+     * 1440x900 before the bound: a leaf sways about 4 px, 8 px in a gust); the mask's lattice 0.02
+     * heights (about 24 px), and the sway never past 0.4 of it, so the warp never folds.
+     */
+    sway: { wind: { scale: 1.6, speed: 0.3, flutter: 3.5, flutterSpeed: 4 }, amp: 0.011, cell: 0.02 } satisfies Sway,
     rects: {
       /**
        * The open sky in the middle of the frame: the centre 50% that docs/PAINTINGS.md keeps clear of
@@ -376,6 +437,10 @@ export const art = {
     lastFraming?: Framing;
     /** A beat's scroll-driven camera move (see passes/model/timeline.ts). */
     camera?: object;
+    /** Two-layer depth parallax (the motion toolkit). */
+    depth?: Depth;
+    /** Leaf sway in the wind (the motion toolkit). */
+    sway?: Sway;
     /** Added to the framing's pan on tall phones, in proportion to how tall (src/stage/framing.ts phoned). */
     phonePan?: Point;
     /** Named points in painting coordinates (0..1, y down). */

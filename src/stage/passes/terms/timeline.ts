@@ -40,6 +40,11 @@ export const TERMS_TUNE = {
   retreatTo: 0.85,
   /** Size eases with t * (lin + (1 - lin) * t^2). */
   sizeLin: 0.6,
+  /**
+   * ...behind a smoothstep ramp over this first share of the retreat (rule 4), so the window and the
+   * picture inside it leave the full frame from rest instead of at 60% of their cruising speed at once.
+   */
+  sizeRamp: 0.15,
   /** The centre follows the size with this lag (ms), so the panel settles after it shrinks. */
   centreLagMs: 220,
   /** The picture zooms out inside the cutout on a smoothstep from this share of the retreat. */
@@ -137,11 +142,15 @@ export function retreatAt(p: number): number {
   return clamp01((drawingT(p) - retreatFrom) / (retreatTo - retreatFrom));
 }
 
-/** The window's size progress at retreat t: t * (0.6 + 0.4 * t^2), accelerating. */
+/**
+ * The window's size progress at retreat t: t * (0.6 + 0.4 * t^2), accelerating, behind a smoothstep
+ * ramp over the first `sizeRamp` (rule 4: the move has no edge to its start). Monotonic and C1; equal
+ * to the plain curve from `sizeRamp` on, so the panel lands exactly where it did.
+ */
 export function sizeEase(t: number): number {
   const k = clamp01(t);
   const lin = TERMS_TUNE.sizeLin;
-  return k * (lin + (1 - lin) * k * k);
+  return k * (lin + (1 - lin) * k * k) * smooth(0, TERMS_TUNE.sizeRamp, k);
 }
 
 /** The picture's zoom progress at retreat t: later than the size, settling. */
