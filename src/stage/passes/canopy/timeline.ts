@@ -82,10 +82,10 @@ export const CANOPY_TUNE = {
   canopyParallax: 1.0,
   domParallax: 0.6,
   /** The camera tilts up through the branches: pan.y walks this far (painting units) over the chapter. */
-  travel: 0.07,
+  travel: 0.22,
   /** The halftone cloud: it crosses at this many widths a second and its fbm edge advances at this many lattice units a second. */
-  cloudDrift: 0.008,
-  cloudEdge: 0.03,
+  cloudDrift: 0.022,
+  cloudEdge: 0.09,
 
   // ---- the title ------------------------------------------------------------------------------------
   /** The title sits at this frame height from the top while it is written, and holds until `titleHold` units, then rises away. */

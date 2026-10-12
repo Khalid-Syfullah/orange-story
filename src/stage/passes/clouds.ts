@@ -58,13 +58,13 @@ float cloud(vec2 pa, vec2 c, float sc, float seed, vec2 sway) {
 // cloudSway: an instance's slow drift: two incommensurate sines in x and one in y (rule 9), slower
 // and wider the larger the cloud, phased by its seed. 'size' and the result are in height units.
 vec2 cloudSway(float size, float seed, float tm) {
-  float p1 = 18.0 + 95.0 * size;                      // 0.30 -> 46.5 s, 0.10 -> 27.5 s
+  float p1 = 14.0 + 55.0 * size;                      // 0.30 -> 30.5 s, 0.10 -> 19.5 s
   float p2 = p1 * 0.618034;
   float p3 = p1 * 0.787;
   float ph = hash(seed) * CLOUD_TAU;
-  float ax = 0.035 * size;
+  float ax = 0.25 * size;                             // wide enough to read as drift: ~10-20 px a second
   return vec2(ax * (sin(tm * CLOUD_TAU / p1 + ph) + 0.5 * sin(tm * CLOUD_TAU / p2 + ph * 1.7)),
-              ax * 0.16 * sin(tm * CLOUD_TAU / p3 + ph * 0.6));
+              ax * 0.2 * sin(tm * CLOUD_TAU / p3 + ph * 0.6));
 }
 
 // cloudCellUV: the screen uv (y down) of the centre of dot cell 'cid' (cells of cellPx device px).

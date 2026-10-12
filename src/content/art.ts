@@ -290,13 +290,13 @@ export const art = {
   canopy: {
     ...loop("canopy", "Questions"),
     /**
-     * Pushed in 10% and held low, so the Questions chapter can tilt the camera up through the
+     * Pushed in 32% and held low (the chapter scrolls the branches by 0.22 of the painting's height), so the Questions chapter can tilt the camera up through the
      * branches (pan.y walks from here by `CANOPY_TRAVEL`, passes/canopy/timeline.ts) without the
      * painting's edge ever showing, with room left for breath, pointer parallax and drift. The
      * match cut lands on the nearest orange as mapped by exactly this framing (the chapter's first
      * frame).
      */
-    framing: { pan: { x: 0, y: -0.035 }, zoom: 1.1 },
+    framing: { pan: { x: 0, y: -0.11 }, zoom: 1.32 },
     /** The nearest fruit (x 0.34) sits in the left third of the narrow window the match cut lands in. */
     phonePan: { x: -0.1, y: 0 },
     rects: {
