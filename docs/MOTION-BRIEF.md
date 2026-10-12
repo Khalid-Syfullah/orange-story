@@ -2,7 +2,7 @@
 
 Written after the first full build. The paintings read as flat pictures being cross-faded: several
 beats were stills with a 3 to 15 px drift, and every chapter used the same slow push-in plus a cut.
-Phases 17 to 21 (`prompts/17-*.md` to `prompts/21-*.md`) fix that. This file is their shared brief.
+Phases 17 to 24 (`prompts/17-*.md` to `prompts/24-*.md`) fix that (17 to 20 the motion pass, 21 to 23 the Model section's rebuilt beats, cuts and split, 24 the checks). This file is their shared brief.
 
 ## What "good" already looks like
 

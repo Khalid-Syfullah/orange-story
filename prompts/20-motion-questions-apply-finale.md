@@ -1,4 +1,4 @@
-# Phase 20 of 21: Motion: questions, application and finale
+# Phase 20 of 24: Motion: questions, application and finale
 
 You are improving orange.io. Phases 17 to 19 are done. Finish the closing chapters' motion.
 

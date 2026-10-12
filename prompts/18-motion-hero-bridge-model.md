@@ -1,4 +1,4 @@
-# Phase 18 of 21: Motion: hero, bridge and the model
+# Phase 18 of 24: Motion: hero, bridge and the model
 
 You are improving orange.io. Phase 17 built the toolkit and the audit. Give the opening chapters their own motion.
 

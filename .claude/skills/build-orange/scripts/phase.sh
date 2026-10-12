@@ -6,7 +6,9 @@
 # per-phase git commit, and the on-disk "done" markers that make the run resumable.
 #
 #   phase.sh next              print the next unfinished phase, its model and effort, or ALL DONE
-#   phase.sh begin  <phase>    start a phase (banner, timing, status file)
+#   phase.sh resolve <X>       find ONE named phase (number like 22, its name, or a unique part of it) and print it
+#                              like `next` does, plus its state and any earlier phases not done (for `only X`)
+#   phase.sh begin  <phase>    start a phase (banner, timing, status file); a finished phase is re-opened
 #   phase.sh check             run the build check for the current phase (counts failed attempts)
 #   phase.sh finish <phase>    commit, mark done, print progress (refused until the check passed)
 #   phase.sh status            phase table + live state (prints ALL PHASES COMPLETE at the end)
@@ -156,12 +158,60 @@ cmd_next() {
   echo "ALL DONE"
 }
 
+# resolve <number | name | part of a name> -> the one phase named, like `next` prints it, then its state.
+# Used by `/build-orange only X`. Exits 2 (listing the candidates) when nothing or several match.
+cmd_resolve() {
+  local q="$*" n i padded
+  local hits=() undone=()
+  q="${q#[Pp]hase}"; q="${q# }"; q="${q#-}"      # "phase 22" and "phase-22" mean 22
+  [[ -n "$q" ]] || die "usage: phase.sh resolve <number | name | part of a name>"
+  if [[ "$q" =~ ^[0-9]+$ ]]; then
+    printf -v padded '%02d' "$((10#$q))"
+    for n in "${names[@]}"; do
+      if [[ "${n%%-*}" == "$padded" ]]; then hits+=("$n"); fi
+    done
+  else
+    for n in "${names[@]}"; do
+      if [[ "$n" == "$q" ]]; then hits=("$n"); break; fi
+    done
+    if (( ${#hits[@]} == 0 )); then
+      for n in "${names[@]}"; do
+        if [[ "$n" == *"$q"* ]]; then hits+=("$n"); fi
+      done
+    fi
+  fi
+  if (( ${#hits[@]} == 0 )); then
+    echo "NO SUCH PHASE: '$q'. The phases are:" >&2
+    printf '  %s\n' "${names[@]}" >&2
+    exit 2
+  fi
+  if (( ${#hits[@]} > 1 )); then
+    echo "AMBIGUOUS: '$q' matches several phases:" >&2
+    printf '  %s\n' "${hits[@]}" >&2
+    exit 2
+  fi
+  n="${hits[0]}"
+  echo "PHASE $(index_of "$n")/$total $n $PROMPT_DIR/$n.md $(model_for "$n") $(effort_for "$n")"
+  if [[ -f "$LOG_DIR/$n.done" ]]; then echo "STATE done (it will be re-run over the existing code)"; else echo "STATE pending"; fi
+  for i in "${names[@]}"; do
+    if [[ "$i" == "$n" ]]; then break; fi
+    if [[ ! -f "$LOG_DIR/$i.done" ]]; then undone+=("$i"); fi
+  done
+  if (( ${#undone[@]} > 0 )); then echo "NOTE earlier phases not done: ${undone[*]}"; fi
+}
+
 cmd_begin() {
   local name="${1:-}" idx resume=""
   [[ -n "$name" ]] || die "usage: phase.sh begin <phase>"
   [[ -f "$PROMPT_DIR/$name.md" ]] || die "no such phase: $name"
   idx="$(index_of "$name")"
-  [[ -f "$LOG_DIR/$name.start" ]] && resume=" (resuming a phase that was interrupted: check the repo for work already done)"
+  if [[ -f "$LOG_DIR/$name.done" ]]; then
+    # `only X` on a finished phase: re-open it, so a run that fails leaves it unfinished rather than falsely done
+    resume=" (re-running a finished phase: its earlier work is already in the repo)"
+    rm -f "$LOG_DIR/$name.done" "$LOG_DIR/$name.secs"
+  elif [[ -f "$LOG_DIR/$name.start" ]]; then
+    resume=" (resuming a phase that was interrupted: check the repo for work already done)"
+  fi
   [[ -f "$LOG_DIR/.run_start" ]] || now >"$LOG_DIR/.run_start"
   now >"$LOG_DIR/$name.start"
   rm -f "$LOG_DIR/$name.checked" "$LOG_DIR/$name.fails"
@@ -303,10 +353,11 @@ cmd_reset() {
 
 case "${1:-}" in
   next)   cmd_next ;;
+  resolve) shift; cmd_resolve "$@" ;;
   begin)  shift; cmd_begin "$@" ;;
   check)  cmd_check ;;
   finish) shift; cmd_finish "$@" ;;
   status) cmd_status ;;
   reset)  cmd_reset ;;
-  *) sed -n '2,14p' "${BASH_SOURCE[0]}"; exit 2 ;;
+  *) sed -n '2,16p' "${BASH_SOURCE[0]}"; exit 2 ;;
 esac
